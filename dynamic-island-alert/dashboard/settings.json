@@ -1,0 +1,495 @@
+{
+  "groups": {
+    "Streamer.bot Connection": {
+      "open": true,
+      "icon": "../../resources/icons/platforms/streamerbot-logo.svg",
+      "badge": "streamerbot"
+    },
+    "OBS Connection": {
+      "open": false,
+      "icon": "../../resources/icons/platforms/obs-logo.svg",
+      "badge": "obs"
+    },
+    "SMTC Connection": {
+      "open": false,
+      "icon": "ri-music-2-fill",
+      "badge": "smtc"
+    },
+    "TikTok Connection": {
+      "open": true,
+      "icon": "ri-tiktok-fill",
+      "badge": "tiktok"
+    },
+    "General": {
+      "open": false,
+      "icon": "ri-settings-4-fill"
+    },
+    "Live Detection": {
+      "open": false,
+      "icon": "ri-live-fill"
+    },
+    "Follow Alert": {
+      "open": false,
+      "icon": "ri-user-add-fill"
+    },
+    "Subscribe Alert": {
+      "open": false,
+      "icon": "ri-star-fill"
+    },
+    "Share Alert": {
+      "open": false,
+      "icon": "ri-share-forward-fill"
+    },
+    "Gift Alert": {
+      "open": false,
+      "icon": "ri-gift-fill"
+    },
+    "First Chatter": {
+      "open": false,
+      "icon": "ri-chat-1-fill",
+      "button": {
+        "label": "Reset",
+        "callFunction": "ResetFirstChatter"
+      }
+    }
+  },
+  "settings": [
+    {
+      "id": "address",
+      "label": "Server IP",
+      "type": "text",
+      "defaultValue": "127.0.0.1",
+      "group": "Streamer.bot Connection"
+    },
+    {
+      "id": "port",
+      "label": "Port",
+      "type": "number",
+      "defaultValue": 8080,
+      "min": 1024,
+      "max": 65535,
+      "group": "Streamer.bot Connection"
+    },
+    {
+      "id": "obsAddress",
+      "label": "Server IP",
+      "type": "text",
+      "defaultValue": "127.0.0.1",
+      "group": "OBS Connection"
+    },
+    {
+      "id": "obsPort",
+      "label": "Port",
+      "type": "number",
+      "defaultValue": 4455,
+      "min": 1024,
+      "max": 65535,
+      "group": "OBS Connection"
+    },
+    {
+      "id": "obsPassword",
+      "label": "Password",
+      "type": "password",
+      "defaultValue": "",
+      "group": "OBS Connection"
+    },
+    {
+      "id": "enableNowPlaying",
+      "label": "Enable Now Playing",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "SMTC Connection"
+    },
+    {
+      "id": "smtcBridgePort",
+      "label": "SMTC Bridge Port",
+      "type": "number",
+      "defaultValue": 5000,
+      "min": 1024,
+      "max": 65535,
+      "group": "SMTC Connection"
+    },
+    {
+      "id": "includedApplications",
+      "label": "Included Apps",
+      "description": "Prioritas aplikasi (pisahkan koma). Kosongkan untuk deteksi otomatis.<br><a href=\"http://localhost:5000/sessions\" target=\"_blank\">Lihat sumber aktif</a>",
+      "type": "text",
+      "defaultValue": "",
+      "group": "SMTC Connection"
+    },
+    {
+      "id": "excludedApplications",
+      "label": "Excluded Apps",
+      "description": "Abaikan aplikasi ini (pisahkan koma).<br><a href=\"http://localhost:5000/sessions\" target=\"_blank\">Lihat sumber aktif</a>",
+      "type": "text",
+      "defaultValue": "",
+      "group": "SMTC Connection"
+    },
+    {
+      "id": "enableDynamicStyleBig",
+      "label": "Enable Dynamic Style Big",
+      "description": "Menampilkan alert lagu baru (songchange) dengan ukuran besar (Spotify/Apple Music Style).",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "SMTC Connection"
+    },
+    {
+      "id": "testAlertType",
+      "label": "Test Alert",
+      "type": "select",
+      "options": [
+        {
+          "value": "all",
+          "label": "Test All"
+        },
+        {
+          "value": "follow",
+          "label": "Test Follow"
+        },
+        {
+          "value": "subscribe",
+          "label": "Test Subscribe"
+        },
+        {
+          "value": "share",
+          "label": "Test Share"
+        },
+        {
+          "value": "gift",
+          "label": "Test Gift"
+        },
+        {
+          "value": "firstChatter",
+          "label": "Test First Chatter"
+        }
+      ],
+      "defaultValue": "",
+      "group": "General"
+    },
+    {
+      "id": "widgetStyle",
+      "label": "Widget Style",
+      "type": "select",
+      "options": [
+        {
+          "value": "glass",
+          "label": "Liquid Glass"
+        },
+        {
+          "value": "solid",
+          "label": "Solid Black"
+        }
+      ],
+      "defaultValue": "glass",
+      "group": "General"
+    },
+    {
+      "id": "widgetScale",
+      "label": "Widget Scale (Zoom)",
+      "type": "slider",
+      "defaultValue": 1.0,
+      "min": 0.5,
+      "max": 5.0,
+      "step": 0.1,
+      "group": "General"
+    },
+    {
+      "id": "font",
+      "label": "Font",
+      "description": "Ganti jenis huruf teks widget. <a href=\"ms-settings:fonts\" target=\"_blank\">Lihat font terpasang</a>",
+      "type": "font",
+      "defaultValue": "",
+      "group": "General"
+    },
+    {
+      "id": "language",
+      "label": "Language",
+      "type": "select",
+      "options": [
+        {
+          "value": "id",
+          "label": "Indonesia"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        }
+      ],
+      "defaultValue": "id",
+      "group": "General"
+    },
+    {
+      "id": "timeFormat",
+      "label": "Time Format",
+      "description": "Format jam. Contoh: HH:mm:ss (24 Jam) atau hh:mm:ss A (12 Jam).",
+      "type": "text",
+      "defaultValue": "HH:mm:ss A",
+      "group": "General"
+    },
+    {
+      "id": "dateFormat",
+      "label": "Date Format",
+      "description": "Format tanggal. Contoh: dddd, DD MMMM YYYY (Senin, 31 Desember 2026).",
+      "type": "text",
+      "defaultValue": "dddd, DD MMMM YYYY",
+      "group": "General"
+    },
+    {
+      "id": "weatherLocation",
+      "label": "Weather Location",
+      "description": "Nama kota untuk dimunculkan pada panel info cuaca.",
+      "type": "text",
+      "defaultValue": "Jakarta",
+      "group": "General"
+    },
+    {
+      "id": "alertDuration",
+      "label": "Alert Duration (seconds)",
+      "type": "number",
+      "min": 1,
+      "max": 30,
+      "defaultValue": 4,
+      "group": "General"
+    },
+    {
+      "id": "infoDuration",
+      "label": "Info Rotation Duration (seconds)",
+      "type": "number",
+      "min": 1,
+      "max": 30,
+      "defaultValue": 4,
+      "group": "General"
+    },
+    {
+      "id": "infoRotationOrder",
+      "label": "Info Rotation Display (Select Min. 3)",
+      "type": "tags",
+      "defaultValue": [
+        "date",
+        "time",
+        "duration",
+        "weather",
+        "viewers",
+        "music"
+      ],
+      "options": [
+        {
+          "value": "date",
+          "label": "Date"
+        },
+        {
+          "value": "time",
+          "label": "Time"
+        },
+        {
+          "value": "duration",
+          "label": "Live Duration"
+        },
+        {
+          "value": "weather",
+          "label": "Weather"
+        },
+        {
+          "value": "viewers",
+          "label": "Viewers"
+        },
+        {
+          "value": "music",
+          "label": "Now Playing"
+        }
+      ],
+      "group": "General",
+      "full": true,
+      "minTags": 3,
+      "placeholder": "Tidak ada opsi"
+    },
+    {
+      "id": "accentPaletteRole",
+      "label": "Accent Color",
+      "type": "select",
+      "options": [
+        {
+          "value": "lightVibrant",
+          "label": "Light Vibrant (default)"
+        },
+        {
+          "value": "vibrant",
+          "label": "Vibrant"
+        },
+        {
+          "value": "darkVibrant",
+          "label": "Dark Vibrant"
+        }
+      ],
+      "defaultValue": "lightVibrant",
+      "group": "SMTC Connection"
+    },
+    {
+      "id": "tiktokService",
+      "label": "TikTok Service Provider",
+      "type": "select",
+      "options": [
+        {
+          "value": "both",
+          "label": "Both (TikFinity & IndoFinity)"
+        },
+        {
+          "value": "tikfinity",
+          "label": "TikFinity"
+        },
+        {
+          "value": "indofinity",
+          "label": "IndoFinity"
+        }
+      ],
+      "defaultValue": "both",
+      "group": "TikTok Connection",
+      "category": "TikTok Alerts"
+    },
+    {
+      "id": "tikfinityPort",
+      "label": "TikFinity Port",
+      "type": "number",
+      "defaultValue": 21213,
+      "min": 1024,
+      "max": 65535,
+      "group": "TikTok Connection",
+      "category": "TikTok Alerts"
+    },
+    {
+      "id": "indofinityPort",
+      "label": "IndoFinity Port",
+      "type": "number",
+      "defaultValue": 62024,
+      "min": 1024,
+      "max": 65535,
+      "group": "TikTok Connection",
+      "category": "TikTok Alerts"
+    },
+    {
+      "id": "enableLiveDetect",
+      "label": "Enable Live Detection",
+      "description": "Deteksi TikTok Studio secara otomatis untuk mengganti panel menjadi mode Offline saat live mati.",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "Live Detection",
+      "category": "TikTok Alerts"
+    },
+    {
+      "id": "liveStudioPort",
+      "label": "LIVE Studio Port",
+      "description": "Biarkan 0 untuk otomatis melacak port internal TikTok LIVE Studio.",
+      "type": "number",
+      "min": 0,
+      "max": 65535,
+      "defaultValue": 0,
+      "group": "Live Detection",
+      "category": "TikTok Alerts"
+    },
+    {
+      "id": "offlineText",
+      "label": "Offline Text",
+      "description": "Teks label status saat stream sedang Offline.",
+      "type": "text",
+      "defaultValue": "Stream Offline",
+      "group": "Live Detection",
+      "category": "TikTok Alerts"
+    },
+    {
+      "id": "offlineViewersText",
+      "label": "Offline Viewers Text",
+      "description": "Simbol jumlah penonton saat stream sedang Offline.",
+      "type": "text",
+      "defaultValue": "-",
+      "group": "Live Detection",
+      "category": "TikTok Alerts"
+    },
+    {
+      "id": "enableFollow",
+      "label": "Follow Alerts",
+      "description": "Nyalakan animasi pop-up saat ada yang mem-follow.",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "Follow Alert",
+      "category": "TikTok Alerts"
+    },
+    {
+      "id": "followMessage",
+      "label": "Follow Message Text",
+      "description": "Pesan di peringatan follow. Tulis {name} untuk memunculkan nama penonton.",
+      "type": "text",
+      "defaultValue": "followed!",
+      "group": "Follow Alert",
+      "category": "TikTok Alerts"
+    },
+    {
+      "id": "enableSubscribe",
+      "label": "Subscribe Alerts",
+      "description": "Nyalakan animasi pop-up saat ada yang men-subscribe.",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "Subscribe Alert",
+      "category": "TikTok Alerts"
+    },
+    {
+      "id": "subscribeMessage",
+      "label": "Subscribe Message Text",
+      "description": "Pesan di peringatan subscribe. Tulis {name} untuk memunculkan nama penonton.",
+      "type": "text",
+      "defaultValue": "subscribed!",
+      "group": "Subscribe Alert",
+      "category": "TikTok Alerts"
+    },
+    {
+      "id": "enableShare",
+      "label": "Share Alerts",
+      "description": "Nyalakan animasi pop-up saat live dibagikan (share).",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "Share Alert",
+      "category": "TikTok Alerts"
+    },
+    {
+      "id": "shareMessage",
+      "label": "Share Message Text",
+      "description": "Pesan di peringatan share. Tulis {name} untuk memunculkan nama penonton.",
+      "type": "text",
+      "defaultValue": "shared the live!",
+      "group": "Share Alert",
+      "category": "TikTok Alerts"
+    },
+    {
+      "id": "enableGift",
+      "label": "Gift Alerts",
+      "description": "Nyalakan animasi pop-up perayaan saat ada yang mengirim kado (gift).",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "Gift Alert",
+      "category": "TikTok Alerts"
+    },
+    {
+      "id": "giftMessage",
+      "label": "Gift Message Text",
+      "description": "Format pesan kado tersesuaikan lewat tag: {name}, {gift}, dan {count}.",
+      "type": "text",
+      "defaultValue": "sent {gift} x{count}!",
+      "group": "Gift Alert",
+      "category": "TikTok Alerts"
+    },
+    {
+      "id": "enableFirstChatter",
+      "label": "First Chatter Alerts",
+      "description": "Sapa otomatis penonton yang menulis chat perdananya di sesi ini.",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "First Chatter",
+      "category": "TikTok Alerts"
+    }
+  ],
+  "categories": {
+    "TikTok Alerts": {
+      "open": false,
+      "icon": "ri-tiktok-fill"
+    }
+  }
+}

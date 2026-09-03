@@ -1,0 +1,19 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+*.lnk
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Logs / temp
+*.log
+*.tmp
+node_modules/
+
+# Local server scratch
+__pycache__/
+*.pyc

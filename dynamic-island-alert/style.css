@@ -1,0 +1,541 @@
+:root {
+	/* Chrome/OBS: animasikan perubahan lebar max-content dengan mulus */
+	interpolate-size: allow-keywords;
+}
+
+body {
+	margin: 0;
+	padding: 0;
+	background: transparent;
+	overflow: hidden;
+	font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+	user-select: none;
+}
+
+.hidden {
+	display: none !important;
+}
+
+#dynamicIsland {
+	--c-glass: #bbbbbc;
+	--c-light: #fff;
+	--c-dark: #000;
+	--glass-reflex-dark: 2;
+	--glass-reflex-light: 0.3;
+	--saturation: 150%;
+
+	position: fixed;
+	top: 12px;
+	left: 50%;
+	/* Default wajib ada: tanpa ini pill muncul geser kanan di frame pertama, karena script.js baru set --base-transform setelah paint pertama. */
+	transform: var(--base-transform, translateX(-50%));
+	/* Liquid Glass */
+	background-color: color-mix(in srgb, var(--c-glass) 25%, transparent);
+	backdrop-filter: blur(24px) url(#liquid-glass) saturate(var(--saturation));
+	-webkit-backdrop-filter: blur(24px) url(#liquid-glass) saturate(var(--saturation));
+	border: none;
+	color: #fff;
+	padding: var(--island-padding-y, 14px) var(--island-padding-x, 20px);
+	border-radius: 60px; /* Absolut: tetap pill saat kecil, rounded corner saat music big membesar */
+	min-height: 50px;
+	font-size: 16px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: flex-start;
+	width: max-content;
+	max-width: 90vw;
+	/* Bevel 3D */
+	box-shadow:
+		inset 0 0 0 1px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 10%), transparent),
+		inset 1.8px 3px 0px -2px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 90%), transparent),
+		inset -2px -2px 0px -2px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 80%), transparent),
+		inset -3px -8px 1px -6px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 60%), transparent),
+		inset -0.3px -1px 4px 0px color-mix(in srgb, var(--c-dark) calc(var(--glass-reflex-dark) * 20%), transparent),
+		inset 0px -4px 1px -2px color-mix(in srgb, var(--c-dark) calc(var(--glass-reflex-dark) * 10%), transparent),
+		0px 4px 8px 0px color-mix(in srgb, var(--c-dark) calc(var(--glass-reflex-dark) * 15%), transparent);
+	z-index: 5;
+	gap: 10px;
+	transition: all 0.5s cubic-bezier(0.5, 0, 0.2, 1.2);
+	box-sizing: border-box;
+	transform-origin: top center;
+}
+
+/* Widget lebih tinggi untuk event/alert TikTok */
+#dynamicIsland.alert-active {
+	/* Background sengaja tidak di-set: mewarisi base pill */
+	padding: var(--island-alert-padding-y, 12px) var(--island-alert-padding-x, 24px);
+	min-height: 58px;
+	min-height: 50px;
+	gap: 12px;
+}
+
+#dynamicIsland:not(.style-solid).alert-active {
+	border: none;
+	/* Shadow lebih dalam saat alert; tekstur bevel tetap dipertahankan */
+	box-shadow:
+		inset 0 0 0 1px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 10%), transparent),
+		inset 1.8px 3px 0px -2px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 90%), transparent),
+		inset -2px -2px 0px -2px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 80%), transparent),
+		inset -3px -8px 1px -6px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 60%), transparent),
+		inset -0.3px -1px 4px 0px color-mix(in srgb, var(--c-dark) calc(var(--glass-reflex-dark) * 20%), transparent),
+		inset 0px -4px 1px -2px color-mix(in srgb, var(--c-dark) calc(var(--glass-reflex-dark) * 10%), transparent),
+		0px 8px 24px 0px color-mix(in srgb, var(--c-dark) calc(var(--glass-reflex-dark) * 35%), transparent);
+}
+
+/* Override gaya: hitam pekat solid */
+#dynamicIsland.style-solid {
+	background: #000;
+	backdrop-filter: none;
+	-webkit-backdrop-filter: none;
+	border: none;
+	/* Bevel neumorphic untuk hitam solid */
+	box-shadow:
+		8px 8px 18px rgba(0, 0, 0, 0.8),
+		-4px -4px 12px rgba(255, 255, 255, 0.03),
+		inset 1.5px 1.5px 4px rgba(255, 255, 255, 0.15),
+		inset -1.5px -1.5px 4px rgba(0, 0, 0, 0.8);
+}
+
+#dynamicIsland.style-solid.alert-active {
+	background: #080808;
+	border: none;
+	box-shadow:
+		10px 10px 24px rgba(0, 0, 0, 0.9),
+		-4px -4px 14px rgba(255, 255, 255, 0.05),
+		inset 2px 2px 5px rgba(255, 255, 255, 0.2),
+		inset -2px -2px 5px rgba(0, 0, 0, 0.9);
+}
+
+/* Foto profil TikTok */
+#islandAvatar {
+	width: var(--island-avatar-size, 38px);
+	height: var(--island-avatar-size, 38px);
+	border-radius: 50%;
+	object-fit: cover;
+	flex-shrink: 0;
+	/* Transparan saat load: cegah lingkaran hitam muncul sebelum gambar selesai dimuat */
+	background: transparent;
+	color: transparent; /* Sembunyikan alt text saat gambar gagal dimuat */
+	/* Bevel lingkaran */
+	border: none;
+	box-shadow:
+		4px 4px 10px rgba(0, 0, 0, 0.5),
+		-2px -2px 8px rgba(255, 255, 255, 0.05),
+		inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.25),
+		inset -1px -1px 3px rgba(0, 0, 0, 0.4);
+}
+
+#islandIcon {
+	width: var(--island-icon-ambient, 20px);
+	height: var(--island-icon-ambient, 20px);
+	object-fit: contain;
+	flex-shrink: 0;
+	/* Transisi ukuran wajib ada: tanpa ini ikon loncat ke 60px lebih dulu dari pill dan menyeret teks judul/artis */
+	transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+	            height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+	            border-radius 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Kontainer konten */
+#islandContent {
+	display: inline-flex;
+	flex-direction: column;
+	justify-content: center;
+	text-align: left;
+	min-width: 0;
+}
+
+#islandText {
+	white-space: nowrap;
+	font-size: var(--island-font-size, 13px);
+	font-weight: 500;
+	line-height: 1.25;
+}
+
+#dynamicIsland.alert-active #islandText {
+	font-weight: 700;
+	font-size: var(--island-font-size, 13px);
+	color: #ffffff;
+}
+
+#islandSubtext {
+	white-space: nowrap;
+	font-size: calc(var(--island-font-size, 13px) * 0.88);
+	font-weight: 500;
+	color: #d8d8d8;
+	line-height: 1.25;
+	margin-top: 1px;
+}
+
+/* Ikon event di sisi kanan saat alert */
+#islandEventIcon {
+	width: var(--island-icon-alert, 24px);
+	height: var(--island-icon-alert, 24px);
+	object-fit: contain;
+	flex-shrink: 0;
+	margin-left: 2px;
+	filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+}
+
+/* Mode ambient: wave icon 20px, sama dengan ikon info lain, agar tinggi pill now playing identik */
+#dynamicIsland:not(.alert-active) #islandEventIcon {
+	width: var(--island-icon-ambient, 20px);
+	height: var(--island-icon-ambient, 20px);
+}
+
+/* Kontainer legacy: disembunyikan agar tidak menyisakan layout hantu */
+#islandAlert {
+	display: none !important;
+}
+
+/* Fade-in halus untuk pergantian teks info, menggantikan efek mantul/bergetar */
+@keyframes bounceIn {
+	0%   { opacity: 0; }
+	100% { opacity: 1; }
+}
+
+.bounce-in {
+	}
+
+/* Bounce pill: diskalakan dari top center (transform-origin) — tepi atas diam, overshoot ke bawah */
+@keyframes islandAmbientBounce {
+	0%   { transform: var(--base-transform, translateX(-50%)) translateY(0) scale(0.97); }
+	50%  { transform: var(--base-transform, translateX(-50%)) translateY(2px) scale(1.015); }
+	100% { transform: var(--base-transform, translateX(-50%)) translateY(0) scale(1); }
+}
+
+.ambient-bounce {
+	animation: islandAmbientBounce 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes islandAlertPop {
+	0%   { transform: var(--base-transform, translateX(-50%)) translateY(0) scale(0.9); }
+	50%  { transform: var(--base-transform, translateX(-50%)) translateY(4px) scale(1.04); }
+	100% { transform: var(--base-transform, translateX(-50%)) translateY(0) scale(1); }
+}
+
+.alert-pop {
+	animation: islandAlertPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Music big: bounce pill tetap jalan, #islandInner diberi counter-scale supaya isi tidak ikut membesar */
+
+.alert-content-pop {
+	}
+
+/* Gift shake: rotasi kiri-kanan pada ikon/avatar selama alert gift tayang */
+@keyframes shakeShake {
+	0%   { transform: rotate(0deg) scale(1); }
+	10%  { transform: rotate(-14deg) scale(1.12); }
+	25%  { transform: rotate(12deg) scale(1.12); }
+	40%  { transform: rotate(-10deg) scale(1.12); }
+	55%  { transform: rotate(8deg) scale(1.12); }
+	70%  { transform: rotate(-6deg) scale(1.08); }
+	85%  { transform: rotate(4deg) scale(1.04); }
+	100% { transform: rotate(0deg) scale(1); }
+}
+
+.shake-anim {
+	animation: shakeShake 0.8s cubic-bezier(.36,.07,.19,.97) both;
+	transform-origin: center;
+}
+
+/* Album art mode ambient: 20px, sama dengan ikon info lain, agar tinggi pill seragam */
+.rounded-icon {
+	width: var(--island-icon-ambient, 20px) !important;
+	height: var(--island-icon-ambient, 20px) !important;
+	border-radius: 5px !important;
+	object-fit: cover !important;
+}
+
+/* Fade-in konten ambient: hanya opacity, tidak ada pergeseran layout */
+@keyframes topRowFadeIn {
+	0%   { opacity: 0; }
+	100% { opacity: 1; }
+}
+
+.ambient-fade-in {
+	animation: topRowFadeIn 0.15s ease-out both;
+}
+
+/* Marquee / teks berjalan untuk judul panjang (Now Playing) */
+.marquee-container {
+	/* Lebar = kapasitas panel date; diset JS lewat --marquee-width (fallback 130px) */
+	width: var(--marquee-width, 130px);
+	overflow: hidden;
+	display: inline-block;
+	vertical-align: bottom;
+	/* [NON-LATIN] overflow:hidden memotong glyph Thai/Devanagari/aksen tinggi: padding + margin negatif melebarkan kotak klip tanpa mengubah layout */
+	padding-block: 0.35em;
+	margin-block: -0.35em;
+}
+
+.marquee-content {
+	display: inline-block !important;
+	white-space: nowrap !important;
+	width: max-content;
+	min-width: 100%;
+	animation: scrollLeftOnce var(--marquee-duration, 6s) ease-in-out forwards;
+}
+
+/* Sekali jalan: jeda di awal, geser kiri sejauh --marquee-shift (negatif, dihitung JS), jeda di akhir */
+@keyframes scrollLeftOnce {
+	0%, 15%   { transform: translateX(0); }
+	85%, 100% { transform: translateX(var(--marquee-shift, -100px)); }
+}
+
+/* --- MUSIC BIG EXTRA (Spotify Style) --- */
+#dynamicIsland {
+	flex-direction: column;
+}
+#islandTopRow {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+}
+#dynamicIsland.alert-music-big {
+	width: 380px;
+	height: 200px;
+	padding: 24px 30px;
+	/* border-radius tidak perlu di-set: base sudah 60px universal */
+	gap: 20px;
+	box-sizing: border-box;
+	/* Konten di-anchor ke ATAS: align-items:center bikin isi meluncur turun saat tinggi pill mekar 63 -> 200 */
+	align-items: flex-start;
+	/* Easing tanpa overshoot: base punya overshoot proporsional delta ukuran, sehingga judul pendek terlihat goyah */
+	/* padding dikeluarkan dari transition: padding melompat di frame pertama, posisi vertikal konten diam total */
+	transition-property: width, height, background-color, border-radius, box-shadow, gap;
+}
+
+/* #islandInner membungkus isi pill dan diberi counter-scale saat bounce agar judul & artis diam */
+#islandInner {
+	transform-origin: top center;
+	/* gap 20px dipulihkan di sini: sebelum ada wrapper, anak langsung pill yang punya gap itu */
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+/* Origin counter-scale harus sama dengan origin pill: 50% -32px = titik top center pill dalam ruang inner, jadi scale(s)/scale(1/s) presisi */
+#dynamicIsland.alert-music-big #islandInner {
+	/* 32px = padding atas music big (24) + margin-top (8) */
+	transform-origin: 50% -32px;
+	/* margin-top 8px menyeimbangkan ruang atas/bawah: isi 135px di pill 200px -> offset ideal 32.5px */
+	margin-top: 8px;
+}
+#dynamicIsland.alert-music-big.ambient-bounce #islandInner {
+	animation: islandInnerCounterAmbient 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+#dynamicIsland.alert-music-big.alert-pop #islandInner {
+	animation: islandInnerCounterPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes islandInnerCounterAmbient {
+	0%   { transform: translateY(0) scale(1.0309); }
+	50%  { transform: translateY(-2px) scale(0.9852); }
+	100% { transform: translateY(0) scale(1); }
+}
+@keyframes islandInnerCounterPop {
+	0%   { transform: translateY(0) scale(1.1111); }
+	50%  { transform: translateY(-4px) scale(0.9615); }
+	100% { transform: translateY(0) scale(1); }
+}
+
+/* Dipasang sementara script.js saat pill keluar dari music big: easing tanpa overshoot, simetris dengan saat mekar */
+#dynamicIsland.morph-no-overshoot {
+	transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+#dynamicIsland.alert-music-big #islandIcon {
+	/* Slot album art dikunci 60px dari frame pertama (flex-basis tidak ikut transition) agar teks tidak terseret saat pill mekar */
+	flex: 0 0 60px;
+	min-width: 60px;
+	max-width: 60px;
+	width: 60px !important;
+	height: 60px !important;
+	border-radius: 16px !important;
+	/* transition: none — tinggi gambar yang merayap 58.7 -> 60 terbaca sebagai goyah; bounce sudah dikompensasi #islandInner */
+	transition: none !important;
+}
+#dynamicIsland.alert-music-big #islandText {
+	font-size: 20px;
+	font-weight: 700;
+}
+#dynamicIsland.alert-music-big #islandSubtext {
+	font-size: 16px;
+	color: #aaa;
+}
+
+#musicBigExtra {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	gap: 15px;
+}
+#musicBigExtra:not(.hidden) {
+	display: flex;
+}
+
+#musicBigExtra .scrubber {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	width: 100%;
+	font-size: 12px;
+	color: #888;
+	font-weight: 600;
+}
+/* Progress bar: trek tipis + isi warna aksen, tanpa wave dance */
+#musicBigExtra .scrub-bar {
+	flex-grow: 1;
+	height: 4px;
+	border-radius: 1em;
+	background-color: rgba(255, 255, 255, 0.23); /* #ffffff3a */
+	box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+	position: relative;
+}
+#musicBigExtra .scrub-bar::before {
+	content: none; /* Trek sudah jadi background .scrub-bar */
+}
+#musicBigExtra .scrub-fill {
+	height: 100%;
+	width: 0%; /* Diatur JS */
+	border-radius: 1em;
+	background-color: var(--accent-color, #ffffff);
+	/* Hanya warna yang ditransisi: transisi width bikin bar tertinggal ~1s dari update rAF @250ms */
+	transition: background-color 0.5s ease-in-out;
+	background-image: none;
+	position: absolute;
+	left: 0;
+	top: 0;
+	z-index: 1;
+}
+
+#musicBigExtra .scrub-thumb {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: #FFF;
+	position: absolute;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 2;
+	box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+
+#musicBigExtra .music-controls {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 10px;
+	color: #FFF;
+}
+#musicBigExtra .music-controls svg {
+	width: 24px;
+	height: 24px;
+	cursor: pointer;
+}
+
+
+/* Penyesuaian baris atas gaya Spotify */
+#dynamicIsland.alert-music-big #islandTopRow {
+    gap: 16px;
+    /* Tinggi baris dikunci 60px: tanpa ini topRow ikut mekar 46 -> 60 dan judul/artis meluncur turun ~8px */
+    height: 60px;
+    min-height: 60px;
+    max-height: 60px;
+    align-items: center;
+}
+/* --marquee-width music big: 196px ruang teks dikurangi padding 12px ke wave icon; JS dan .marquee-container membaca angka yang sama */
+#dynamicIsland.alert-music-big {
+    --marquee-width: 184px;
+}
+#dynamicIsland.alert-music-big #islandContent {
+    flex: 1; /* Stretch untuk mendorong wave ke kanan */
+    align-items: flex-start; /* Teks rata kiri */
+    min-width: 0; /* Izinkan teks menyusut, jangan dorong wave icon keluar */
+    overflow: hidden;
+    /* Jarak judul -> wave icon pakai PADDING, bukan lebar tetap */
+    padding-right: 12px;
+}
+/* Lebar tetap 184px wajib: tanpa itu kotak teks mengecil sesuai teks dan jarak ke wave icon berantakan. text-overflow sengaja dihapus — yang meng-klip adalah .marquee-container */
+#dynamicIsland.alert-music-big #islandText {
+    width: 184px;
+    max-width: 184px;
+    white-space: nowrap; /* 1 baris, tidak wrap */
+    overflow: hidden; /* Tanpa text-overflow -> klip, bukan "..." */
+}
+#dynamicIsland.alert-music-big #islandSubtext {
+    width: 184px;
+    max-width: 184px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Artis cenderung pendek, ellipsis aman */
+}
+#dynamicIsland.alert-music-big #islandEventIcon {
+    width: 32px !important;
+    height: 32px !important;
+    align-self: center;
+}
+
+
+
+
+/* Tidak ada panel yang bisa tayang -> pill disembunyikan, bukan tampilkan teks fallback */
+#dynamicIsland.island-no-panel {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Panel musik saat PAUSE: overlay menutupi album art, teks jadi label "Paused • m:ss", wave icon tetap di kanan */
+#islandIconWrap {
+	position: relative;
+	display: inline-flex;
+	flex-shrink: 0;
+	width: var(--island-icon-ambient, 20px);
+	height: var(--island-icon-ambient, 20px);
+}
+
+/* Wrapper ikut hilang saat ikon disembunyikan (event TikTok pakai avatar): cegah slot 20px dobel */
+#islandIconWrap:has(> #islandIcon.hidden) {
+	display: none;
+}
+#islandPauseOverlay {
+	position: absolute;
+	inset: 0;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	border-radius: inherit;
+	background: rgba(0, 0, 0, 0.45);
+	z-index: 3;
+	pointer-events: none;
+}
+#islandPauseOverlay svg {
+	width: 60%;
+	height: 60%;
+	/* Warna aksen lagu (lightVibrant), fallback putih */
+	fill: var(--accent-color, #ffffff);
+	filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
+}
+#dynamicIsland.music-paused #islandPauseOverlay {
+	display: flex;
+}
+#dynamicIsland.music-paused #islandIconWrap {
+	border-radius: 5px;
+	overflow: hidden;
+}
+
+/* Song change (music big): wrapper album art ikut 60px — jika tetap 20px, <img> 60px meluber dan menimpa judul/artis */
+#dynamicIsland.alert-music-big #islandIconWrap {
+	flex: 0 0 60px;
+	min-width: 60px;
+	max-width: 60px;
+	width: 60px !important;
+	height: 60px !important;
+	border-radius: 16px !important;
+	overflow: hidden;
+}
+#dynamicIsland.alert-music-big #islandPauseOverlay {
+	display: none !important;
+}

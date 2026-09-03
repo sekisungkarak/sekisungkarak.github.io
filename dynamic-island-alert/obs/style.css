@@ -1,0 +1,477 @@
+:root {
+	/* Izinkan Chrome modern menginterpolasi lebar max-content. */
+	interpolate-size: allow-keywords;
+}
+
+body {
+	margin: 0;
+	padding: 0;
+	background: transparent;
+	overflow: hidden;
+	font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+	user-select: none;
+}
+
+.hidden {
+	display: none !important;
+}
+
+#dynamicIsland {
+	--c-glass: #bbbbbc;
+	--c-light: #fff;
+	--c-dark: #000;
+	--glass-reflex-dark: 2;
+	--glass-reflex-light: 0.3;
+	--saturation: 150%;
+	
+	position: fixed;
+	top: 12px;
+	left: 50%;
+	/* WAJIB ada default: kalau tidak, transform hanya di-set script.js
+   setelah paint pertama dan pill terlihat bergeser dari kanan. */
+	transform: var(--base-transform, translateX(-50%));
+	/* Liquid Glass */
+	background-color: color-mix(in srgb, var(--c-glass) 25%, transparent);
+	backdrop-filter: blur(24px) url(#liquid-glass) saturate(var(--saturation));
+	-webkit-backdrop-filter: blur(24px) url(#liquid-glass) saturate(var(--saturation));
+	border: none;
+	color: #fff;
+	padding: var(--island-padding-y, 14px) var(--island-padding-x, 20px);
+	border-radius: 60px; /* Gunakan 60px absolut: tetap berbentuk pill di mode kecil, dan rounded corner saat Music Big membesar */
+	min-height: 50px;
+	font-size: 16px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: max-content;
+	max-width: 90vw;
+	/* 3D Bevel Box Shadow */
+	box-shadow: 
+		inset 0 0 0 1px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 10%), transparent),
+		inset 1.8px 3px 0px -2px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 90%), transparent),
+		inset -2px -2px 0px -2px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 80%), transparent),
+		inset -3px -8px 1px -6px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 60%), transparent),
+		inset -0.3px -1px 4px 0px color-mix(in srgb, var(--c-dark) calc(var(--glass-reflex-dark) * 20%), transparent),
+		inset 0px -4px 1px -2px color-mix(in srgb, var(--c-dark) calc(var(--glass-reflex-dark) * 10%), transparent),
+		0px 4px 8px 0px color-mix(in srgb, var(--c-dark) calc(var(--glass-reflex-dark) * 15%), transparent);
+	z-index: 5;
+	gap: 10px;
+	transition: all 0.5s cubic-bezier(0.5, 0, 0.2, 1.2);
+	box-sizing: border-box;
+	transform-origin: top center;
+}
+
+/* Expanded taller widget for TikTok events / alerts */
+#dynamicIsland.alert-active {
+	/* Background sengaja dihilangkan: warisi glass transparan dari base pill. */
+	padding: var(--island-alert-padding-y, 12px) var(--island-alert-padding-x, 24px);
+	min-height: 58px;
+	min-height: 50px;
+	gap: 12px;
+}
+
+#dynamicIsland:not(.style-solid).alert-active {
+	border: none;
+	/* Proporsi 3D sedikit ditingkatkan saat alert. */
+	box-shadow: 
+		inset 0 0 0 1px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 10%), transparent),
+		inset 1.8px 3px 0px -2px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 90%), transparent),
+		inset -2px -2px 0px -2px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 80%), transparent),
+		inset -3px -8px 1px -6px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 60%), transparent),
+		inset -0.3px -1px 4px 0px color-mix(in srgb, var(--c-dark) calc(var(--glass-reflex-dark) * 20%), transparent),
+		inset 0px -4px 1px -2px color-mix(in srgb, var(--c-dark) calc(var(--glass-reflex-dark) * 10%), transparent),
+		0px 8px 24px 0px color-mix(in srgb, var(--c-dark) calc(var(--glass-reflex-dark) * 35%), transparent);
+}
+
+/* Override: Solid Black */
+#dynamicIsland.style-solid {
+	background: #000;
+	backdrop-filter: none;
+	-webkit-backdrop-filter: none;
+	border: none;
+	/* Bevel neumorphic untuk Solid Black */
+	box-shadow: 
+		8px 8px 18px rgba(0, 0, 0, 0.8),
+		-4px -4px 12px rgba(255, 255, 255, 0.03),
+		inset 1.5px 1.5px 4px rgba(255, 255, 255, 0.15),
+		inset -1.5px -1.5px 4px rgba(0, 0, 0, 0.8);
+}
+
+#dynamicIsland.style-solid.alert-active {
+	background: #080808;
+	border: none;
+	box-shadow: 
+		10px 10px 24px rgba(0, 0, 0, 0.9),
+		-4px -4px 14px rgba(255, 255, 255, 0.05),
+		inset 2px 2px 5px rgba(255, 255, 255, 0.2),
+		inset -2px -2px 5px rgba(0, 0, 0, 0.9);
+}
+
+/* TikTok profile picture */
+#islandAvatar {
+	width: var(--island-avatar-size, 38px);
+	height: var(--island-avatar-size, 38px);
+	border-radius: 50%;
+	object-fit: cover;
+	flex-shrink: 0;
+	background: #1e1e1e;
+	/* Neumorphic circle */
+	border: none;
+	box-shadow: 
+		4px 4px 10px rgba(0, 0, 0, 0.5),
+		-2px -2px 8px rgba(255, 255, 255, 0.05),
+		inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.25),
+		inset -1px -1px 3px rgba(0, 0, 0, 0.4);
+}
+
+#islandIcon {
+	width: var(--island-icon-ambient, 20px);
+	height: var(--island-icon-ambient, 20px);
+	object-fit: contain;
+	flex-shrink: 0;
+}
+
+/* Content container */
+#islandContent {
+	display: inline-flex;
+	flex-direction: column;
+	justify-content: center;
+	text-align: left;
+	min-width: 0;
+}
+
+#islandText {
+	white-space: nowrap;
+	font-size: var(--island-font-size, 13px);
+	font-weight: 500;
+	line-height: 1.25;
+}
+
+#dynamicIsland.alert-active #islandText {
+	font-weight: 700;
+	font-size: var(--island-font-size, 13px);
+	color: #ffffff;
+}
+
+#islandSubtext {
+	white-space: nowrap;
+	font-size: calc(var(--island-font-size, 13px) * 0.88);
+	font-weight: 500;
+	color: #d8d8d8;
+	line-height: 1.25;
+	margin-top: 1px;
+}
+
+/* Event icon on the right side during alert */
+#islandEventIcon {
+	width: var(--island-icon-alert, 24px);
+	height: var(--island-icon-alert, 24px);
+	object-fit: contain;
+	flex-shrink: 0;
+	margin-left: 2px;
+	filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+}
+
+/* Ambient: wave icon 20px = ikon info lain, agar tinggi pill identik. */
+#dynamicIsland:not(.alert-active) #islandEventIcon {
+	width: var(--island-icon-ambient, 20px);
+	height: var(--island-icon-ambient, 20px);
+}
+
+/* Alert element (legacy container kept hidden to prevent ghost layout) */
+#islandAlert {
+	display: none !important;
+}
+
+/* Smooth fade in for info text changes, replacing bouncy/shaky effect */
+@keyframes bounceIn {
+	0%   { opacity: 0; }
+	100% { opacity: 1; }
+}
+
+.bounce-in {
+	}
+
+/* Skala dari titik tengah-atas: pill tumbuh ke bawah seperti Dynamic Island.
+   translateY positif = overshoot ke bawah. */
+@keyframes islandAmbientBounce {
+	0%   { transform: var(--base-transform, translateX(-50%)) translateY(0) scale(0.97); }
+	50%  { transform: var(--base-transform, translateX(-50%)) translateY(2px) scale(1.015); }
+	100% { transform: var(--base-transform, translateX(-50%)) translateY(0) scale(1); }
+}
+
+.ambient-bounce {
+	animation: islandAmbientBounce 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes islandAlertPop {
+	0%   { transform: var(--base-transform, translateX(-50%)) translateY(0) scale(0.9); }
+	50%  { transform: var(--base-transform, translateX(-50%)) translateY(4px) scale(1.04); }
+	100% { transform: var(--base-transform, translateX(-50%)) translateY(0) scale(1); }
+}
+
+.alert-pop {
+	animation: islandAlertPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.alert-content-pop {
+	}
+
+/* Gift shake: rotasi kiri-kanan pada ikon/avatar. */
+@keyframes shakeShake {
+	0%   { transform: rotate(0deg) scale(1); }
+	10%  { transform: rotate(-14deg) scale(1.12); }
+	25%  { transform: rotate(12deg) scale(1.12); }
+	40%  { transform: rotate(-10deg) scale(1.12); }
+	55%  { transform: rotate(8deg) scale(1.12); }
+	70%  { transform: rotate(-6deg) scale(1.08); }
+	85%  { transform: rotate(4deg) scale(1.04); }
+	100% { transform: rotate(0deg) scale(1); }
+}
+
+.shake-anim {
+	animation: shakeShake 0.8s cubic-bezier(.36,.07,.19,.97) both;
+	transform-origin: center;
+}
+
+/* Album art ambient 20px = ikon info lain, agar tinggi pill identik. */
+.rounded-icon {
+	width: var(--island-icon-ambient, 20px) !important;
+	height: var(--island-icon-ambient, 20px) !important;
+	border-radius: 5px !important;
+	object-fit: cover !important;
+}
+
+/* Marquee / Scrolling effect for long text (Now Playing) */
+.marquee-container {
+	/* Lebar = kapasitas panel date, disamakan lewat JS (--marquee-width). */
+	width: var(--marquee-width, 130px);
+	overflow: hidden;
+	display: inline-block;
+	vertical-align: bottom;
+	/* [NON-LATIN] overflow:hidden memotong glyph di luar line box. Ruang
+   vertikal ekstra + margin negatif melebarkan kotak klip tanpa
+   mengubah layout. */
+	padding-block: 0.35em;
+	margin-block: -0.35em;
+}
+
+.marquee-content {
+	display: inline-block !important;
+	white-space: nowrap !important;
+	width: max-content;
+	min-width: 100%;
+	animation: scrollLeftOnce var(--marquee-duration, 6s) ease-in-out forwards;
+}
+
+/* Jeda di awal, geser kiri sejauh overflow nyata (--marquee-shift), jeda di akhir. */
+@keyframes scrollLeftOnce {
+	0%, 15%   { transform: translateX(0); }
+	85%, 100% { transform: translateX(var(--marquee-shift, -100px)); }
+}
+
+/* --- MUSIC BIG EXTRA (Spotify style) --- */
+#dynamicIsland {
+	flex-direction: column;
+}
+#islandTopRow {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+}
+#dynamicIsland.alert-music-big {
+	width: 380px;
+	height: 200px;
+	padding: 24px 30px;
+	/* Radius 60px universal dari base, tidak perlu di-set ulang. */
+	gap: 20px;
+	box-sizing: border-box;
+}
+
+
+#dynamicIsland.alert-music-big #islandIcon {
+	width: 60px !important;
+	height: 60px !important;
+	border-radius: 16px !important;
+}
+#dynamicIsland.alert-music-big #islandText {
+	font-size: 20px;
+	font-weight: 700;
+}
+#dynamicIsland.alert-music-big #islandSubtext {
+	font-size: 16px;
+	color: #aaa;
+}
+
+#musicBigExtra {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	gap: 15px;
+}
+#musicBigExtra:not(.hidden) {
+	display: flex;
+}
+
+#musicBigExtra .scrubber {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	width: 100%;
+	font-size: 12px;
+	color: #888;
+	font-weight: 600;
+}
+/* Progress bar polos: trek tipis + isi warna aksen, tanpa wave dance. */
+#musicBigExtra .scrub-bar {
+	flex-grow: 1;
+	height: 4px;
+	border-radius: 1em;
+	background-color: rgba(255, 255, 255, 0.23); /* #ffffff3a */
+	box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+	position: relative;
+}
+#musicBigExtra .scrub-bar::before {
+	content: none; /* trek sudah jadi background .scrub-bar */
+}
+#musicBigExtra .scrub-fill {
+	height: 100%;
+	width: 0%; /* JS yang mengatur */
+	border-radius: 1em;
+	background-color: var(--accent-color, #ffffff);
+	/* Lebar di-update via rAF (250ms) — transisi width malah bikin bar
+   tertinggal. Yang ditransisi hanya warna saat ganti lagu. */
+	transition: background-color 0.5s ease-in-out;
+	background-image: none;
+	position: absolute;
+	left: 0;
+	top: 0;
+	z-index: 1;
+}
+
+#musicBigExtra .scrub-thumb {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: #FFF;
+	position: absolute;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 2;
+	box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+
+#musicBigExtra .music-controls {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 10px;
+	color: #FFF;
+}
+#musicBigExtra .music-controls svg {
+	width: 24px;
+	height: 24px;
+	cursor: pointer;
+}
+
+
+/* Tweaks for Spotify Style Top Row */
+#dynamicIsland.alert-music-big #islandTopRow {
+    gap: 16px;
+}
+/* Batas marquee khusus music big. */
+#dynamicIsland.alert-music-big {
+    --marquee-width: 184px;
+}
+#dynamicIsland.alert-music-big #islandContent {
+    flex: 1; /* Stretch to push wave to the right */
+    align-items: flex-start; /* Left align text */
+    min-width: 0; /* Izinkan teks menyusut, tidak mendorong wave icon keluar */
+    overflow: hidden;
+    padding-right: 12px; /* jarak judul -> wave icon */
+}
+/* Lebar tetap 184px, tanpa ellipsis. */
+#dynamicIsland.alert-music-big #islandText {
+    width: 184px;
+    max-width: 184px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+#dynamicIsland.alert-music-big #islandSubtext {
+    width: 184px;
+    max-width: 184px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#dynamicIsland.alert-music-big #islandEventIcon {
+    width: 32px !important;
+    height: 32px !important;
+    align-self: center;
+}
+
+
+
+
+/* Tidak ada panel yang bisa tayang -> pill disembunyikan. */
+#dynamicIsland.island-no-panel {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Panel musik saat PAUSE: overlay menutupi album art, teks jadi
+   "Paused • m:ss", wave icon tetap di kanan. */
+#islandIconWrap {
+	position: relative;
+	display: inline-flex;
+	flex-shrink: 0;
+	width: var(--island-icon-ambient, 20px);
+	height: var(--island-icon-ambient, 20px);
+}
+
+/* Saat ikon disembunyikan (event TikTok pakai avatar), wrapper ikut hilang
+   agar slot 20px tidak dobel. */
+#islandIconWrap:has(> #islandIcon.hidden) {
+	display: none;
+}
+#islandPauseOverlay {
+	position: absolute;
+	inset: 0;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	border-radius: inherit;
+	background: rgba(0, 0, 0, 0.45);
+	z-index: 3;
+	pointer-events: none;
+}
+#islandPauseOverlay svg {
+	width: 60%;
+	height: 60%;
+	/* Warna aksen lagu (lightVibrant), fallback putih. */
+	fill: var(--accent-color, #ffffff);
+	filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
+}
+#dynamicIsland.music-paused #islandPauseOverlay {
+	display: flex;
+}
+#dynamicIsland.music-paused #islandIconWrap {
+	border-radius: 5px;
+	overflow: hidden;
+}
+
+/* Song change: wrapper mengikuti ukuran 60px, kalau tidak gambar
+   meluber keluar slot dan menimpa teks. */
+#dynamicIsland.alert-music-big #islandIconWrap {
+	flex: 0 0 60px;
+	min-width: 60px;
+	max-width: 60px;
+	width: 60px !important;
+	height: 60px !important;
+	border-radius: 16px !important;
+	overflow: hidden;
+}
+#dynamicIsland.alert-music-big #islandPauseOverlay {
+	display: none !important;
+}
