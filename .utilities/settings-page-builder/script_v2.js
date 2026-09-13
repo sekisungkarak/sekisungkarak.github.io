@@ -281,10 +281,8 @@ if (saveObsButton) {
             // 3b) Reload source widget di scene LAIN. Scene aktif sudah
             //     diperbarui di atas; scene lain hanya perlu memuat ulang
             //     halaman. Setting per-scene tidak disentuh (opsi A).
-            let reloadedCount = 0;
             try {
-                const reloaded = await ObsReloadAllWidgetSources();
-                reloadedCount = reloaded.length;
+                await ObsReloadAllWidgetSources();
             } catch (e) {
                 // Reload scene lain bersifat pelengkap — kegagalannya tidak
                 // boleh menggagalkan Save yang sudah berhasil.
