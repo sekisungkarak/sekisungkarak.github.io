@@ -18,6 +18,6 @@ const widgetURL = new URL('../index.html', window.location.href).href;
 
 dashFrame.src =
     settingsPageURL +
-    '?v=1&settingsJson=' + encodeURIComponent(settingsDir + 'settings.json') +
+    '?v=2&settingsJson=' + encodeURIComponent(settingsDir + 'settings.json') +
     '&widgetURL=' + encodeURIComponent(widgetURL) +
     '&dashboard=1';
