@@ -302,8 +302,7 @@ if (saveObsButton) {
             SetFooterButtonState(
                 saveObsButton,
                 result.created ? `Saved — source dibuat: ${result.name}`
-                    : `Saved — ${result.name} diperbarui`
-                      + (reloadedCount > 0 ? ` (+${reloadedCount} scene lain di-reload)` : ''),
+                    : `Saved — ${result.name} diperbarui`,
                 true
             );
         } catch (err) {
@@ -2035,6 +2034,10 @@ async function RelaySongChange(data) {
     if (!s) return;
 
     const mp = s.media_properties || {};
+    // Timeline SMTC (satuan milidetik, sama seperti yang dikirim bridge). Dipakai
+    // hanya sebagai snapshot saat ganti lagu: EndTime = durasi, Position = posisi
+    // saat deteksi, LastUpdatedTime = anchor waktu UTC dari Windows.
+    const tp = s.timeline_properties || {};
     const title = mp.Title || '';
     const artist = mp.Artist || '';
     // Metadata "Unknown" belum final; jangan dipakai sebagai kunci lagu.
@@ -2065,7 +2068,11 @@ async function RelaySongChange(data) {
             color,
             palette,
 			source: s.source_app_id || '',
-            playbackStatus: s.playback_info?.PlaybackStatus ?? 0
+            playbackStatus: s.playback_info?.PlaybackStatus ?? 0,
+            // Timeline SMTC — snapshot saat ganti lagu, satuan milidetik.
+            EndTime: Number(tp.EndTime) || 0,
+            Position: Number(tp.Position) || 0,
+            LastUpdatedTime: tp.LastUpdatedTime || ''
         });
         relayLastSongId = songId;
         console.log('[Geseki][Relay] songchange terkirim:', title, '-', artist);
