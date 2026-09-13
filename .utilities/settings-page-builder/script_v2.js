@@ -270,11 +270,26 @@ if (saveObsButton) {
 //    pada klik Save berikutnya.
             SaveSettingsToStorage();
 
-            // 2) Bangun URL widget terbaru
-            const url = BuildWidgetURL();
+            // 2) Bangun URL widget terbaru. cacheBust=true supaya URL selalu
+            //    berubah tiap Save — tanpa itu, setting yang sama menghasilkan
+            //    URL identik dan OBS tidak memuat ulang widget.
+            const url = BuildWidgetURL({ cacheBust: true });
 
             // 3) Buat / update browser source di scene aktif
             const result = await ObsSyncBrowserSource(url);
+
+            // 3b) Reload source widget di scene LAIN. Scene aktif sudah
+            //     diperbarui di atas; scene lain hanya perlu memuat ulang
+            //     halaman. Setting per-scene tidak disentuh (opsi A).
+            let reloadedCount = 0;
+            try {
+                const reloaded = await ObsReloadAllWidgetSources();
+                reloadedCount = reloaded.length;
+            } catch (e) {
+                // Reload scene lain bersifat pelengkap — kegagalannya tidak
+                // boleh menggagalkan Save yang sudah berhasil.
+                console.warn('[OBS Save] Reload source lain gagal:', e);
+            }
 
             // 4) Simpan juga sebagai profil scene, supaya bisa dimuat
             //    lagi lewat tombol Load.
@@ -287,7 +302,8 @@ if (saveObsButton) {
             SetFooterButtonState(
                 saveObsButton,
                 result.created ? `Saved — source dibuat: ${result.name}`
-                    : `Saved — ${result.name} diperbarui`,
+                    : `Saved — ${result.name} diperbarui`
+                      + (reloadedCount > 0 ? ` (+${reloadedCount} scene lain di-reload)` : ''),
                 true
             );
         } catch (err) {
@@ -1338,6 +1354,10 @@ function BuildWidgetURL(options = {}) {
     // `previewOnly` hanya untuk URL pratinjau; `dragPreview` tidak pernah ikut
 // ke URL yang dipakai browser source OBS.
     const previewOnly = options.previewOnly === true;
+    // cacheBust: tambahkan param `v=<timestamp>` ke URL. Tanpa ini, Save dengan
+    // setting yang tidak berubah menghasilkan URL identik, sehingga
+    // SetInputSettings tidak memicu OBS memuat ulang widget.
+    const cacheBust = options.cacheBust === true;
 
     const settings = {};
 
@@ -1357,6 +1377,11 @@ function BuildWidgetURL(options = {}) {
 // (bukan settings.json) supaya tidak tampil sebagai opsi, tidak tersimpan,
 // dan tidak pernah ada di URL OBS.
     if (previewOnly) settings.dragPreview = '1';
+
+    // Cache-buster: hanya untuk URL yang dikirim ke OBS (bukan pratinjau, yang
+    // punya mekanisme reload sendiri). Nilai berubah tiap Save sehingga
+    // SetInputSettings selalu terlihat sebagai perubahan URL.
+    if (cacheBust && !previewOnly) settings.v = String(Date.now());
 
     const paramString = Object.entries(settings)
         .map(([key, value]) => {
