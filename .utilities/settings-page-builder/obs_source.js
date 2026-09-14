@@ -289,49 +289,6 @@ async function ObsCenterSourceHorizontally(sceneName, sourceName) {
     }
 }
 
-// ── Kenali nama source widget (untuk SEMUA scene) ────────────────
-// Nama sah: "{scene} | Dynamic Island Alert" (+ akhiran varian " 2", " 3", …)
-// atau nama lama tanpa prefix scene. Dipakai saat mencocokkan source di
-// seluruh OBS, bukan hanya scene aktif.
-function IsWidgetSourceName(name) {
-    if (!name) return false;
-    // Buang akhiran varian dulu (" 2", " 3", …) supaya satu pola cukup.
-    const base = name.replace(/\s+\d+$/, '');
-    if (base.includes(' | ' + OBS_SOURCE_BASE_NAME)) return true;
-    // Nama lama tanpa prefix scene.
-    return base === OBS_SOURCE_BASE_NAME;
-}
-
-// ── Reload semua browser source widget di OBS ────────────────────
-// Dipakai tombol Save. Scene aktif sudah diperbarui lewat
-// ObsSyncBrowserSource(); scene LAIN hanya perlu memuat ulang halaman agar
-// kode terbaru ikut terbawa. Setting per-scene TIDAK diubah di sini — murni
-// reload, jadi profil tiap scene tetap utuh.
-async function ObsReloadAllWidgetSources() {
-    await ObsConnect();
-
-    const inputs = await ObsRequest('GetInputList', { inputKind: 'browser_source' });
-    const names = (inputs?.inputs || [])
-        .map(i => i.inputName)
-        .filter(IsWidgetSourceName);
-
-    const reloaded = [];
-    for (const name of names) {
-        try {
-            await ObsRequest('PressInputPropertiesButton', {
-                inputName: name,
-                propertyName: 'refreshnocache'
-            });
-            reloaded.push(name);
-        } catch (e) {
-            // Sebagian versi OBS tidak mendukung refreshnocache. Lanjut saja:
-            // cache-buster di URL (param v=) tetap memaksa halaman memuat ulang.
-            console.warn('[OBS] Gagal reload source ' + name, e);
-        }
-    }
-    return reloaded;
-}
-
 // Mengembalikan { created: bool, name: string }
 async function ObsSyncBrowserSource(widgetUrl) {
     await ObsConnect();
@@ -357,9 +314,10 @@ async function ObsSyncBrowserSource(widgetUrl) {
     if (target) {
         // Sudah ada -> update URL-nya saja. SetInputSettings hanya mengubah `url`;
 // untuk memaksa widget memuat ulang, `reroute` tidak cukup — OBS butuh
-// RefreshNoCache atau perubahan URL. URL dari tombol Save memuat param
-// `v=<timestamp>` (BuildWidgetURL({cacheBust:true})), jadi selalu berubah
-// dan browser memuat ulang dengan sendirinya.
+// RefreshNoCache atau perubahan URL. CATATAN: URL Save TIDAK lagi membawa
+// param ?v= (cacheBust dihapus), jadi bila setting tidak berubah URL-nya
+// identik dan OBS tidak memuat ulang widget — pakai RefreshNoCache bila
+// ingin reload paksa.
         await ObsRequest('SetInputSettings', {
             inputName: target,
             inputSettings: {
