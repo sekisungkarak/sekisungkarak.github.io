@@ -5,6 +5,14 @@
 const queryString = window.location.search;
 const urlParams = new URLSearchParams(queryString);
 
+// [Stale-alert guard] Waktu tick terakhir FetchNowPlaying. Saat scene tidak tampil,
+// OBS membekukan render/timer; begitu scene dipindah kembali, tick pertama bisa
+// datang dengan jeda besar. Jeda itu dipakai untuk membuang alert music big basi.
+let lastNowPlayingTick = Date.now();
+// Guard baru aktif setelah InitInfoLoop selesai: sebelum itu, alertQueue dkk
+// belum terdeklarasi (TDZ) sehingga DiscardStaleAlerts() akan melempar error.
+let staleGuardReady = false;
+
 // Weather info
 const weatherLocation = urlParams.get("weatherLocation") || "Jakarta";
 // Durasi alert (detik -> ms). Dipakai HANYA untuk alert.
@@ -1018,6 +1026,15 @@ async function FetchNowPlaying() {
 		return;
 	}
 
+	// [Stale-alert guard] Jeda besar antar-tick = halaman tadi dibekukan OBS
+	// (scene tidak tampil). Saat pulih, jangan lanjutkan alert music big yang
+	// sudah basi: tutup alert yang tertahan, kosongkan antrean, seed ulang lagu.
+	const tickGap = Date.now() - lastNowPlayingTick;
+	lastNowPlayingTick = Date.now();
+	if (staleGuardReady && tickGap > 5000) {
+		DiscardStaleAlerts();
+	}
+
 	try {
 		const response = await fetch(SMTC_BRIDGE_URL);
 		if (!response.ok) throw new Error("Bridge offline");
@@ -1653,7 +1670,10 @@ InitInfoLoop();
 
 const alertQueue = [];
 let alertLocked = false;
+let activeAlertTimer = null;
 const recentAlerts = new Map();
+// Antrean & timer sudah siap -> guard stale-alert boleh aktif.
+staleGuardReady = true;
 
 // Durasi alert: antrean padat -> lebih cepat; surut -> alertDisplayDuration.
 function ComputeAlertDuration() {
@@ -1874,7 +1894,7 @@ function ProcessAlertQueue() {
 		if (alertText) alertText.textContent = text || `${title} ${subtext}`;
 	}
 
-	setTimeout(() => {
+	activeAlertTimer = setTimeout(() => {
 		if (alertQueue.length > 0) {
 			alertLocked = false;
 			ProcessAlertQueue(); // Show next alert in queue immediately
@@ -1921,6 +1941,51 @@ function ProcessAlertQueue() {
 			StartCycleTimer();
 		}
 	}, currentAlertDuration);
+}
+
+// [Stale-alert guard] Dipanggil saat terdeteksi lompatan jam antar-tick
+// FetchNowPlaying — tanda halaman tadi dibekukan OBS (scene tidak tampil).
+// Semua alert yang tertinggal sudah basi: tutup paksa yang masih tayang,
+// kosongkan antrean, lalu seed ulang lagu supaya tick berikutnya hanya
+// menanam lagu yang sedang berjalan TANPA memicu music big basi.
+function DiscardStaleAlerts() {
+	// 1) Hentikan timer alert yang sedang berjalan.
+	if (activeAlertTimer) {
+		clearTimeout(activeAlertTimer);
+		activeAlertTimer = null;
+	}
+	// 2) Kosongkan antrean.
+	alertQueue.length = 0;
+	// 3) Tutup paksa alert yang masih terpasang di DOM.
+	if (window.currentActiveAlertData) {
+		dynamicIsland.classList.remove('alert-active', 'alert-pop', 'alert-music-big', 'morph-no-overshoot');
+		const extra = document.getElementById('musicBigExtra');
+		if (extra) extra.classList.add('hidden');
+		if (islandAvatar) {
+			islandAvatar.classList.add('hidden');
+			islandAvatar.src = '';
+		}
+		islandIcon.classList.remove('hidden');
+		SyncIconWrapHidden();
+		if (islandEventIcon) {
+			islandEventIcon.classList.add('hidden');
+			islandEventIcon.src = '';
+		}
+		if (islandSubtext) {
+			islandSubtext.classList.add('hidden');
+			islandSubtext.textContent = '';
+		}
+	}
+	isAlertActive = false;
+	alertLocked = false;
+	window.currentActiveAlertData = null;
+	// 4) Seed ulang: lagu yang sedang berjalan bukan "ganti lagu".
+	nowPlayingData._seeded = false;
+	nowPlayingData._pendingSongAlert = null;
+	// 5) Pulihkan widget ambient.
+	UpdateInfoText(true, true);
+	RefreshMusicWaveIcon();
+	StartCycleTimer();
 }
 
 // Global test helpers for preview / dev
