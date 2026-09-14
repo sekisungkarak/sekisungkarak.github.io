@@ -189,14 +189,13 @@
       "type": "slider",
       "defaultValue": 1.0,
       "min": 0.5,
-      "max": 5.0,
+      "max": 2.0,
       "step": 0.1,
       "group": "General"
     },
     {
       "id": "font",
       "label": "Font",
-      "description": "Ganti jenis huruf teks widget. <a href=\"ms-settings:fonts\" target=\"_blank\">Lihat font terpasang</a>",
       "type": "font",
       "defaultValue": "",
       "group": "General"

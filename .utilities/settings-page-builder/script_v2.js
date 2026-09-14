@@ -1005,7 +1005,7 @@ function BuildInput(setting) {
         case 'font':
             inputElement = document.createElement('wa-input');
             inputElement.value = savedValue ?? '';
-            inputElement.placeholder = 'Type to search font (e.g. Poppins, Inter)...';
+            inputElement.placeholder = 'Type font name';
             inputElement.setAttribute('autocomplete', 'off');
             inputElement.setAttribute('clearable', '');
             inputElement.setAttribute('list', 'fonts');
@@ -1886,6 +1886,38 @@ let relaySb = null;             // klien Streamer.bot khusus relay
 let relayLastSongId = null;     // kunci lagu terakhir (anti-dobel)
 let relayBusy = false;          // cegah tumpang tindih saat ekstraksi palet
 
+// ── Palet relay: samakan persis dengan widget ────────────────────
+// Widget memakai role pilihan user (settings accentPaletteRole) lewat
+// ResolveAccentColor(). Relay wajib memakai aturan yang sama, kalau tidak
+// warna event Streamer.bot berbeda dari warna overlay untuk lagu yang sama.
+const RELAY_ACCENT_ROLE_MAP = {
+    lightvibrant: 'LightVibrant',
+    vibrant: 'Vibrant',
+    darkvibrant: 'DarkVibrant'
+};
+
+// Warna/palet terakhir yang BERHASIL diekstrak. Dipakai untuk menirukan widget:
+// bila Vibrant gagal dimuat, widget mempertahankan warna lamanya (bukan jatuh ke
+// ungu), jadi relay pun harus begitu supaya keduanya tetap sama.
+let relayLastPalette = null;
+let relayLastColor = null;
+
+function GetRelayAccentRole() {
+    const v = document.getElementById('accentPaletteRole')?.value
+        || settingsMap.get('accentPaletteRole') || 'lightvibrant';
+    return String(v).toLowerCase();
+}
+
+// Fallback: role pilihan -> LightVibrant -> Vibrant -> ungu default.
+// Identik dengan ResolveAccentColor() di widget.
+function ResolveRelayAccentColor(hexPalette, role) {
+    const preferred = RELAY_ACCENT_ROLE_MAP[role || 'lightvibrant'];
+    return (preferred && hexPalette[preferred])
+        || hexPalette.LightVibrant
+        || hexPalette.Vibrant
+        || '#8A2BE2';
+}
+
 function GetRelaySb() {
     if (typeof StreamerbotClient === 'undefined') return null;
     const host = document.getElementById('address')?.value
@@ -1969,7 +2001,14 @@ async function GetRelayPalette(artUrl) {
             document.head.appendChild(s);
         }).catch(() => {});
     }
-    if (typeof Vibrant === 'undefined') return { color: '#8A2BE2', palette: {} };
+    // Library gagal dimuat (CDN offline/diblokir). Widget di posisi ini akan
+    // melempar error lalu MEMPERTAHANKAN warna lamanya, jadi relay menirukan:
+    // pakai palet terakhir yang berhasil supaya event tetap terkirim dengan
+    // warna yang sama seperti yang sedang tampil di overlay.
+    if (typeof Vibrant === 'undefined') {
+        if (relayLastPalette) return { color: relayLastColor, palette: relayLastPalette };
+        return { color: '#8A2BE2', palette: {} };
+    }
 
     const hexPalette = await new Promise((resolve) => {
         Vibrant.from(artUrl).getPalette((err, palette) => {
@@ -1982,8 +2021,11 @@ async function GetRelayPalette(artUrl) {
         });
     });
 
-    // Urutan fallback sama dengan widget: LightVibrant -> Vibrant -> #8A2BE2.
-    const color = hexPalette.LightVibrant || hexPalette.Vibrant || '#8A2BE2';
+    // Warna accent mengikuti role pilihan user (settings: accentPaletteRole),
+    // sama seperti ResolveAccentColor() di widget.
+    const color = ResolveRelayAccentColor(hexPalette, GetRelayAccentRole());
+    relayLastPalette = hexPalette;
+    relayLastColor = color;
     return { color, palette: hexPalette };
 }
 

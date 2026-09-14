@@ -13,8 +13,8 @@
 const OBS_WS_DEFAULT_PORT = 4455;
 // Ukuran browser source: dipakai CreateInput, SetInputSettings, dan
 // perhitungan posisi tengah.
-const OBS_SOURCE_WIDTH = 700;
-const OBS_SOURCE_HEIGHT = 350;
+const OBS_SOURCE_WIDTH = 1080;
+const OBS_SOURCE_HEIGHT = 500;
 
 const OBS_SOURCE_BASE_NAME = 'Dynamic Island Alert';
 

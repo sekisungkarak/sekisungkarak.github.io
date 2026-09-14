@@ -295,7 +295,13 @@ function FormatViewers(count) {
 ///////////////////////
 
 const dynamicIsland = document.getElementById('dynamicIsland');
-const widgetScale = GetFloatParam("widgetScale", 1.0);
+// Widget Scale dibatasi 0.5–2.0. Clamp dilakukan di sini, bukan hanya lewat
+// slider di settings.json, supaya nilai lama yang sudah tersimpan di localStorage
+// (atau URL OBS yang lama) ikut terpotong otomatis.
+const MIN_WIDGET_SCALE = 0.5;
+const MAX_WIDGET_SCALE = 2.0;
+const widgetScale = Math.min(MAX_WIDGET_SCALE,
+	Math.max(MIN_WIDGET_SCALE, GetFloatParam("widgetScale", 1.0)));
 const verticalAlign = urlParams.get("verticalAlign") || "top";
 
 let baseTransform = "translateX(-50%)";
@@ -1590,12 +1596,23 @@ function LoadSocketIoAndDetect() {
 
 // Fetch live data in the background (standard 15-minute interval)
 const WEATHER_REFRESH_INTERVAL = 15 * 60 * 1000;
+// Saat fetch gagal, coba lagi jauh lebih cepat daripada 15 menit: kalau wttr.in
+// hanya berkedip sebentar, panel tidak perlu kosong sampai seperempat jam.
+const WEATHER_RETRY_INTERVAL = 90 * 1000;
+// Batalkan fetch yang menggantung. wttr.in yang down masih menerima TCP connect
+// tapi tidak mengirim byte apa pun, jadi tanpa batas ini fetch menggantung sampai
+// timeout bawaan browser (~5 menit) dan rantai retry tidak pernah jalan.
+const WEATHER_FETCH_TIMEOUT = 8000;
 
 async function FetchWeather() {
+	const controller = new AbortController();
+	const abortTimer = setTimeout(() => controller.abort(), WEATHER_FETCH_TIMEOUT);
 	try {
 		const isId = (appLanguage && appLanguage.toLowerCase().startsWith("id"));
 		const langQuery = isId ? "&lang=id" : "";
-		const response = await fetch(`https://wttr.in/${encodeURIComponent(weatherLocation)}?format=j1${langQuery}`);
+		const response = await fetch(`https://wttr.in/${encodeURIComponent(weatherLocation)}?format=j1${langQuery}`, { signal: controller.signal });
+		// Respons error (503 / halaman HTML dari proxy) jangan di-parse sebagai JSON.
+		if (!response.ok) throw new Error("HTTP " + response.status);
 		const data = await response.json();
 		const condition = data.current_condition[0];
 		
@@ -1631,9 +1648,25 @@ async function FetchWeather() {
 			tempC: condition.temp_C,
 			desc: weatherDesc
 		};
+		return true;
 	} catch (error) {
 		console.debug("[Geseki] Weather data fetch failed:", error);
+		return false;
+	} finally {
+		clearTimeout(abortTimer);
 	}
+}
+
+// Penjadwal cuaca berantai: interval berikutnya bergantung pada hasil fetch.
+// Sukses -> kembali ke 15 menit; gagal -> coba lagi 1,5 menit. setTimeout
+// berantai (bukan setInterval) supaya tidak ada dua fetch berjalan bersamaan.
+let weatherTimer = null;
+function ScheduleWeatherFetch(delayMs) {
+	if (weatherTimer) clearTimeout(weatherTimer);
+	weatherTimer = setTimeout(async () => {
+		const ok = await FetchWeather();
+		ScheduleWeatherFetch(ok ? WEATHER_REFRESH_INTERVAL : WEATHER_RETRY_INTERVAL);
+	}, delayMs);
 }
 
 // Tunggu paling lama `ms`, lalu lanjut apa pun hasilnya.
@@ -1648,8 +1681,10 @@ async function InitInfoLoop() {
 	// Isi semua data panel dulu agar panel pertama tidak tampil teks fallback.
 	await WithTimeout(Promise.all([FetchWeather(), FetchNowPlaying()]), 2500);
 
-	setInterval(FetchWeather, WEATHER_REFRESH_INTERVAL);
 	setInterval(FetchNowPlaying, 2000); // Check media every 2 seconds
+	// Cuaca: jadwal pertama ditentukan hasil fetch di atas (sukses 15 menit,
+	// gagal 1,5 menit) — bukan setInterval buta yang mengunci 15 menit.
+	ScheduleWeatherFetch(weatherData ? WEATHER_REFRESH_INTERVAL : WEATHER_RETRY_INTERVAL);
 
 	UpdateInfoText();
 	StartCycleTimer();
@@ -2086,8 +2121,11 @@ window.ALERT_ICONS = ALERT_ICONS;
 window.setWidgetScale = function(scale) {
 	if (!dynamicIsland) return;
 	let t = "translateX(-50%)";
-	const s = parseFloat(scale);
-	if (!isNaN(s) && s !== 1.0) {
+	const parsed = parseFloat(scale);
+	const s = isNaN(parsed)
+		? 1.0
+		: Math.min(MAX_WIDGET_SCALE, Math.max(MIN_WIDGET_SCALE, parsed));
+	if (s !== 1.0) {
 		t += ` scale(${s})`;
 	}
 	const va = (typeof verticalAlign !== 'undefined') ? verticalAlign : "top";
