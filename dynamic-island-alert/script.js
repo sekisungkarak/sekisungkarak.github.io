@@ -330,6 +330,10 @@ dynamicIsland.style.transform = baseTransform;
 // settings.json, kalau tidak widget tanpa param akan tampil Solid Black.
 if ((urlParams.get("widgetStyle") || "glass") === "solid") {
 	dynamicIsland.classList.add("style-solid");
+	// Background Opacity untuk Solid Black (10-100%, default 100 = hitam pekat).
+	// Diterapkan sebagai CSS variable supaya CSS yang mengatur rgba-nya.
+	const solidBgOpacity = Math.min(100, Math.max(10, GetIntParam("solidBgOpacity", 100))) / 100;
+	document.documentElement.style.setProperty('--solid-bg-opacity', String(solidBgOpacity));
 }
 const islandAvatar = document.getElementById('islandAvatar');
 const islandIcon = document.getElementById('islandIcon');

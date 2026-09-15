@@ -85,7 +85,8 @@ body {
 
 /* Override: Solid Black */
 #dynamicIsland.style-solid {
-	background: #000;
+	/* --solid-bg-opacity di-set dari script.js (setting Background Opacity). */
+	background: rgba(0, 0, 0, var(--solid-bg-opacity, 1));
 	backdrop-filter: none;
 	-webkit-backdrop-filter: none;
 	border: none;
@@ -98,7 +99,7 @@ body {
 }
 
 #dynamicIsland.style-solid.alert-active {
-	background: #080808;
+	background: rgba(8, 8, 8, var(--solid-bg-opacity, 1));
 	border: none;
 	box-shadow: 
 		10px 10px 24px rgba(0, 0, 0, 0.9),

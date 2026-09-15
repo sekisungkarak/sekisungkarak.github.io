@@ -1143,7 +1143,18 @@ function ApplyShowIfVisibility() {
             let currentSetting = setting;
             while (currentSetting.showIf) {
                 const parentElement = document.getElementById(currentSetting.showIf);
-                if (!parentElement || !parentElement.checked) {
+                if (!parentElement) {
+                    shouldShow = false;
+                    break;
+                }
+                // showIfValue: bandingkan dengan .value (untuk select).
+                // Tanpa showIfValue: perilaku lama, checkbox memakai .checked.
+                if (currentSetting.showIfValue !== undefined) {
+                    if (String(parentElement.value) !== String(currentSetting.showIfValue)) {
+                        shouldShow = false;
+                        break;
+                    }
+                } else if (!parentElement.checked) {
                     shouldShow = false;
                     break;
                 }
@@ -1886,6 +1897,20 @@ let relaySb = null;             // klien Streamer.bot khusus relay
 let relayLastSongId = null;     // kunci lagu terakhir (anti-dobel)
 let relayBusy = false;          // cegah tumpang tindih saat ekstraksi palet
 
+// ── Tunggu artwork benar-benar berganti ──────────────────────────
+// Bridge menulis artwork ke file per-app dan URL-nya memuat ?v=<mtime>, jadi
+// URL hanya berubah saat byte gambar berubah. Saat ganti lagu, metadata SMTC
+// sering mendahului artwork 1-2 detik: URL masih menunjuk gambar LAGU SEBELUMNYA.
+// Widget menoleransi ini karena ia mengekstrak palet ulang tiap tick, tapi relay
+// hanya menembak SEKALI per lagu (relayLastSongId) — tanpa penjagaan ini relay
+// terkunci memakai warna lagu lama.
+let relayLastArtUrl = null;     // artwork lagu terakhir yang BENAR-BENAR terkirim
+let relayArtWaitSongId = null;  // lagu yang sedang ditunggu artwork barunya
+let relayArtWaitSince = 0;      // waktu mulai menunggu (untuk batas waktu)
+// Batas tunggu: dua lagu berurutan bisa punya artwork identik (satu album) sehingga
+// URL-nya memang tidak berubah — tanpa batas ini relay tidak akan pernah menembak.
+const RELAY_ART_SETTLE_TIMEOUT = 4000;
+
 // ── Palet relay: samakan persis dengan widget ────────────────────
 // Widget memakai role pilihan user (settings accentPaletteRole) lewat
 // ResolveAccentColor(). Relay wajib memakai aturan yang sama, kalau tidak
@@ -2068,6 +2093,19 @@ async function RelaySongChange(data) {
     const rawArt = mp.Thumbnail || mp.ThumbnailBase64 || '';
     if (!rawArt) return;                      // tunggu tick berikutnya
     const artUrl = NormalizeRelayArt(rawArt);
+
+    // Artwork masih milik lagu SEBELUMNYA -> tunda dulu. Widget akan menyusul
+    // sendiri di tick berikutnya, tapi relay sudah terkunci setelah menembak.
+    if (relayLastArtUrl && artUrl === relayLastArtUrl) {
+        if (relayArtWaitSongId !== songId) {
+            relayArtWaitSongId = songId;
+            relayArtWaitSince = Date.now();
+        }
+        if (Date.now() - relayArtWaitSince < RELAY_ART_SETTLE_TIMEOUT) return;
+        // Lewat batas waktu (artwork identik / bridge tidak pernah mengirim baru):
+        // lanjutkan dengan artwork yang ada daripada tidak mengirim sama sekali.
+    }
+
     const artReady = await RelayWaitArtwork(artUrl);
     if (!artReady) return;                    // artwork belum valid, coba lagi nanti
 
@@ -2093,6 +2131,10 @@ async function RelaySongChange(data) {
             LastUpdatedTime: tp.LastUpdatedTime || ''
         });
         relayLastSongId = songId;
+        // Artwork yang benar-benar terkirim -> penjaga perbandingan lagu berikutnya.
+        relayLastArtUrl = artUrl;
+        relayArtWaitSongId = null;
+        relayArtWaitSince = 0;
         console.log('[Geseki][Relay] songchange terkirim:', title, '-', artist);
     } catch (e) {
         console.warn('[Geseki][Relay] Gagal kirim songchange:', e);

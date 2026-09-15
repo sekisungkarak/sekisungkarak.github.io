@@ -184,14 +184,16 @@
       "group": "General"
     },
     {
-      "id": "widgetScale",
-      "label": "Widget Scale (Zoom)",
+      "id": "solidBgOpacity",
+      "label": "Background Opacity",
       "type": "slider",
-      "defaultValue": 1.0,
-      "min": 0.5,
-      "max": 2.0,
-      "step": 0.1,
-      "group": "General"
+      "defaultValue": 100,
+      "min": 10,
+      "max": 100,
+      "step": 1,
+      "group": "General",
+      "showIf": "widgetStyle",
+      "showIfValue": "solid"
     },
     {
       "id": "font",
@@ -257,6 +259,16 @@
       "min": 1,
       "max": 30,
       "defaultValue": 4,
+      "group": "General"
+    },
+	{
+      "id": "widgetScale",
+      "label": "Widget Scale (Zoom)",
+      "type": "slider",
+      "defaultValue": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.1,
       "group": "General"
     },
     {

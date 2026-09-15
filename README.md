@@ -3,21 +3,6 @@
 Koleksi widget overlay OBS untuk streaming. Widget berupa HTML/CSS/JS polos yang dimuat
 sebagai browser source di OBS — tanpa build step, tanpa framework.
 
-## Akses
-
-Widget di-deploy otomatis ke **GitHub Pages** lewat GitHub Actions. Setiap push ke
-`master` memicu deploy ulang.
-
-```
-https://sekisungkarak.github.io/Geseki/
-```
-
-Ganti `<username>` dengan nama akun GitHub pemilik repo. Halaman ini juga bisa dibuka
-langsung di browser untuk pratinjau.
-
-> **Catatan:** jalur folder bersifat case-sensitive di GitHub Pages. `resources/`,
-> `dynamic-island-alert/`, dan `dashboard/` harus tetap huruf kecil seperti di repo.
-
 ## Struktur
 
 ```
@@ -51,10 +36,8 @@ first chatter, plus panel Now Playing dari media yang sedang diputar.
 - Event TikTok via websocket **TikFinity** (`ws://localhost:21213/`) dan **IndoFinity**
   (`ws://localhost:62024/`) — reconnect tiap 5 detik.
 - Event Streamer.Bot via `@streamerbot/client` (host/port dari URL param).
-- Now Playing via SMTC bridge (`http://127.0.0.1:5000/now-playing`) di mesin lokal.
+- Now Playing via SMTC bridge https://github.com/nuttylmao/smtc-bridge.
 - Antrean alert dengan flag lock, sehingga animasi tidak tumpang-tindih.
-- 37 setting dalam 12 grup: koneksi (Streamer.bot, TikTok, SMTC, OBS, Live Detection),
-  General, dan konfigurasi tiap jenis alert.
 
 
 ## Cara pakai
@@ -107,7 +90,4 @@ Lalu buka `http://127.0.0.1:3000/dynamic-island-alert/dashboard/index.html`.
 - **Reset via BroadcastChannel** — kanal `geseki_island_channel` menjangkau widget di OBS
   sungguhan. Halaman dashboard harus hidup (di-dock atau terbuka) sebagai pengirim, dan
   harus satu origin + satu browser profile dengan widget.
-- **Transparansi** — browser source OBS itu transparan. Saat dibuka langsung di browser,
-  widget mendeteksi tidak adanya `window.obsstudio` lalu memasang latar gelap agar tidak
-  silau; di OBS tetap transparan.
 
