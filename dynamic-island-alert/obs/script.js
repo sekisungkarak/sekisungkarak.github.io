@@ -638,7 +638,10 @@ const infoPanels = [
 			if (weatherData) {
 				return `${weatherData.desc} • ${weatherData.tempC}°C`;
 			}
-			return 'Cuaca tidak tersedia';
+			// Ikuti Language global, sama seperti deskripsi cuaca di FetchWeather.
+			return (appLanguage || "id").toLowerCase().startsWith("id")
+				? 'Cuaca tidak tersedia'
+				: 'Weather unavailable';
 		}
 	},
 	{
@@ -1600,56 +1603,81 @@ function LoadSocketIoAndDetect() {
 
 // Fetch live data in the background (standard 15-minute interval)
 const WEATHER_REFRESH_INTERVAL = 15 * 60 * 1000;
-// Saat fetch gagal, coba lagi jauh lebih cepat daripada 15 menit: kalau wttr.in
-// hanya berkedip sebentar, panel tidak perlu kosong sampai seperempat jam.
+// Saat fetch gagal, coba lagi jauh lebih cepat daripada 15 menit: kalau penyedia
+// cuaca hanya berkedip sebentar, panel tidak perlu kosong sampai seperempat jam.
 const WEATHER_RETRY_INTERVAL = 90 * 1000;
-// Batalkan fetch yang menggantung. wttr.in yang down masih menerima TCP connect
+// Batalkan fetch yang menggantung: server yang down masih menerima TCP connect
 // tapi tidak mengirim byte apa pun, jadi tanpa batas ini fetch menggantung sampai
 // timeout bawaan browser (~5 menit) dan rantai retry tidak pernah jalan.
 const WEATHER_FETCH_TIMEOUT = 8000;
+
+// ── Sumber cuaca: Open-Meteo ──────────────────────────────────────
+// Menggantikan wttr.in, yang sertifikat TLS-nya sempat kedaluwarsa: server
+// sehat tapi HTTPS ditolak browser, sehingga panel cuaca kosong total tanpa
+// ada yang bisa diperbaiki dari sisi kode. Open-Meteo gratis, tanpa API key,
+// dan mengirim kode cuaca numerik (WMO) yang dipetakan di bawah.
+const WMO_DESC_ID = {
+	0: "Cerah", 1: "Cerah Berawan", 2: "Berawan", 3: "Mendung",
+	45: "Kabut", 48: "Kabut Beku",
+	51: "Gerimis Ringan", 53: "Gerimis", 55: "Gerimis Lebat",
+	56: "Gerimis Beku Ringan", 57: "Gerimis Beku",
+	61: "Hujan Ringan", 63: "Hujan Sedang", 65: "Hujan Lebat",
+	66: "Hujan Beku Ringan", 67: "Hujan Beku Lebat",
+	71: "Salju Ringan", 73: "Salju Sedang", 75: "Salju Lebat", 77: "Butir Salju",
+	80: "Hujan Lokal Ringan", 81: "Hujan Lokal", 82: "Hujan Lokal Lebat",
+	85: "Hujan Salju Ringan", 86: "Hujan Salju Lebat",
+	95: "Badai Petir", 96: "Badai Petir + Es Ringan", 99: "Badai Petir + Es Lebat"
+};
+const WMO_DESC_EN = {
+	0: "Clear", 1: "Mainly Clear", 2: "Partly Cloudy", 3: "Overcast",
+	45: "Fog", 48: "Freezing Fog",
+	51: "Light Drizzle", 53: "Drizzle", 55: "Dense Drizzle",
+	56: "Light Freezing Drizzle", 57: "Freezing Drizzle",
+	61: "Light Rain", 63: "Rain", 65: "Heavy Rain",
+	66: "Light Freezing Rain", 67: "Freezing Rain",
+	71: "Light Snow", 73: "Snow", 75: "Heavy Snow", 77: "Snow Grains",
+	80: "Light Rain Showers", 81: "Rain Showers", 82: "Violent Rain Showers",
+	85: "Snow Showers", 86: "Heavy Snow Showers",
+	95: "Thunderstorm", 96: "Thunderstorm + Light Hail", 99: "Thunderstorm + Heavy Hail"
+};
+
+// Nama kota -> lat/lon di-cache: nama kota tidak berubah selama widget hidup,
+// jadi cukup satu panggilan geocoding, bukan tiap 15 menit.
+let weatherGeo = null;
+async function ResolveWeatherGeo(signal) {
+	if (weatherGeo) return weatherGeo;
+	const url = "https://geocoding-api.open-meteo.com/v1/search"
+		+ `?name=${encodeURIComponent(weatherLocation)}&count=1&language=id&format=json`;
+	const r = await fetch(url, { signal });
+	if (!r.ok) throw new Error("geocoding HTTP " + r.status);
+	const d = await r.json();
+	const hit = d.results && d.results[0];
+	if (!hit) throw new Error("lokasi tidak ditemukan: " + weatherLocation);
+	weatherGeo = { lat: hit.latitude, lon: hit.longitude };
+	return weatherGeo;
+}
 
 async function FetchWeather() {
 	const controller = new AbortController();
 	const abortTimer = setTimeout(() => controller.abort(), WEATHER_FETCH_TIMEOUT);
 	try {
 		const isId = (appLanguage && appLanguage.toLowerCase().startsWith("id"));
-		const langQuery = isId ? "&lang=id" : "";
-		const response = await fetch(`https://wttr.in/${encodeURIComponent(weatherLocation)}?format=j1${langQuery}`, { signal: controller.signal });
-		// Respons error (503 / halaman HTML dari proxy) jangan di-parse sebagai JSON.
+		const geo = await ResolveWeatherGeo(controller.signal);
+		const url = "https://api.open-meteo.com/v1/forecast"
+			+ `?latitude=${geo.lat}&longitude=${geo.lon}`
+			+ "&current=temperature_2m,weather_code,is_day&timezone=auto";
+		const response = await fetch(url, { signal: controller.signal });
+		// Respons error jangan di-parse sebagai JSON.
 		if (!response.ok) throw new Error("HTTP " + response.status);
 		const data = await response.json();
-		const condition = data.current_condition[0];
-		
-		let weatherDesc = condition.weatherDesc[0].value;
-		if (isId) {
-			if (condition.lang_id && condition.lang_id[0]) {
-				weatherDesc = condition.lang_id[0].value;
-			}
-			// Manual fallback dictionary for wttr.in untranslated terms (mostly smog/haze in Asia)
-			const dictMap = {
-				"smog": "Kabut Asap",
-				"smoky haze": "Kabut Asap",
-				"haze": "Kabut",
-				"mist": "Kabut Tipis",
-				"partly cloudy": "Cerah Berawan",
-				"cloudy": "Berawan", 
-				"overcast": "Mendung",
-				"clear": "Cerah",
-				"sunny": "Cerah",
-				"light rain": "Hujan Ringan",
-				"moderate rain": "Hujan Sedang",
-				"heavy rain": "Hujan Lebat",
-				"light drizzle": "Gerimis",
-				"patchy rain possible": "Potensi Hujan"
-			};
-			const lowerDesc = weatherDesc.trim().toLowerCase();
-			if (dictMap[lowerDesc]) {
-				weatherDesc = dictMap[lowerDesc];
-			}
-		}
+		const cur = data.current || {};
+		// Tanpa suhu valid, biarkan panel kosong dan retry — jangan tampilkan angka palsu.
+		if (typeof cur.temperature_2m !== "number") throw new Error("respons tanpa suhu");
+		const table = isId ? WMO_DESC_ID : WMO_DESC_EN;
+		const weatherDesc = table[cur.weather_code] || (isId ? "Cuaca" : "Weather");
 
 		weatherData = {
-			tempC: condition.temp_C,
+			tempC: String(Math.round(cur.temperature_2m)),
 			desc: weatherDesc
 		};
 		return true;
