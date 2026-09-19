@@ -179,6 +179,54 @@ body {
 	height: var(--island-icon-ambient, 20px);
 }
 
+/* ══ Panel gabungan "Time & Now Playing" (ambient saja) ══
+   Urutan visual: wave icon (kiri) · teks waktu (tengah) · album art (kanan).
+   DOM aslinya [art][teks][wave], jadi dibalik pakai `order` (tanpa ubah HTML).
+   Hanya aktif saat ADA lagu (class `panel-time-music`); mode jam-saja tetap
+   ikon jam di kiri seperti panel time lama.
+   [PAUSE] Overlay ⏸ ada di dalam #islandIconWrap -> ikut pindah ke kanan
+   bersama album art (sesuai permintaan: ⏸ tetap menempel di album art).
+   `:not(.alert-active)` penting: kartu alert music big/medium TIDAK boleh ikut. */
+#dynamicIsland:not(.alert-active).panel-time-music #islandTopRow {
+	/* Jarak antar elemen (wave · teks · album art) HANYA saat ada lagu
+	   (play maupun pause). Mode jam-saja tetap memakai base 10px.
+	   Base #islandTopRow pakai 10px; di sini diatur lewat satu angka
+	   --time-music-gap. Panel lain tidak terpengaruh. */
+	gap: var(--time-music-gap, 14px);
+}
+#dynamicIsland:not(.alert-active).panel-time-music #islandEventIcon {
+	order: -1;            /* wave ke paling kiri */
+	/* Margin base #islandEventIcon (margin-left: 2px) dimatikan supaya jarak
+	   antar elemen murni ditentukan `gap` di atas. */
+	margin-left: 0;
+	margin-right: 0;
+}
+#dynamicIsland:not(.alert-active).panel-time-music #islandContent {
+	flex: 1 1 auto;       /* isi ruang antara wave & art */
+	text-align: center;   /* teks waktu di tengah */
+}
+#dynamicIsland:not(.alert-active).panel-time-music #islandIconWrap {
+	order: 1;             /* album art ke paling kanan */
+	/* [KOMPENSASI 2.5px] Album art memakai object-fit: cover -> gambarnya
+	   menyentuh tepi kotak 20px (full-bleed), jadi jarak optisnya = 14px.
+	   Wave icon (SVG, viewBox 24, gambar hanya x=2..21) punya ruang kosong
+	   internal 3/24 di kanan = 2.5px pada ikon 20px, sehingga jarak optisnya
+	   16.5px. Album art-lah yang kurang 2.5px -> tambah margin kiri 2.5px
+	   supaya kedua jarak sama-sama 16.5px. */
+	margin-left: 2.5px;
+}
+
+/* ══ Jam: lebar digit DIKUNCI (tabular) ══
+   #dynamicIsland memakai `width: max-content`, jadi lebar pill = lebar teks.
+   Font Segoe UI memakai digit PROPOSIONAL (lebar "1" ≠ lebar "8"), sehingga
+   setiap detik berubah pill ikut "bernafas". `tnum` membuat semua digit
+   berlebar sama -> lebar teks jam konstan sepanjang hari.
+   Scoped ke panel jam saja; panel lain (judul lagu, dsb) tidak terpengaruh. */
+#dynamicIsland.panel-time #islandText {
+	font-variant-numeric: tabular-nums;
+	font-feature-settings: "tnum" 1;
+}
+
 /* Alert element (legacy container kept hidden to prevent ghost layout) */
 #islandAlert {
 	display: none !important;
@@ -475,4 +523,199 @@ body {
 }
 #dynamicIsland.alert-music-big #islandPauseOverlay {
 	display: none !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MUSIC MEDIUM — "Dynamic Medium"
+   Kartu pendek & lebar: artwork besar di kiri mengisi penuh tinggi kartu,
+   judul + artis di kanan (terpusat vertikal terhadap art), progress bar
+   absolut di dasar kartu (sejajar tepi bawah art). Tanpa kontrol transport
+   & tanpa slider volume — desain aslinya pun tidak bisa diklik di browser
+   source OBS. Menggantikan alert-music-big saat musicStyle = medium.
+   ══════════════════════════════════════════════════════════════════ */
+#dynamicIsland.alert-music-medium.alert-active {
+	width: 340px;
+	/* Tinggi tetap (bukan auto) supaya morph dari pill kecil tetap
+	   beranimasi seperti Big. 13 padding + 86 art + 13 padding = 112:
+	   kotak isi jadi tepat 86px, sehingga artwork mengisi penuh tinggi
+	   kartu dan judul/artis/bar/wave otomatis sejajar dengan tepi art. */
+	height: 112px;
+	padding: 13px 18px;
+	/* Di varian OBS tidak ada #islandInner, jadi #dynamicIsland sendiri
+	   yang jadi kolom flex: gap di sini yang mengatur jarak baris. */
+	gap: 6px;
+	box-sizing: border-box;
+	/* Sudut membulat; 26px (bukan 60px) supaya tidak jadi setengah
+	   lingkaran pada tinggi 112px. */
+	border-radius: 26px;
+	align-items: stretch;
+	/* Catatan: #dynamicIsland sudah position:fixed di base, jadi ia SUDAH
+	   jadi acuan untuk progress bar absolut di bawah — jangan di-set ulang,
+	   menimpa fixed akan merusak posisi widget. */
+	/* LIQUID GLASS (default): jangan override `background` shorthand —
+	   itu akan mematikan background-color kaca dari base pill. Glow aksen
+	   ditumpuk lewat background-image saja dan memudar ke transparan,
+	   supaya kaca tetap tembus pandang. Refraksi asli Liquid Glass
+	   (url(#liquid-glass)) dipakai di backdrop-filter. */
+	background-image:
+		radial-gradient(135% 165% at 4% 0%,
+			color-mix(in srgb, var(--accent-color, #8A2BE2) 46%, transparent) 0%,
+			color-mix(in srgb, var(--accent-color, #8A2BE2) 16%, transparent) 42%,
+			transparent 76%);
+	backdrop-filter: blur(24px) url(#liquid-glass) saturate(var(--saturation));
+	-webkit-backdrop-filter: blur(24px) url(#liquid-glass) saturate(var(--saturation));
+	box-shadow:
+		inset 0 0 0 1px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 10%), transparent),
+		inset 1.8px 3px 0px -2px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 90%), transparent),
+		inset -2px -2px 0px -2px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 80%), transparent),
+		inset -3px -8px 1px -6px color-mix(in srgb, var(--c-light) calc(var(--glass-reflex-light) * 60%), transparent),
+		inset -0.3px -1px 4px 0px color-mix(in srgb, var(--c-dark) calc(var(--glass-reflex-dark) * 20%), transparent),
+		inset 0px -4px 1px -2px color-mix(in srgb, var(--c-dark) calc(var(--glass-reflex-dark) * 10%), transparent),
+		0px 8px 24px 0px color-mix(in srgb, var(--c-dark) calc(var(--glass-reflex-dark) * 35%), transparent);
+}
+
+/* Artwork: kotak besar di kiri, mengisi hampir seluruh tinggi kartu. */
+#dynamicIsland.alert-music-medium #islandIconWrap,
+#dynamicIsland.alert-music-medium #islandIcon {
+	width: 86px !important;
+	height: 86px !important;
+	border-radius: 13px !important;
+	flex: 0 0 86px;
+}
+#dynamicIsland.alert-music-medium #islandIconWrap {
+	overflow: hidden;
+}
+#dynamicIsland.alert-music-medium #islandTopRow {
+	/* stretch: kolom teks ikut setinggi artwork (86px) supaya judul bisa
+	   rata-atas dengan tepi atas art, seperti desain referensi. */
+	align-items: stretch;
+	gap: 14px;
+}
+
+/* Kolom teks: judul tebal + artis redup, rata-atas dengan artwork. */
+#dynamicIsland.alert-music-medium #islandContent {
+	flex: 1;
+	align-items: flex-start;
+	justify-content: flex-start;
+	min-width: 0;
+	overflow: hidden;
+	padding-right: 0;
+}
+#dynamicIsland.alert-music-medium #islandText {
+	font-size: 19px;
+	font-weight: 700;
+	width: auto;
+	max-width: 100%;
+	line-height: 1.2;
+}
+#dynamicIsland.alert-music-medium #islandSubtext {
+	font-size: 12.5px;
+	font-weight: 500;
+	color: #b6b6b6;
+	letter-spacing: 0.07em;
+	text-transform: uppercase;
+	width: auto;
+	max-width: 100%;
+	margin-top: 2px;
+}
+/* Wave/equalizer di kanan — rata-atas dengan judul (seperti referensi). */
+#dynamicIsland.alert-music-medium #islandEventIcon {
+	width: 22px !important;
+	height: 22px !important;
+	align-self: flex-start;
+	margin-top: 2px;
+}
+
+/* Progress bar: diposisikan absolut di dasar kartu supaya TIDAK menambah
+   tinggi di bawah baris artwork. Kalau ia ikut aliran layout, tingginya
+   (5px + gap 6px) mendorong baris artwork+teks naik ~5,5px sehingga art
+   tidak terpusat di kartu — inilah penyebab tampak "tidak sejajar".
+   left = padding 18 + art 86 + gap 14 = 118 (sejajar tepi kiri judul). */
+#dynamicIsland.alert-music-medium #musicBigExtra {
+	position: absolute;
+	left: 118px;
+	right: 18px;
+	/* Atas = titik tengah antara dasar teks (y≈53) dan puncak progress bar
+	   (y≈94), supaya padding ikon ke tulisan = padding ikon ke progress bar
+	   (masing-masing ≈9px). Bawah sejajar tepi bawah artwork (y=99). */
+	top: 63px;
+	bottom: 13px;
+	margin-left: 0;
+	width: auto;
+	gap: 0;
+	/* column-reverse: music-controls (anak terakhir) tampil di ATAS,
+	   scrubber (anak pertama) menempel di DASAR kartu. */
+	display: flex;
+	flex-direction: column-reverse;
+	justify-content: space-between;
+}
+/* Transport ⏪⏸⏩ — hanya 3 ikon; hati (anak pertama) dan shuffle
+   (anak terakhir) disembunyikan supaya sama dengan desain referensi.
+   Jarak antar ikon diatur `gap` (bukan space-between) dan grupnya
+   di tengah kolom. */
+#dynamicIsland.alert-music-medium .music-controls {
+	display: flex;
+	justify-content: center;
+	gap: 45px;
+	padding: 0;
+}
+#dynamicIsland.alert-music-medium .music-controls svg {
+	width: 22px;
+	height: 22px;
+}
+#dynamicIsland.alert-music-medium .music-controls svg:first-child,
+#dynamicIsland.alert-music-medium .music-controls svg:last-child {
+	display: none;
+}
+/* Label waktu tetap disembunyikan (desain tidak menampilkannya). */
+#dynamicIsland.alert-music-medium .scrub-time {
+	display: none;
+}
+#dynamicIsland.alert-music-medium .scrub-bar {
+	height: 5px;
+	background-color: rgba(255, 255, 255, 0.18);
+	box-shadow: none;
+}
+#dynamicIsland.alert-music-medium .scrub-thumb {
+	width: 0;
+	height: 0;
+	box-shadow: none;
+}
+
+/* Batas marquee khusus medium. Kolom teks = 340 − 36 padding − 86 art
+   − 22 wave icon − 28 (2 gap × 14) = 168px. */
+#dynamicIsland.alert-music-medium.alert-active {
+	--marquee-width: 168px;
+}
+
+/* SOLID BLACK + MEDIUM: kembalikan tampilan pekat. Tanpa blok ini, aturan
+   medium (spesifisitas sama, tapi ditulis paling akhir) akan menang dan
+   Solid Black ikut jadi kaca. Dipisah dari aturan medium agar Liquid Glass
+   tetap jadi default. */
+#dynamicIsland.style-solid.alert-music-medium.alert-active {
+	/* Dasar hitam pekat, opacity dari slider Background Opacity. */
+	background-color: rgba(8, 8, 8, var(--solid-bg-opacity, 1));
+	/* Glow aksen dari warna artwork tetap ada, ditumpuk di atas dasar
+	   hitam dan memudar ke transparan (bukan ke #000, supaya tidak
+	   menambah kepekatan di luar --solid-bg-opacity). */
+	background-image:
+		radial-gradient(135% 165% at 4% 0%,
+			color-mix(in srgb, var(--accent-color, #8A2BE2) 46%, transparent) 0%,
+			color-mix(in srgb, var(--accent-color, #8A2BE2) 16%, transparent) 42%,
+			transparent 76%);
+	backdrop-filter: none;
+	-webkit-backdrop-filter: none;
+	box-shadow:
+		10px 10px 24px rgba(0, 0, 0, 0.9),
+		-4px -4px 14px rgba(255, 255, 255, 0.05),
+		inset 2px 2px 5px rgba(255, 255, 255, 0.2),
+		inset -2px -2px 5px rgba(0, 0, 0, 0.9);
+}
+#dynamicIsland.alert-music-medium #islandText,
+#dynamicIsland.alert-music-medium #islandSubtext {
+	width: 168px;
+	max-width: 168px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }

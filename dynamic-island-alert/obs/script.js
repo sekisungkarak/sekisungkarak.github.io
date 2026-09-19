@@ -103,8 +103,26 @@ const enableFirstChatter = GetBoolParam("enableFirstChatter", true);
 const enableNowPlaying = GetBoolParam("enableNowPlaying", true);
 const includedApplications = urlParams.get("includedApplications") || '';
 const excludedApplications = urlParams.get("excludedApplications") || '';
-const enableDynamicStyleBig = GetBoolParam("enableDynamicStyleBig", true);
-const enableDynamicBig = GetBoolParam("enableDynamicStyleBig", true);
+// Gaya kartu alert musik. Satu dropdown menggantikan checkbox lama:
+//   small  = tidak ada kartu (pill kecil biasa)
+//   big    = kartu besar Dynamic Island (default, perilaku lama)
+//   medium = kartu pendek lebar "Dynamic Medium"
+// Param lama `enableDynamicStyleBig` masih dibaca sebagai cadangan supaya URL
+// yang tersimpan sebelum perubahan ini tidak mendadak jadi "small".
+const musicStyle = (() => {
+	const raw = urlParams.get("musicStyle");
+	if (raw) return raw.toLowerCase();
+	// Cadangan: URL lama tanpa musicStyle.
+	return GetBoolParam("enableDynamicStyleBig", true) ? "big" : "small";
+})();
+const isMusicMedium = musicStyle === "medium";
+// Kartu besar ATAU medium sama-sama "mekar" — kode lama memakai flag ini di
+// banyak tempat, jadi nilainya diturunkan agar tidak perlu diubah semua.
+const enableDynamicStyleBig = musicStyle !== "small";
+const enableDynamicBig = enableDynamicStyleBig;
+// Kelas penanda kartu musik sedang mekar. Dipakai di semua add/remove/contains
+// supaya kode lama tetap satu jalur; CSS yang membedakan tampilan Big vs Medium.
+const MUSIC_CARD_CLASS = isMusicMedium ? "alert-music-medium" : "alert-music-big";
 const SMTC_BRIDGE_PORT = GetIntParam("smtcBridgePort", 5000);
 const SMTC_BRIDGE_URL = `http://127.0.0.1:${SMTC_BRIDGE_PORT}/now-playing`;
 
@@ -619,9 +637,31 @@ const infoPanels = [
 		}
 	},
 	{
-		id: 'time',
-		icon: ALERT_ICONS.clock, // purple clock
+		id: 'music',
+		// ══ TIME & NOW PLAYING (panel gabungan, menggantikan panel time lama) ══
+		// Selalu tampil: waktu tidak pernah kosong. Musik hanya menambah
+		// wave icon (kiri) + album art (kanan); tanpa lagu tampil jam saja.
+		// [PAUSE] overlay ⏸ tetap di album art: art tetap dirender ke
+		// #islandIconWrap (rumah #islandPauseOverlay), lalu dipindah ke kanan
+		// lewat CSS `order` saat panel ini aktif (lihat style.css).
+		icon: () => (HasPlayableTrack() && nowPlayingData.albumArt) ? nowPlayingData.albumArt : ALERT_ICONS.clock,
+		rightIcon: () => ((HasPlayableTrack() && nowPlayingData.albumArt) ? (() => {
+			const hexStr = encodeURIComponent(nowPlayingData.lightVibrant || "#8A2BE2");
+			// ══ Wave icon: PLAY vs PAUSE ══
+			// - Play : 3 bar beranimasi (SMIL <animate>) — equalizer hidup.
+			// - Pause: 3 bar FLAT pendek, tanpa animasi — "equalizer kosong".
+			//   (Pilihan user 2026-09-19; overlay ⏸ tetap di album art.)
+			// [PENTING] src berbeda antara play/pause -> RefreshMusicWaveIcon()
+			// mengganti src hanya saat src-nya berbeda, jadi animasi tidak restart
+			// tiap tick; transisi play<->pause berganti tepat saat status berubah.
+			if (nowPlayingData.pausedAtMs !== null) {
+				// Flat: y=10, height=4, semua bar sama. TANPA <animate>.
+				return `data:image/svg+xml;utf8,%3Csvg%20fill%3D%22${hexStr}%22%20viewBox%3D%220%200%2024%2024%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20x%3D%222%22%20y%3D%2210%22%20width%3D%225%22%20height%3D%224%22%20rx%3D%222%22%2F%3E%3Crect%20x%3D%229%22%20y%3D%2210%22%20width%3D%225%22%20height%3D%224%22%20rx%3D%222%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%2210%22%20width%3D%225%22%20height%3D%224%22%20rx%3D%222%22%2F%3E%3C%2Fsvg%3E`;
+			}
+			return `data:image/svg+xml;utf8,%3Csvg%20fill%3D%22${hexStr}%22%20viewBox%3D%220%200%2024%2024%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20x%3D%222%22%20y%3D%229%22%20width%3D%225%22%20height%3D%226%22%20rx%3D%222%22%3E%3Canimate%20attributeName%3D%22height%22%20values%3D%226%3B16%3B6%22%20begin%3D%220s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3Canimate%20attributeName%3D%22y%22%20values%3D%229%3B4%3B9%22%20begin%3D%220s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3C%2Frect%3E%3Crect%20x%3D%229%22%20y%3D%223%22%20width%3D%225%22%20height%3D%2218%22%20rx%3D%222%22%3E%3Canimate%20attributeName%3D%22height%22%20values%3D%2218%3B8%3B18%22%20begin%3D%220.2s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3Canimate%20attributeName%3D%22y%22%20values%3D%223%3B8%3B3%22%20begin%3D%220.2s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3C%2Frect%3E%3Crect%20x%3D%2216%22%20y%3D%227%22%20width%3D%225%22%20height%3D%2210%22%20rx%3D%222%22%3E%3Canimate%20attributeName%3D%22height%22%20values%3D%2210%3B18%3B10%22%20begin%3D%220.4s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3Canimate%20attributeName%3D%22y%22%20values%3D%227%3B3%3B7%22%20begin%3D%220.4s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3C%2Frect%3E%3C%2Fsvg%3E`;
+		})() : null),
 		ticks: true,
+		// Tengah: waktu saja — judul/artis tidak ditampilkan di panel gabungan.
 		text: () => GetTimeNowText()
 	},
 	{
@@ -660,26 +700,10 @@ const infoPanels = [
 		rawViewers: () => ((IsTikTokProviderConnected() || liveStatus === 2)
 			? Math.max(0, Math.floor(Number(viewerCount) || 0))
 			: 0)
-	},
-	{
-		id: 'music',
-		// Panel musik tayang saat play & pause, tapi di-skip bila tidak ada lagu
-		// (bridge putus / metadata kosong) atau artwork kosong —
-		// [NO FALLBACK] tidak ada ikon pengganti.
-		skip: () => !HasPlayableTrack() || !nowPlayingData.albumArt,
-		icon: () => nowPlayingData.albumArt,
-		rightIcon: () => {
-			const hexStr = encodeURIComponent(nowPlayingData.lightVibrant || "#8A2BE2");
-			return `data:image/svg+xml;utf8,%3Csvg%20fill%3D%22${hexStr}%22%20viewBox%3D%220%200%2024%2024%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20x%3D%222%22%20y%3D%229%22%20width%3D%225%22%20height%3D%226%22%20rx%3D%222%22%3E%3Canimate%20attributeName%3D%22height%22%20values%3D%226%3B16%3B6%22%20begin%3D%220s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3Canimate%20attributeName%3D%22y%22%20values%3D%229%3B4%3B9%22%20begin%3D%220s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3C%2Frect%3E%3Crect%20x%3D%229%22%20y%3D%223%22%20width%3D%225%22%20height%3D%2218%22%20rx%3D%222%22%3E%3Canimate%20attributeName%3D%22height%22%20values%3D%2218%3B8%3B18%22%20begin%3D%220.2s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3Canimate%20attributeName%3D%22y%22%20values%3D%223%3B8%3B3%22%20begin%3D%220.2s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3C%2Frect%3E%3Crect%20x%3D%2216%22%20y%3D%227%22%20width%3D%225%22%20height%3D%2210%22%20rx%3D%222%22%3E%3Canimate%20attributeName%3D%22height%22%20values%3D%2210%3B18%3B10%22%20begin%3D%220.4s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3Canimate%20attributeName%3D%22y%22%20values%3D%227%3B3%3B7%22%20begin%3D%220.4s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3C%2Frect%3E%3C%2Fsvg%3E`;
-		},
-		ticks: true,
-		// Marquee dipicu lebar piksel nyata, bukan jumlah karakter (cegah scroll terbalik).
-		isMarquee: () => MeasureIslandTextWidth(musicText()) > MARQUEE_MAX_WIDTH,
-		// Satu jalur teks: play = judul • artis; pause = "Paused • m:ss".
-		text: () => (nowPlayingData.pausedAtMs !== null
-			? 'Paused • ' + formatTimeMs(nowPlayingData.pausedAtMs)
-			: musicText()),
 	}
+	// [DIHAPUS] Panel music lama: digabung ke panel "Time & Now Playing" di atas
+	// (wave kiri, waktu tengah, album art kanan). Jalur alert song-change tetap
+	// memakai id 'music' — sekarang menunjuk panel gabungan ini.
 ];
 
 // Urutan rotasi info (settings: infoRotationOrder).
@@ -696,6 +720,10 @@ const infoPanels = [
 	if (!Array.isArray(order) || order.length === 0) return;
 	const sorted = [];
 	order.forEach(id => {
+		// Alias lama: id 'time' sudah digabung ke panel 'music' (Time & Now Playing).
+		// URL/setting lama yang masih menyimpan 'time' diarahkan ke panel gabungan
+		// supaya tampilan waktu tidak hilang.
+		if (id === 'time') id = 'music';
 		const panel = infoPanels.find(p => p.id === id);
 		// Hindari dobel bila URL mengandung id yang sama dua kali.
 		if (panel && !sorted.includes(panel)) sorted.push(panel);
@@ -861,8 +889,9 @@ function StartScrubberAnimation() {
 			
 			if (elFill && totalMs > 0) {
 				const pct = (posMs / totalMs) * 100;
-				// Visual mulai dari 25% lebar, naik ke 100% saat lagu mendekati akhir.
-				const visualPct = 25 + (pct * 0.75);
+				// Big: visual mulai 25% agar bar terlihat hidup sejak awal.
+				// Medium: mulai 0% — bar mengisi penuh dari kiri, seperti progress asli.
+				const visualPct = isMusicMedium ? pct : (25 + (pct * 0.75));
 				elFill.style.width = `${visualPct}%`;
 				if (elThumb) elThumb.style.left = `${visualPct}%`;
 				// Progress bar polos: tidak ada animasi squiggly wave.
@@ -909,6 +938,14 @@ function RefreshMusicWaveIcon(force = false) {
 	if (islandEventIcon) {
 		// Set ulang src me-restart animasi <animate> di SVG (wave jadi kedut).
 		const nextSrc = typeof panel.rightIcon === 'function' ? panel.rightIcon() : panel.rightIcon;
+		// [GUARD null] Panel gabungan mengembalikan null saat tidak ada lagu —
+		// jangan set src=null (ikon rusak), sembunyikan saja wave-nya.
+		if (!nextSrc) {
+			islandEventIcon.classList.add('hidden');
+			islandEventIcon.src = '';
+			islandEventIcon.__gesekiRightSrc = '';
+			return;
+		}
 		if (force || islandEventIcon.src !== nextSrc) {
 			islandEventIcon.src = nextSrc;
 		}
@@ -939,6 +976,31 @@ function UpdateViewerCount() {
 	}
 }
 
+// Sinkronkan ikon kiri (#islandIcon) dengan panel aktif: album art saat ada lagu,
+// ikon panel (mis. jam) saat tidak ada. Dipakai jalur ANIMASI maupun jalur SENYAP.
+// [BUG FIX] Dulu jalur senyap tidak pernah menyentuh ikon sama sekali; saat lagu
+// berhenti sementara panel Time & Now Playing tayang, album art tertinggal dan
+// ikon jam tidak muncul sampai rotasi berganti panel.
+function SyncIslandIcon(panel) {
+	if (!islandIcon || !panel) return;
+	const nextIcon = typeof panel.icon === 'function' ? panel.icon() : panel.icon;
+	// Bandingkan atribut mentah (getAttribute), bukan properti .src yang sudah
+	// di-resolve jadi URL absolut — supaya tidak set ulang tiap detik (tick jam).
+	if (islandIcon.getAttribute('src') !== nextIcon) {
+		islandIcon.src = nextIcon;
+	}
+	// Kotak membulat hanya untuk ALBUM ART; ikon jam/panel lain tetap polos.
+	if (panel.id === 'music' && HasPlayableTrack() && nowPlayingData.albumArt && nowPlayingData.albumArt !== "") {
+		islandIcon.classList.add('rounded-icon');
+	} else {
+		islandIcon.classList.remove('rounded-icon');
+	}
+	// onerror di-null-kan supaya handler panel SEBELUMNYA tidak menempel.
+	islandIcon.onerror = null;
+	islandIcon.classList.remove('hidden');
+	SyncIconWrapHidden();
+}
+
 function ApplyInfoPanel(animate, allowBounce = true) {
 	if (isAlertActive) return;
 	const panel = infoPanels[currentPanelIndex];
@@ -946,13 +1008,27 @@ function ApplyInfoPanel(animate, allowBounce = true) {
 
 	const nextText = panel.text();
 
+	// Penanda panel gabungan "Time & Now Playing" sedang aktif di AMBIENT.
+	// Dipakai CSS untuk memindah album art ke kanan (order) — hanya bila
+	// ada lagu; mode jam-saja tidak dipindah agar ikon jam tetap di kiri.
+	// `panel-time` menyala TANPA syarat lagu: dipakai untuk mengunci lebar
+	// teks jam (angka tabular) supaya pill tidak goyang tiap detik.
+	if (dynamicIsland) {
+		dynamicIsland.classList.toggle('panel-time', panel.id === 'music');
+		dynamicIsland.classList.toggle('panel-time-music',
+			panel.id === 'music' && HasPlayableTrack() && !!nowPlayingData.albumArt);
+	}
+
 	// Pause HANYA mengubah dua hal: class `music-paused` (overlay CSS) dan
 	// teks "Paused • m:ss". Jalur render lain sama persis seperti saat play.
+	// [GUARD] pause hanya berlaku bila ADA album art: panel gabungan kini selalu
+	// tampil, jadi tanpa syarat ini overlay ⏸ bisa menimpa ikon jam.
 	if (dynamicIsland) {
 		dynamicIsland.classList.toggle('music-paused',
-			panel.id === 'music' && nowPlayingData.pausedAtMs !== null);
+			panel.id === 'music' && nowPlayingData.pausedAtMs !== null
+			&& HasPlayableTrack() && !!nowPlayingData.albumArt);
 		// Aksen untuk ikon pause; hanya panel ambient, music big tidak disentuh.
-		if (panel.id === 'music' && !dynamicIsland.classList.contains('alert-music-big')) {
+		if (panel.id === 'music' && !dynamicIsland.classList.contains(MUSIC_CARD_CLASS)) {
 			dynamicIsland.style.setProperty('--accent-color',
 				nowPlayingData.lightVibrant || '#8A2BE2');
 		}
@@ -969,6 +1045,9 @@ function ApplyInfoPanel(animate, allowBounce = true) {
 		} else if (islandText.textContent !== nextText) {
 			islandText.textContent = nextText;
 		}
+		// [BUG FIX] Ikon kiri juga harus disinkronkan di jalur senyap: saat lagu
+		// berhenti, album art harus berganti ke ikon jam TANPA menunggu rotasi.
+		SyncIslandIcon(panel);
 		RefreshMusicWaveIcon();
 		return;
 	}
@@ -987,18 +1066,8 @@ function ApplyInfoPanel(animate, allowBounce = true) {
 		dynamicIsland.classList.add('ambient-bounce');
 	}
 
-	islandIcon.src = typeof panel.icon === 'function' ? panel.icon() : panel.icon;
-	if (panel.id === 'music' && nowPlayingData.albumArt && nowPlayingData.albumArt !== "") {
-		islandIcon.classList.add('rounded-icon');
-	} else {
-		islandIcon.classList.remove('rounded-icon');
-	}
-	
-	// [NO FALLBACK] Tidak ada ikon pengganti artwork. onerror di-null-kan
-	// agar handler panel sebelumnya tidak menempel.
-	islandIcon.onerror = null;
-	islandIcon.classList.remove('hidden');
-	SyncIconWrapHidden();
+	// Sinkronkan ikon kiri (album art / ikon jam) — satu jalur dengan mode senyap.
+	SyncIslandIcon(panel);
 
 	// Simpan nilai mentah di dataset.viewers untuk inspeksi/debug.
 	if (typeof panel.rawViewers === 'function') {
@@ -1017,8 +1086,13 @@ function ApplyInfoPanel(animate, allowBounce = true) {
 	}
 	
 	// Saat pause: overlay menutupi album art, wave icon disembunyikan.
-	if (islandEventIcon && panel.rightIcon) {
-		const nextRight = typeof panel.rightIcon === 'function' ? panel.rightIcon() : panel.rightIcon;
+	// [GUARD null] rightIcon kini SELALU fungsi, tapi mengembalikan null saat tidak
+	// ada lagu (panel gabungan hanya menampilkan jam). Tanpa cek ini, <img> di-set
+	// src=null dan muncul ikon rusak.
+	const nextRight = (islandEventIcon && panel.rightIcon)
+		? (typeof panel.rightIcon === 'function' ? panel.rightIcon() : panel.rightIcon)
+		: null;
+	if (islandEventIcon && nextRight) {
 		if (islandEventIcon.__gesekiRightSrc !== nextRight) {
 			islandEventIcon.__gesekiRightSrc = nextRight;
 			islandEventIcon.src = nextRight;
@@ -1212,14 +1286,17 @@ async function FetchNowPlaying() {
 				// Tandai SEBELUM TriggerAlert: satu songId = satu alert.
 				nowPlayingData._lastAlertedSongId = songIdKey;
 				const musicPanel = infoPanels.find(p => p.id === 'music');
-				// Music Big: judul TANPA "• artist" (artist sudah ada di subtext).
+				// Big/Medium: judul SAJA — artis tampil di baris #islandSubtext.
+				// Small: kartu tidak mekar & #islandSubtext disembunyikan, jadi
+				// artis WAJIB inline "judul • artis" atau namanya hilang total.
+				const alertText = enableDynamicStyleBig ? nowPlayingData.title : musicText();
 				TriggerAlert({
 					type: 'music',
 					// Artwork pasti ada: alert song change ditunda sampai thumbnail tiba.
 					icon: nowPlayingData.albumArt,
 					rightIcon: musicPanel.rightIcon,
-					text: nowPlayingData.title,
-					subtext: nowPlayingData.artist || ''
+					text: alertText,
+					subtext: enableDynamicStyleBig ? (nowPlayingData.artist || '') : ''
 				});
 				// JANGAN panggil ForceMusicPanelActive(): itu melompati antrean.
 				// Biarkan TriggerAlert mengantre.
@@ -1229,7 +1306,7 @@ async function FetchNowPlaying() {
 				// Saat music big tayang, UpdateInfoText(false) menimpa judul, artwork,
 				// dan palet -> biarkan antrean yang mengatur.
 				const bigBusy = isAlertActive ||
-					(dynamicIsland && dynamicIsland.classList.contains('alert-music-big'));
+					(dynamicIsland && dynamicIsland.classList.contains(MUSIC_CARD_CLASS));
 				if (bigBusy) {
 					// Simpan kunci render agar panel ambient sinkron setelah kartu besar.
 					nowPlayingData._lastRenderKey = [
@@ -1891,7 +1968,7 @@ function ProcessAlertQueue() {
 	// Alert musik: pill membesar jadi music big hanya bila enableDynamicStyleBig.
 	if (type === 'music') {
 		if (enableDynamicStyleBig) {
-			dynamicIsland.classList.add('alert-active', 'alert-music-big');
+			dynamicIsland.classList.add('alert-active', MUSIC_CARD_CLASS);
 			document.getElementById('musicBigExtra').classList.remove('hidden');
 			if (islandSubtext) {
 				islandSubtext.textContent = alertData.subtext || nowPlayingData.artist || 'Unknown Artist';
@@ -1918,9 +1995,14 @@ function ProcessAlertQueue() {
 			}
 			const scrubThumb = document.querySelector('.scrub-thumb');
 			if (scrubThumb) scrubThumb.style.backgroundColor = color;
+			// Glow kartu Medium memakai warna artwork. Di-set di pill (bukan hanya
+			// di fill) karena background gradient-nya ada di #dynamicIsland.
+			if (isMusicMedium) {
+				dynamicIsland.style.setProperty('--accent-color', color);
+			}
 			StartScrubberAnimation();
 		} else {
-			dynamicIsland.classList.remove('alert-active', 'alert-music-big');
+			dynamicIsland.classList.remove('alert-active', MUSIC_CARD_CLASS);
 			document.getElementById('musicBigExtra').classList.add('hidden');
 			if (islandSubtext) {
 				islandSubtext.textContent = '';
@@ -1930,7 +2012,7 @@ function ProcessAlertQueue() {
 		islandText.innerHTML = RenderIslandText(text || title || '', true);
 	} else {
 		dynamicIsland.classList.add('alert-active');
-		dynamicIsland.classList.remove('alert-music-big');
+		dynamicIsland.classList.remove(MUSIC_CARD_CLASS);
 		document.getElementById('musicBigExtra').classList.add('hidden');
 	}
 
@@ -1967,7 +2049,7 @@ function ProcessAlertQueue() {
 			ProcessAlertQueue(); // Show next alert in queue immediately
 		} else {
 			// All alerts completed: resume ambient looping widget!
-			dynamicIsland.classList.remove('alert-active', 'alert-pop', 'alert-music-big');
+			dynamicIsland.classList.remove('alert-active', 'alert-pop', MUSIC_CARD_CLASS);
 			document.getElementById('musicBigExtra').classList.add('hidden');
 			if (islandAvatar) {
 				islandAvatar.classList.add('hidden');
@@ -1986,17 +2068,11 @@ function ProcessAlertQueue() {
 			islandIcon.classList.remove('hidden');
 			SyncIconWrapHidden();
 
-			// [UX] Lompati panel music setelah alert songchange agar tidak mengulang lagu sama.
-			if (type === 'music') {
-				const musicPanelIdx = infoPanels.findIndex(p => p.id === 'music');
-				if (musicPanelIdx !== -1 && currentPanelIndex === musicPanelIdx) {
-					let attempts = 0;
-					do {
-						currentPanelIndex = (currentPanelIndex + 1) % infoPanels.length;
-						attempts++;
-					} while (infoPanels[currentPanelIndex].skip && infoPanels[currentPanelIndex].skip() && attempts < infoPanels.length);
-				}
-			}
+			// [DIHAPUS] Dulu panel 'music' dilewati setelah alert songchange agar lagu
+			// tidak tampil dua kali. Panel itu kini menampilkan WAKTU (Time & Now
+			// Playing), bukan judul lagu -> tidak ada pengulangan, dan melewatinya
+			// hanya membuat jam terlewat. Panel time lama juga tidak pernah di-skip.
+			// (Skip generik lewat panel.skip tetap dihormati oleh StartCycleTimer.)
 
 			isAlertActive = false;
 			alertLocked = false;
@@ -2025,7 +2101,7 @@ function DiscardStaleAlerts() {
 	alertQueue.length = 0;
 	// 3) Tutup paksa alert yang masih terpasang di DOM.
 	if (window.currentActiveAlertData) {
-		dynamicIsland.classList.remove('alert-active', 'alert-pop', 'alert-music-big', 'morph-no-overshoot');
+		dynamicIsland.classList.remove('alert-active', 'alert-pop', MUSIC_CARD_CLASS, 'morph-no-overshoot');
 		const extra = document.getElementById('musicBigExtra');
 		if (extra) extra.classList.add('hidden');
 		if (islandAvatar) {

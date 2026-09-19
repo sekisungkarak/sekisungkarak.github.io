@@ -126,11 +126,24 @@
       "group": "SMTC Connection"
     },
     {
-      "id": "enableDynamicStyleBig",
-      "label": "Enable Dynamic Style Big",
-      "description": "Menampilkan alert lagu baru (songchange) dengan ukuran besar (Spotify/Apple Music Style).",
-      "type": "checkbox",
-      "defaultValue": true,
+      "id": "musicStyle",
+      "label": "Music Alert Style",
+      "type": "select",
+      "options": [
+        {
+          "value": "small",
+          "label": "Small"
+        },
+        {
+          "value": "big",
+          "label": "Big"
+        },
+        {
+          "value": "medium",
+          "label": "Medium"
+        }
+      ],
+      "defaultValue": "big",
       "group": "SMTC Connection"
     },
     {
@@ -277,11 +290,10 @@
       "type": "tags",
       "defaultValue": [
         "date",
-        "time",
+        "music",
         "duration",
         "weather",
-        "viewers",
-        "music"
+        "viewers"
       ],
       "options": [
         {
@@ -289,8 +301,8 @@
           "label": "Date"
         },
         {
-          "value": "time",
-          "label": "Time"
+          "value": "music",
+          "label": "Time & Now Playing"
         },
         {
           "value": "duration",
@@ -303,10 +315,6 @@
         {
           "value": "viewers",
           "label": "Viewers"
-        },
-        {
-          "value": "music",
-          "label": "Now Playing"
         }
       ],
       "group": "General",
