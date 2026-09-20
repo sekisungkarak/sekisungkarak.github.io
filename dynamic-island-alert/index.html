@@ -12,7 +12,7 @@
 	     Catatan: script.js dimuat oleh router di AKHIR body (lihat bawah),
 	     bukan di sini. Script widget perlu elemen pill sudah ada di DOM.
 	     ============================================================ -->
-	<link rel="stylesheet" href="./style.css?v=93" />
+	<link rel="stylesheet" href="./style.css?v=94" />
 </head>
 
 <body>
@@ -50,11 +50,16 @@
 				<span class="scrub-time" id="scrubberTotal">3:20</span>
 			</div>
 			<div class="music-controls">
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.7 0l-1.1 1-1.1-1a5.5 5.5 0 0 0-7.8 7.8l1 1 7.9 7.8 7.8-7.9 1-1a5.5 5.5 0 0 0 0-7.7z"></path></svg>
-				<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 20L9 12l10-8v16zM5 19h2V5H5v14z"></path></svg>
-				<svg viewBox="0 0 24 24" fill="currentColor" style="transform: scale(1.5);"><circle cx="12" cy="12" r="10"></circle><g fill="#000"><rect x="8" y="7" width="2.5" height="10" rx="1"></rect><rect x="13.5" y="7" width="2.5" height="10" rx="1"></rect></g></svg>
-				<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 4l10 8-10 8V4zm14 1h-2v14h2V5z"></path></svg>
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"></path></svg>
+				<!-- 1) Star (outline) — kecil, setara AirPods (12 unit dari 24) -->
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 5.37L13.49 9.95L18.30 9.95L14.41 12.78L15.90 17.36L12 14.53L8.10 17.36L9.59 12.78L5.70 9.95L10.51 9.95Z"></path></svg>
+				<!-- 2) Rewind: dua segitiga gemuk (lebar 11, tinggi 20) -->
+				<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.5 2V22L0.5 12zM23.5 2V22L12.5 12z"></path></svg>
+				<!-- 3) Pause: dua bar gemuk (6.3 x 22, jarak = lebar bar) -->
+				<svg viewBox="0 0 24 24" fill="currentColor"><rect x="2.55" y="1" width="6.3" height="22" rx="3.15"></rect><rect x="15.15" y="1" width="6.3" height="22" rx="3.15"></rect></svg>
+				<!-- 4) Fast-forward: cermin rewind (lebar 11) -->
+				<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 2V22L23.5 12zM0.5 2V22L11.5 12z"></path></svg>
+				<!-- 5) AirPods: kecil, setara bintang (12 unit) -->
+				<svg viewBox="0 0 24 24" fill="currentColor"><g transform="rotate(10 7.5 12)"><circle cx="7.5" cy="9" r="3"></circle><rect x="6.2" y="9" width="2.6" height="9" rx="1.3"></rect></g><g transform="rotate(-10 16.5 12)"><circle cx="16.5" cy="9" r="3"></circle><rect x="15.2" y="9" width="2.6" height="9" rx="1.3"></rect></g></svg>
 			</div>
 		</div>
 		</div>
@@ -89,7 +94,7 @@
 		location.replace('./obs/index.html' + location.search);
 		return;
 	}
-	var v = '153';
+	var v = '154';
 	document.write(
 		'<' + 'script src="./script.js?v=' + v + '"><\/script>'
 	);
