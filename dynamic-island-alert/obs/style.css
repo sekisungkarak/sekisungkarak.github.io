@@ -163,6 +163,44 @@ body {
 	margin-top: 1px;
 }
 
+/* Baris judul: pembungkus username + badge. Di luar kartu alert div ini
+   "transparan" (display: contents) supaya layout ambient & kartu musik
+   big/medium tidak berubah sama sekali. Di kartu alert TikTok baru menjadi
+   baris flex sungguhan: username + badge berdampingan, badge setinggi mata
+   username (align-items: center). */
+#islandTitleRow {
+	display: contents;
+}
+#dynamicIsland.alert-active:not(.alert-music-big):not(.alert-music-medium) #islandTitleRow {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	min-width: 0;
+}
+
+/* ══ Badge TikTok (grade / Top Gifter) ══
+   Anak #islandTitleRow, tepat di kanan #islandText -> menempel di ujung
+   username pada baris yang sama (bukan sejajar tengah blok judul+subtext). */
+#islandBadges {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	flex-shrink: 0;
+	margin-left: 5px;      /* jarak dari ujung kanan username */
+}
+#islandBadges .island-badge {
+	width: 16px;
+	height: 16px;
+	object-fit: contain;
+	flex-shrink: 0;
+	filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.55));
+}
+/* Di kartu musik big/medium badge tidak relevan (bukan event TikTok) */
+#dynamicIsland.alert-music-big #islandBadges,
+#dynamicIsland.alert-music-medium #islandBadges {
+	display: none;
+}
+
 /* Event icon on the right side during alert */
 #islandEventIcon {
 	width: var(--island-icon-alert, 24px);

@@ -12,7 +12,7 @@
 	     Catatan: script.js dimuat oleh router di AKHIR body (lihat bawah),
 	     bukan di sini. Script widget perlu elemen pill sudah ada di DOM.
 	     ============================================================ -->
-	<link rel="stylesheet" href="./style.css?v=94" />
+	<link rel="stylesheet" href="./style.css?v=97" />
 </head>
 
 <body>
@@ -38,7 +38,10 @@
 				</div>
 			</div>
 			<div id="islandContent" class="content">
-				<span id="islandText" class="text">Loading...</span>
+				<div id="islandTitleRow">
+					<span id="islandText" class="text">Loading...</span>
+					<span id="islandBadges" class="badges hidden"></span>
+				</div>
 				<span id="islandSubtext" class="subtext hidden"></span>
 			</div>
 			<img id="islandEventIcon" class="event-icon hidden" src="" alt="">
@@ -94,7 +97,7 @@
 		location.replace('./obs/index.html' + location.search);
 		return;
 	}
-	var v = '154';
+	var v = '157';
 	document.write(
 		'<' + 'script src="./script.js?v=' + v + '"><\/script>'
 	);

@@ -94,6 +94,16 @@ const enableShare = GetBoolParam("enableShare", true);
 const enableGift = GetBoolParam("enableGift", true);
 const enableFirstChatter = GetBoolParam("enableFirstChatter", true);
 
+// Ikon event TikTok (foto/gift/chat/follow/subscribe/share) — KHUSUS event TikTok.
+// Tiap grup event punya toggle sendiri. Default true = perilaku lama tidak berubah.
+// Hanya memengaruhi ikon event di kartu alert; ikon panel ambient (wave/album art)
+// tidak tersentuh karena jalurnya beda (SyncIslandIcon, bukan ProcessAlertQueue).
+const enableFollowIcon = GetBoolParam("enableFollowIcon", true);
+const enableSubscribeIcon = GetBoolParam("enableSubscribeIcon", true);
+const enableShareIcon = GetBoolParam("enableShareIcon", true);
+const enableGiftIcon = GetBoolParam("enableGiftIcon", true);
+const enableFirstChatterIcon = GetBoolParam("enableFirstChatterIcon", true);
+
 // SMTC Bridge & Now Playing settings
 const enableNowPlaying = GetBoolParam("enableNowPlaying", true);
 const includedApplications = urlParams.get("includedApplications") || '';
@@ -258,6 +268,25 @@ function GetGraphemeCount(str) {
 	return [...str].length;
 }
 
+// Potong string per GRAPHEME (bukan code unit) supaya emoji/ZWJ/Arab tidak
+// terbelah jadi karakter rusak. Dipakai untuk batas username 15 karakter.
+function TruncateGraphemes(str, maxChars) {
+	if (!str) return '';
+	if (GetGraphemeCount(str) <= maxChars) return str;
+	if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+		const seg = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+		let out = '';
+		let n = 0;
+		for (const { segment } of seg.segment(str)) {
+			if (n >= maxChars) break;
+			out += segment;
+			n++;
+		}
+		return out + '…';
+	}
+	return [...str].slice(0, maxChars).join('') + '…';
+}
+
 function GetIntParam(paramName, defaultValue) {
 	const paramValue = urlParams.get(paramName);
 	if (paramValue === null) return defaultValue;
@@ -365,6 +394,54 @@ const islandContent = document.getElementById('islandContent');
 const islandText = document.getElementById('islandText');
 const islandSubtext = document.getElementById('islandSubtext');
 const islandEventIcon = document.getElementById('islandEventIcon');
+const islandBadges = document.getElementById('islandBadges');
+
+// ══ Badge TikTok ══
+// URL badge dari TikFinity/IndoFinity kadang dibungkus `@url:`…`` (lihat contoh
+// payload userBadges). Bersihkan bungkus itu + kutip, kalau tidak <img> gagal muat.
+function CleanBadgeUrl(raw) {
+	if (!raw || typeof raw !== 'string') return '';
+	let s = raw.trim();
+	const m = s.match(/^@url:`([^`]+)`$/);
+	if (m) s = m[1];
+	else if (s.startsWith('@url:')) s = s.slice(4).replace(/^`|`$/g, '');
+	if (!/^https?:\/\//i.test(s) && !s.startsWith('data:')) return '';
+	// Tolak karakter yang bisa keluar dari atribut src saat disuntik via innerHTML.
+	if (/["'<>\s]/.test(s)) return '';
+	return s;
+}
+
+// Ambil maksimal 2 badge dari payload TikTok. Urutan payload dipertahankan
+// (biasanya grade dulu, lalu top gifter).
+function GetUserBadges(tiktokData) {
+	if (!tiktokData) return [];
+	const list = tiktokData.userBadges || tiktokData.user?.userBadges || [];
+	if (!Array.isArray(list)) return [];
+	const out = [];
+	for (const b of list) {
+		if (!b || typeof b !== 'object') continue;
+		const url = CleanBadgeUrl(b.image || b.imageUrl || b.url);
+		if (!url) continue;
+		out.push(url);
+		if (out.length >= 2) break;
+	}
+	return out;
+}
+
+// Tampilkan badge di kartu alert (setelah username). Kosong -> sembunyikan.
+function RenderBadges(badges) {
+	if (!islandBadges) return;
+	if (!Array.isArray(badges) || badges.length === 0) {
+		islandBadges.innerHTML = '';
+		islandBadges.classList.add('hidden');
+		return;
+	}
+	islandBadges.innerHTML = badges
+		.map((u) => `<img class="island-badge" src="${u}" alt="">`)
+		.join('');
+	islandBadges.classList.remove('hidden');
+}
+
 const islandAlert = document.getElementById('islandAlert');
 const alertIcon = document.getElementById('alertIcon');
 const alertText = document.getElementById('alertText');
@@ -1172,6 +1249,8 @@ function ApplyInfoPanel(animate, allowBounce = true) {
 		islandSubtext.classList.add('hidden');
 		islandSubtext.textContent = '';
 	}
+	// Badge hanya milik kartu alert: kembali ke ambient -> bersihkan.
+	RenderBadges(null);
 	
 	// Mode pause panel musik: overlay pause menutupi album art, wave icon disembunyikan.
 	// Diterapkan di atas blok mode senyap supaya berlaku di SEMUA mode render.
@@ -2098,7 +2177,14 @@ function ProcessAlertQueue() {
 		currentAlertDuration = ComputeAlertDuration();
 	}
 
-	const { icon, text, title, subtext, avatar, type, rightIcon } = alertData;
+	const { icon, text, title, subtext, avatar, type, rightIcon, badges } = alertData;
+	// showIcon=false (khusus toggle ikon event TikTok) -> sembunyikan TOTAL ikon
+	// event: tidak di kanan, dan TIDAK dipindah ke slot kiri saat tanpa avatar.
+	// Event non-TikTok tidak mengirim `showIcon`, jadi default tetap tampil.
+	const showIcon = alertData.showIcon !== false;
+
+	// Badge TikTok (maks 2) tampil setelah username. Kosong -> tersembunyi.
+	RenderBadges(badges);
 
 	// Avatar sudah 100% didownload di atas (Prefetch Avatar), jadi aman disuntikkan tanpa
 	// efek berkedip/hitam.
@@ -2110,14 +2196,23 @@ function ProcessAlertQueue() {
 	} else if (islandAvatar) {
 		islandAvatar.classList.add('hidden');
 		islandAvatar.src = '';
-		islandIcon.src = icon;
-		islandIcon.classList.remove('hidden');
+		// showIcon=false -> slot kiri dibiarkan kosong, ikon event tidak pindah ke sini.
+		if (showIcon) {
+			islandIcon.src = icon;
+			islandIcon.classList.remove('hidden');
+		} else {
+			islandIcon.classList.add('hidden');
+			islandIcon.src = '';
+		}
 		SyncIconWrapHidden();
 	}
 
 	// Event icon on the right side if avatar or rightIcon is present
 	if (islandEventIcon) {
-		if (rightIcon) {
+		if (!showIcon) {
+			islandEventIcon.classList.add('hidden');
+			islandEventIcon.src = '';
+		} else if (rightIcon) {
 			islandEventIcon.src = typeof rightIcon === 'function' ? rightIcon() : rightIcon;
 			islandEventIcon.classList.remove('hidden');
 		} else if (avatar) {
@@ -2366,6 +2461,12 @@ function ProcessAlertQueue() {
 // Global test helpers for preview / dev
 const testUser = 'sekisungkarak';
 const testAvatar = '../resources/sekisungkarak_avatar.jpeg';
+// Badge contoh untuk tombol Test di dashboard (grade lv1 + Top Gifter No. 3),
+// diambil dari payload TikTok asli supaya preview = tampilan live.
+const testBadges = [
+	'https://p19-webcast.tiktokcdn.com/webcast-va/grade_badge_icon_lite_lv1_v1.png~tplv-obj.image',
+	'https://p19-webcast.tiktokcdn.com/webcast-sg/new_top_gifter_version_2.png~tplv-obj.image'
+];
 
 window.testFollow = function () {
 	const msg = urlParams.get("followMessage") || "followed!";
@@ -2375,7 +2476,9 @@ window.testFollow = function () {
 		text: `${testUser} ${msg.replaceAll('{name}', testUser)}`,
 		title: testUser,
 		subtext: msg.replaceAll('{name}', testUser),
-		avatar: testAvatar
+		avatar: testAvatar,
+		badges: testBadges,
+		showIcon: enableFollowIcon
 	});
 };
 
@@ -2387,7 +2490,9 @@ window.testSubscribe = function () {
 		text: `${testUser} ${msg.replaceAll('{name}', testUser)}`,
 		title: testUser,
 		subtext: msg.replaceAll('{name}', testUser),
-		avatar: testAvatar
+		avatar: testAvatar,
+		badges: testBadges,
+		showIcon: enableSubscribeIcon
 	});
 };
 
@@ -2399,7 +2504,9 @@ window.testShare = function () {
 		text: `${testUser} ${msg.replaceAll('{name}', testUser)}`,
 		title: testUser,
 		subtext: msg.replaceAll('{name}', testUser),
-		avatar: testAvatar
+		avatar: testAvatar,
+		badges: testBadges,
+		showIcon: enableShareIcon
 	});
 };
 
@@ -2412,7 +2519,9 @@ window.testGift = function () {
 		text: `${testUser} ${action}`,
 		title: testUser,
 		subtext: action,
-		avatar: testAvatar
+		avatar: testAvatar,
+		badges: testBadges,
+		showIcon: enableGiftIcon
 	});
 };
 
@@ -2427,7 +2536,9 @@ window.testFirstChatter = function () {
 		text: `${testUser}: ${message}`,
 		title: testUser,
 		subtext: message,
-		avatar: testAvatar
+		avatar: testAvatar,
+		badges: testBadges,
+		showIcon: enableFirstChatterIcon
 	});
 };
 
@@ -2842,9 +2953,10 @@ function handleTikTokEvent(event, tiktokData, source) {
 	if (!tiktokData) return;
 
 	const userName = tiktokData.nickname || tiktokData.uniqueId || 'Someone';
-	// Username dibatasi 20 karakter (sama seperti first chatter) supaya marquee tidak
-	// berjalan terlalu jauh dan pill tetap proporsional.
-	const displayUser = userName.length > 20 ? userName.slice(0, 20) + '…' : userName;
+	// Username dibatasi 15 karakter. Dipotong per GRAPHEME (bukan code unit)
+	// supaya nickname ber-emoji tidak terbelah jadi karakter rusak.
+	const displayUser = TruncateGraphemes(userName, 15);
+	const badges = GetUserBadges(tiktokData);
 	const avatar = tiktokData.profilePictureUrl || tiktokData.profilePicture || tiktokData.avatarThumb || tiktokData.user?.profilePictureUrl || '';
 
 	switch (event) {
@@ -2868,7 +2980,9 @@ function handleTikTokEvent(event, tiktokData, source) {
 					title: displayName,
 					subtext: message,
 					text: `${displayName}: ${message}`,
-					avatar: avatar
+					avatar: avatar,
+					badges: badges,
+					showIcon: enableFirstChatterIcon
 				});
 			}
 			break;
@@ -2899,7 +3013,9 @@ function handleTikTokEvent(event, tiktokData, source) {
 				text: `${displayUser} ${action}`,
 				title: displayUser,
 				subtext: action,
-				avatar: avatar
+				avatar: avatar,
+				badges: badges,
+				showIcon: enableGiftIcon
 			});
 			break;
 		}
@@ -2910,8 +3026,10 @@ function handleTikTokEvent(event, tiktokData, source) {
 				icon: ALERT_ICONS.subscribe,
 				text: `${displayUser} ${subscribeMessage.replaceAll('{name}', displayUser)}`,
 				title: displayUser,
-			subtext: subscribeMessage.replaceAll('{name}', displayUser),
-				avatar: avatar
+				subtext: subscribeMessage.replaceAll('{name}', displayUser),
+				avatar: avatar,
+				badges: badges,
+				showIcon: enableSubscribeIcon
 			});
 			break;
 		}
@@ -2922,8 +3040,10 @@ function handleTikTokEvent(event, tiktokData, source) {
 				icon: ALERT_ICONS.follow,
 				text: `${displayUser} ${followMessage.replaceAll('{name}', displayUser)}`,
 				title: displayUser,
-			subtext: followMessage.replaceAll('{name}', displayUser),
-				avatar: avatar
+				subtext: followMessage.replaceAll('{name}', displayUser),
+				avatar: avatar,
+				badges: badges,
+				showIcon: enableFollowIcon
 			});
 			break;
 		}
@@ -2934,8 +3054,10 @@ function handleTikTokEvent(event, tiktokData, source) {
 				icon: ALERT_ICONS.share,
 				text: `${displayUser} ${shareMessage.replaceAll('{name}', displayUser)}`,
 				title: displayUser,
-			subtext: shareMessage.replaceAll('{name}', displayUser),
-				avatar: avatar
+				subtext: shareMessage.replaceAll('{name}', displayUser),
+				avatar: avatar,
+				badges: badges,
+				showIcon: enableShareIcon
 			});
 			break;
 		}

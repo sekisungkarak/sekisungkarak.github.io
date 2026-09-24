@@ -433,6 +433,14 @@
       "category": "TikTok Alerts"
     },
     {
+      "id": "enableFollowIcon",
+      "label": "Show Event Icon",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "Follow Alert",
+      "category": "TikTok Alerts"
+    },
+    {
       "id": "followMessage",
       "label": "Follow Message Text",
       "description": "Pesan di peringatan follow. Tulis {name} untuk memunculkan nama penonton.",
@@ -445,6 +453,14 @@
       "id": "enableSubscribe",
       "label": "Subscribe Alerts",
       "description": "Nyalakan animasi pop-up saat ada yang men-subscribe.",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "Subscribe Alert",
+      "category": "TikTok Alerts"
+    },
+    {
+      "id": "enableSubscribeIcon",
+      "label": "Show Event Icon",
       "type": "checkbox",
       "defaultValue": true,
       "group": "Subscribe Alert",
@@ -469,6 +485,14 @@
       "category": "TikTok Alerts"
     },
     {
+      "id": "enableShareIcon",
+      "label": "Show Event Icon",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "Share Alert",
+      "category": "TikTok Alerts"
+    },
+    {
       "id": "shareMessage",
       "label": "Share Message Text",
       "description": "Pesan di peringatan share. Tulis {name} untuk memunculkan nama penonton.",
@@ -487,6 +511,14 @@
       "category": "TikTok Alerts"
     },
     {
+      "id": "enableGiftIcon",
+      "label": "Show Event Icon",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "Gift Alert",
+      "category": "TikTok Alerts"
+    },
+    {
       "id": "giftMessage",
       "label": "Gift Message Text",
       "description": "Format pesan kado tersesuaikan lewat tag: {name}, {gift}, dan {count}.",
@@ -499,6 +531,14 @@
       "id": "enableFirstChatter",
       "label": "First Chatter Alerts",
       "description": "Sapa otomatis penonton yang menulis chat perdananya di sesi ini.",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "First Chatter",
+      "category": "TikTok Alerts"
+    },
+    {
+      "id": "enableFirstChatterIcon",
+      "label": "Show Event Icon",
       "type": "checkbox",
       "defaultValue": true,
       "group": "First Chatter",
