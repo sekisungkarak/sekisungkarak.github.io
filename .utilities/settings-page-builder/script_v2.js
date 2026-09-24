@@ -1079,11 +1079,11 @@ function BuildInput(setting) {
         // Custom override for Auto Test Dropdown: trigger instantly without reload
         if (setting.id === 'testAlertType') {
             if (value && value !== 'none') {
-                // Lewat CallWidgetFunction (bukan contentWindow mentah): mode dashboard
-// tidak punya iframe pratinjau, jadi contentWindow null -> throw -> baris
-// BroadcastChannel di bawahnya tidak pernah jalan dan OBS tak dapat test.
+                // Cukup CallWidgetFunction: ia SUDAH menyiarkan lewat BroadcastChannel
+// (menjangkau browser source OBS) sekaligus postMessage ke iframe pratinjau.
+// Dulu ada bc.postMessage({type:'trigger_test'}) tambahan di sini; akibatnya
+// widget dipanggil DUA kali tiap pilihan -> alert test ikut dobel.
                 CallWidgetFunction('testWidgetSelect', [value]);
-                if (bc) bc.postMessage({ type: 'trigger_test', testType: value });
             }
             return; // Skip save & refresh
         }

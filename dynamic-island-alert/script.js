@@ -159,6 +159,72 @@ const alertAudio = new Audio("../resources/sfx/notification.mp3");
 // Turunkan volume karena aslinya sfx ini cukup keras (sesuaikan kalau kurang)
 alertAudio.volume = 0.5;
 
+// ---- Batas 1 suara notifikasi (overlay ada di banyak scene) ----
+// Overlay Geseki bisa dipasang di beberapa scene sekaligus. Tiap browser source
+// punya koneksi websocket SENDIRI, jadi satu event TikTok tiba di SEMUA instance
+// dan tiap instance memutar sfx-nya sendiri -> suara dobel/triple.
+// Semua browser source OBS berbagi origin yang sama, jadi localStorage dipakai
+// sebagai buku besar bersama: hanya instance PERTAMA yang mengklaim sebuah event
+// yang memutar suara. Instance lain tetap menampilkan alert, tapi tanpa suara.
+const SOUND_CLAIM_KEY = 'geseki-sound-claim';
+const SOUND_CLAIM_WINDOW_MS = 4000; // selaras dengan jendela dedup TriggerAlert
+const SOUND_LOCK_NAME = 'geseki-sound-lock';
+
+// true = instance ini boleh memutar suara untuk `key`; false = event yang sama
+// sudah diputar instance lain baru saja. WAJIB dipanggil di dalam Web Lock,
+// supaya urutan cek-lalu-tulis benar-benar atomik antar browser source.
+function ClaimAlertSoundLocked(key) {
+	try {
+		const now = Date.now();
+		const raw = localStorage.getItem(SOUND_CLAIM_KEY);
+		const map = raw ? JSON.parse(raw) : {};
+		const prev = map[key];
+		if (prev && (now - prev.t) < SOUND_CLAIM_WINDOW_MS) {
+			return false;
+		}
+		map[key] = { t: now };
+		for (const k of Object.keys(map)) {
+			if (now - map[k].t > 10000) delete map[k];
+		}
+		localStorage.setItem(SOUND_CLAIM_KEY, JSON.stringify(map));
+		return true;
+	} catch (e) {
+		return true; // localStorage diblokir -> jangan pernah menelan suara
+	}
+}
+
+// Putar sfx satu alert, dibatasi 1 lintas instance (overlay ada di banyak scene).
+// Web Locks memberi mutual-exclusion antar browser source se-origin, jadi klaim
+// tidak bisa dobel MAUPUN hilang saat beberapa scene memproses event yang sama
+// berbarengan. Bila Web Locks tak tersedia, jatuh ke klaim localStorage (best-effort).
+function PlayAlertSound(key) {
+	// Pratinjau di iframe dashboard tidak pernah bunyi: suara selalu dari jendela utama (OBS).
+	if (window.top !== window) return;
+
+	const doPlay = () => {
+		alertAudio.currentTime = 0; // Ulang suara bila sebelumnya masih main
+		alertAudio.play().catch(e => console.debug("[Geseki] Audio play diblokir oleh browser:", e));
+	};
+
+	const attempt = () => {
+		if (navigator.locks && navigator.locks.request) {
+			navigator.locks.request(SOUND_LOCK_NAME, () => {
+				if (ClaimAlertSoundLocked(key)) doPlay();
+			}).catch(() => { if (ClaimAlertSoundLocked(key)) doPlay(); });
+		} else if (ClaimAlertSoundLocked(key)) {
+			doPlay();
+		}
+	};
+
+	// Scene OBS yang tidak tampil: beri kesempatan instance yang TERLIHAT lebih dulu,
+	// supaya suara keluar dari scene yang benar-benar sedang tayang.
+	if (document.visibilityState === 'hidden') {
+		setTimeout(attempt, 150);
+	} else {
+		attempt();
+	}
+}
+
 // Konstanta status playback Windows SMTC
 const PlaybackStatus = Object.freeze({
 	CLOSED: 0,   // Engine uninitialized or empty
@@ -2089,9 +2155,18 @@ function TriggerAlert(iconOrOptions, textArg, avatarArg, titleArg, subtextArg) {
 		}
 	}
 
-	// Deduplicate identical alerts within 4s
-	const key = `${alertData.icon}:${alertData.text || alertData.title}`;
+	// Deduplikasi berdasarkan IDENTITAS EVENT, bukan URL ikon.
+	// Kunci lama `${icon}:${text}` gagal untuk event TikTok: ikon gift memakai
+	// URL CDN yang berbeda tiap pengiriman, jadi duplikat lolos dan ikut
+	// menumpuk di antrean -> bunyi beruntun setelah event musik.
+	// `event` + `userId` dibawa dari payload websocket (lihat handleTikTokEvent).
+	// Isi pesan tetap disertakan supaya dua event BERBEDA dari user yang sama
+	// (mis. dua gift berlainan dalam 4 detik) tidak ikut terbuang.
+	// Event non-TikTok tidak mengirim `event` -> fallback ke perilaku lama.
 	const now = Date.now();
+	const key = alertData.event
+		? `evt:${alertData.event}:${alertData.userId || ''}:${alertData.text || alertData.title || ''}`
+		: `${alertData.icon}:${alertData.text || alertData.title}`;
 	if (recentAlerts.has(key) && (now - recentAlerts.get(key) < 4000)) {
 		return;
 	}
@@ -2159,8 +2234,12 @@ function ProcessAlertQueue() {
 	
 	// Mainkan suara notifikasi KECUALI untuk alert lagu baru (music)
 	if (alertData.type !== 'music') {
-		alertAudio.currentTime = 0; // Ulang suara bila sebelumnya masih main
-		alertAudio.play().catch(e => console.debug("[Geseki] Audio play diblokir oleh browser:", e));
+		// Kunci sama seperti dedup TriggerAlert: identitas EVENT (bukan URL ikon,
+		// yang berbeda tiap kirim) supaya instance di scene lain ikut dikunci.
+		const soundKey = alertData.event
+			? `evt:${alertData.event}:${alertData.userId || ''}:${alertData.text || alertData.title || ''}`
+			: `${alertData.icon}:${alertData.text || alertData.title}`;
+		PlayAlertSound(soundKey);
 	}
 
 	// Dihitung SETELAH shift(): yang dihitung event yang MASIH MENUNGGU. Durasi alert yang
@@ -2478,7 +2557,9 @@ window.testFollow = function () {
 		subtext: msg.replaceAll('{name}', testUser),
 		avatar: testAvatar,
 		badges: testBadges,
-		showIcon: enableFollowIcon
+		showIcon: enableFollowIcon,
+		event: 'follow',
+		userId: 'test'
 	});
 };
 
@@ -2492,7 +2573,9 @@ window.testSubscribe = function () {
 		subtext: msg.replaceAll('{name}', testUser),
 		avatar: testAvatar,
 		badges: testBadges,
-		showIcon: enableSubscribeIcon
+		showIcon: enableSubscribeIcon,
+		event: 'subscribe',
+		userId: 'test'
 	});
 };
 
@@ -2506,7 +2589,9 @@ window.testShare = function () {
 		subtext: msg.replaceAll('{name}', testUser),
 		avatar: testAvatar,
 		badges: testBadges,
-		showIcon: enableShareIcon
+		showIcon: enableShareIcon,
+		event: 'share',
+		userId: 'test'
 	});
 };
 
@@ -2521,7 +2606,9 @@ window.testGift = function () {
 		subtext: action,
 		avatar: testAvatar,
 		badges: testBadges,
-		showIcon: enableGiftIcon
+		showIcon: enableGiftIcon,
+		event: 'gift',
+		userId: 'test'
 	});
 };
 
@@ -2538,7 +2625,9 @@ window.testFirstChatter = function () {
 		subtext: message,
 		avatar: testAvatar,
 		badges: testBadges,
-		showIcon: enableFirstChatterIcon
+		showIcon: enableFirstChatterIcon,
+		event: 'firstChatter',
+		userId: 'test'
 	});
 };
 
@@ -2982,7 +3071,9 @@ function handleTikTokEvent(event, tiktokData, source) {
 					text: `${displayName}: ${message}`,
 					avatar: avatar,
 					badges: badges,
-					showIcon: enableFirstChatterIcon
+					showIcon: enableFirstChatterIcon,
+					event: 'chat',
+					userId: tiktokData.userId
 				});
 			}
 			break;
@@ -3015,7 +3106,9 @@ function handleTikTokEvent(event, tiktokData, source) {
 				subtext: action,
 				avatar: avatar,
 				badges: badges,
-				showIcon: enableGiftIcon
+				showIcon: enableGiftIcon,
+				event: 'gift',
+				userId: tiktokData.userId
 			});
 			break;
 		}
@@ -3029,7 +3122,9 @@ function handleTikTokEvent(event, tiktokData, source) {
 				subtext: subscribeMessage.replaceAll('{name}', displayUser),
 				avatar: avatar,
 				badges: badges,
-				showIcon: enableSubscribeIcon
+				showIcon: enableSubscribeIcon,
+				event: 'subscribe',
+				userId: tiktokData.userId
 			});
 			break;
 		}
@@ -3043,7 +3138,9 @@ function handleTikTokEvent(event, tiktokData, source) {
 				subtext: followMessage.replaceAll('{name}', displayUser),
 				avatar: avatar,
 				badges: badges,
-				showIcon: enableFollowIcon
+				showIcon: enableFollowIcon,
+				event: 'follow',
+				userId: tiktokData.userId
 			});
 			break;
 		}
@@ -3057,7 +3154,9 @@ function handleTikTokEvent(event, tiktokData, source) {
 				subtext: shareMessage.replaceAll('{name}', displayUser),
 				avatar: avatar,
 				badges: badges,
-				showIcon: enableShareIcon
+				showIcon: enableShareIcon,
+				event: 'share',
+				userId: tiktokData.userId
 			});
 			break;
 		}
