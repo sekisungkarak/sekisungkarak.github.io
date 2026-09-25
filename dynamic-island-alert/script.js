@@ -104,6 +104,10 @@ const enableShareIcon = GetBoolParam("enableShareIcon", true);
 const enableGiftIcon = GetBoolParam("enableGiftIcon", true);
 const enableFirstChatterIcon = GetBoolParam("enableFirstChatterIcon", true);
 
+// Suara notifikasi per overlay (Settings > General). Default true = perilaku lama.
+// Overlay yang hanya perlu tampil visual (mis. pratinjau scene lain) bisa OFF.
+const enableSound = GetBoolParam("enableSound", true);
+
 // SMTC Bridge & Now Playing settings
 const enableNowPlaying = GetBoolParam("enableNowPlaying", true);
 const includedApplications = urlParams.get("includedApplications") || '';
@@ -159,70 +163,16 @@ const alertAudio = new Audio("../resources/sfx/notification.mp3");
 // Turunkan volume karena aslinya sfx ini cukup keras (sesuaikan kalau kurang)
 alertAudio.volume = 0.5;
 
-// ---- Batas 1 suara notifikasi (overlay ada di banyak scene) ----
-// Overlay Geseki bisa dipasang di beberapa scene sekaligus. Tiap browser source
-// punya koneksi websocket SENDIRI, jadi satu event TikTok tiba di SEMUA instance
-// dan tiap instance memutar sfx-nya sendiri -> suara dobel/triple.
-// Semua browser source OBS berbagi origin yang sama, jadi localStorage dipakai
-// sebagai buku besar bersama: hanya instance PERTAMA yang mengklaim sebuah event
-// yang memutar suara. Instance lain tetap menampilkan alert, tapi tanpa suara.
-const SOUND_CLAIM_KEY = 'geseki-sound-claim';
-const SOUND_CLAIM_WINDOW_MS = 4000; // selaras dengan jendela dedup TriggerAlert
-const SOUND_LOCK_NAME = 'geseki-sound-lock';
-
-// true = instance ini boleh memutar suara untuk `key`; false = event yang sama
-// sudah diputar instance lain baru saja. WAJIB dipanggil di dalam Web Lock,
-// supaya urutan cek-lalu-tulis benar-benar atomik antar browser source.
-function ClaimAlertSoundLocked(key) {
-	try {
-		const now = Date.now();
-		const raw = localStorage.getItem(SOUND_CLAIM_KEY);
-		const map = raw ? JSON.parse(raw) : {};
-		const prev = map[key];
-		if (prev && (now - prev.t) < SOUND_CLAIM_WINDOW_MS) {
-			return false;
-		}
-		map[key] = { t: now };
-		for (const k of Object.keys(map)) {
-			if (now - map[k].t > 10000) delete map[k];
-		}
-		localStorage.setItem(SOUND_CLAIM_KEY, JSON.stringify(map));
-		return true;
-	} catch (e) {
-		return true; // localStorage diblokir -> jangan pernah menelan suara
-	}
-}
-
-// Putar sfx satu alert, dibatasi 1 lintas instance (overlay ada di banyak scene).
-// Web Locks memberi mutual-exclusion antar browser source se-origin, jadi klaim
-// tidak bisa dobel MAUPUN hilang saat beberapa scene memproses event yang sama
-// berbarengan. Bila Web Locks tak tersedia, jatuh ke klaim localStorage (best-effort).
-function PlayAlertSound(key) {
+// ---- Suara notifikasi (opsional per overlay) ----
+// Diatur dari Settings > General ("Notification Sound", default ON). Overlay yang
+// hanya perlu tampil visual bisa mematikannya. Suara selalu keluar dari jendela
+// utama: pratinjau iframe di halaman Settings tidak pernah bunyi.
+function PlayAlertSound() {
 	// Pratinjau di iframe dashboard tidak pernah bunyi: suara selalu dari jendela utama (OBS).
 	if (window.top !== window) return;
-
-	const doPlay = () => {
-		alertAudio.currentTime = 0; // Ulang suara bila sebelumnya masih main
-		alertAudio.play().catch(e => console.debug("[Geseki] Audio play diblokir oleh browser:", e));
-	};
-
-	const attempt = () => {
-		if (navigator.locks && navigator.locks.request) {
-			navigator.locks.request(SOUND_LOCK_NAME, () => {
-				if (ClaimAlertSoundLocked(key)) doPlay();
-			}).catch(() => { if (ClaimAlertSoundLocked(key)) doPlay(); });
-		} else if (ClaimAlertSoundLocked(key)) {
-			doPlay();
-		}
-	};
-
-	// Scene OBS yang tidak tampil: beri kesempatan instance yang TERLIHAT lebih dulu,
-	// supaya suara keluar dari scene yang benar-benar sedang tayang.
-	if (document.visibilityState === 'hidden') {
-		setTimeout(attempt, 150);
-	} else {
-		attempt();
-	}
+	if (!enableSound) return;
+	alertAudio.currentTime = 0; // Ulang suara bila sebelumnya masih main
+	alertAudio.play().catch(e => console.debug("[Geseki] Audio play diblokir oleh browser:", e));
 }
 
 // Konstanta status playback Windows SMTC
@@ -654,6 +604,10 @@ const ALERT_ICONS = {
 let weatherData = null;
 let viewerCount = null;
 let currentPanelIndex = 0;
+// [AMBIENT ROTASI] Waktu (ms) panel saat ini mulai tayang. Rotasi dihitung dari
+// anchor ini, bukan dari tick timer, supaya rotasi tetap berjalan selama alert
+// menghentikan timer dan bisa dikejar (CatchUpRotation) saat ambient dipulihkan.
+let cycleAnchorAt = Date.now();
 let cycleTimer = null;
 let secondTicker = null;
 let isAlertActive = false;
@@ -1123,13 +1077,36 @@ function SyncIslandVisibility() {
 	dynamicIsland.classList.toggle('island-no-panel', !anyVisible);
 }
 
-function CycleInfo() {
-	if (isAlertActive) return;
+// Majukan indeks rotasi SATU langkah, melewati panel yang di-skip.
+// Dipakai rotasi normal (CycleInfo) dan pengejaran rotasi setelah alert.
+function AdvancePanelIndexOnce() {
 	let attempts = 0;
 	do {
 		currentPanelIndex = (currentPanelIndex + 1) % infoPanels.length;
 		attempts++;
 	} while (infoPanels[currentPanelIndex].skip && infoPanels[currentPanelIndex].skip() && attempts < infoPanels.length);
+}
+
+// [AMBIENT ROTASI] Selama alert, cycle timer dihentikan. Rotasi tetap dihitung dari
+// cycleAnchorAt; saat ambient dipulihkan, kejar semua slot yang terlewat supaya panel
+// yang tampil seolah alert TIDAK menginterupsi rotasi.
+function CatchUpRotation(force = false) {
+	if (isAlertActive && !force) return;
+	const len = infoPanels.length;
+	if (!len) return;
+	let steps = Math.floor((Date.now() - cycleAnchorAt) / infoCycleDuration);
+	if (steps <= 0) return;
+	// Satu putaran penuh kembali ke panel yang sama - cukup sisanya saja.
+	steps = steps % len;
+	for (let i = 0; i < steps; i++) {
+		AdvancePanelIndexOnce();
+	}
+}
+
+function CycleInfo() {
+	if (isAlertActive) return;
+	AdvancePanelIndexOnce();
+	cycleAnchorAt = Date.now(); // slot baru mulai sekarang
 	// Guard: bila SEMUA panel ter-skip, jangan biarkan pill menampilkan panel yang di-skip.
 	if (infoPanels[currentPanelIndex].skip && infoPanels[currentPanelIndex].skip()) return;
 
@@ -1642,6 +1619,8 @@ async function ApplyNowPlayingData(data) {
 
 function StartCycleTimer() {
 	StopCycleTimer();
+	// Panel yang sedang tampil dihitung mulai sekarang; sisa < 1 slot diabaikan.
+	cycleAnchorAt = Date.now();
 	cycleTimer = setInterval(() => {
 		if (!isAlertActive) {
 			CycleInfo();
@@ -2234,12 +2213,7 @@ function ProcessAlertQueue() {
 	
 	// Mainkan suara notifikasi KECUALI untuk alert lagu baru (music)
 	if (alertData.type !== 'music') {
-		// Kunci sama seperti dedup TriggerAlert: identitas EVENT (bukan URL ikon,
-		// yang berbeda tiap kirim) supaya instance di scene lain ikut dikunci.
-		const soundKey = alertData.event
-			? `evt:${alertData.event}:${alertData.userId || ''}:${alertData.text || alertData.title || ''}`
-			: `${alertData.icon}:${alertData.text || alertData.title}`;
-		PlayAlertSound(soundKey);
+		PlayAlertSound();
 	}
 
 	// Dihitung SETELAH shift(): yang dihitung event yang MASIH MENUNGGU. Durasi alert yang
@@ -2441,6 +2415,9 @@ function ProcessAlertQueue() {
 			}
 			} else {
 				// All alerts completed: resume ambient looping widget!
+			// Kejar rotasi yang terlewat selama alert: ambient tampil seolah alert
+			// tidak menginterupsi. Dilakukan SEBELUM render ambient mana pun di bawah.
+			CatchUpRotation(true);
 			// [UX] Simetris dengan saat mekar: easing TANPA overshoot selama menyusut keluar dari
 			// music big, lalu lepas lagi.
 			if (type === 'music' && enableDynamicStyleBig) {

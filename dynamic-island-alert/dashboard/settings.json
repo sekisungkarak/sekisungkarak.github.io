@@ -275,6 +275,13 @@
       "group": "General"
     },
 	{
+      "id": "enableSound",
+      "label": "Notification Sound",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "General"
+    },
+	{
       "id": "widgetScale",
       "label": "Widget Scale (Zoom)",
       "type": "slider",
