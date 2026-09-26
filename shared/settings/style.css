@@ -211,146 +211,125 @@ a { color: var(--accent-color); }
     color-scheme: normal;
 }
 
-/* ══ Loading settings — loader "rollercoaster" ══
+/* ══ Layar loading layar-penuh (#loading) ══════════════════════════════
+   Overlay `position: fixed` yang menutupi SELURUH viewport selama
+   settings.json dimuat — mencegah FOUC (panel setengah jadi berkedip).
+
    Semua selector DI-SCOPING ke `.loading-settings` supaya kelas umum
-   (.loader, .roller) tidak bocor ke elemen lain di halaman. */
+   (.sk-loader, .sk-orbit, .sk-dot) tidak bocor ke elemen lain.
 
-/* ── Layar loading layar-penuh ──
-   Posisi fixed + z-index tinggi menutupi seluruh viewport selama settings
-   dimuat. Isinya HANYA loader di atas latar gelap. */
+   Animasi: tiga lingkaran titik yang mengorbit — referensi CodePen
+   "Loader" oleh Oliver Holretz (3 orbit ber-rotasi 0/40/80 derajat,
+   tiap orbit punya 3 titik dengan keyframes translate sendiri). */
 
-/* `inset: -40px` + `scale(1.08)` menutupi halo transparan di tepi
-   yang selalu muncul pada filter: blur(). */
-
-/* .hidden = fade-out. display:none dipasang setelah transisi selesai
-   supaya benar-benar hilang dan tidak menghalangi klik. */
-
-#settingsPanel .loading-settings {
-    text-align: center;
-    padding: 40px 0;
-    color: color-mix(in srgb, var(--c-content) 80%, transparent);
+.loading-settings {
+    position: fixed;
+    inset: 0;
+    z-index: 1111;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    /* Motif latar DISALIN dari body::before, bukan sekadar warna polos.
+       Overlay ini menutupi body::before (z-index -1), jadi tanpa menyalin
+       motifnya layar loading tampak hitam pekat — lalu "melompat" ke
+       bermotif saat overlay memudar. */
+    background-color: var(--c-bg, #121114);
+    background-image:
+        radial-gradient(1100px 620px at 12% -10%, rgba(212, 168, 67, 0.20), transparent 62%),
+        radial-gradient(900px 520px at 92% 4%, rgba(185, 141, 46, 0.15), transparent 60%),
+        radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+    background-size: auto, auto, 26px 26px;
+    background-position: 0 0, 0 0, 0 0;
+    /* .hidden = fade-out; display:none dipasang script setelah transisi. */
+    opacity: 1;
+    transition: opacity 320ms ease;
 }
 
-#settingsPanel .loading-text {
-    margin-top: 6px;
-    font-size: 14px;
-    letter-spacing: 0.02em;
+.loading-settings.hidden {
+    opacity: 0;
+    pointer-events: none;
 }
 
-#settingsPanel .loader-wrapper {
-    width: 148px;
-    height: 100px;
-    /* Dipusatkan dengan auto margin supaya tidak bergantung pada posisi
-       parent (referensi memakai position:absolute + left/top 50%). */
+/* ── Loader orbit ──
+   Ukuran diperkecil dari referensi (100px -> 84px) supaya pas di dock OBS
+   yang sempit; titik 10px -> 8px dan radius orbit ikut disesuaikan agar
+   proporsinya tetap sama. */
+.loading-settings .sk-loader,
+.loading-settings .sk-orbit {
     position: relative;
-    margin: 0 auto;
+    width: 84px;
+    height: 84px;
 }
 
-#settingsPanel .loader {
-    width: 148px;
-    height: 100px;
-    top: 0;
-    left: 0;
-    position: absolute;
+.loading-settings .sk-loader {
+    transform-origin: center;
+    animation: sk-orbit-spin 10s linear infinite;
 }
 
-#settingsPanel .loader:after {
-    content: "";
-    top: auto;
+.loading-settings .sk-orbit {
     position: absolute;
-    display: block;
-    animation: shadow 1.2s infinite linear;
-    bottom: 0;
-    left: 0;
-    height: 0.25em;
-    width: 1em;
+    inset: 0;
     border-radius: 50%;
-    /* aslinya biru gelap — diganti putih redup agar terbaca di latar gelap */
-    background-color: rgba(255, 255, 255, 0.75);
-    opacity: 0.3;
 }
 
-#settingsPanel .roller,
-#settingsPanel .roller:last-child {
-    width: 70px;
-    height: 70px;
+/* Tiap orbit diputar supaya tiga lingkaran titik tidak saling menumpuk,
+   dan animasi titiknya diberi delay berbeda — inilah yang membuat
+   gerakannya terlihat seperti orbit, bukan tiga titik serentak. */
+.loading-settings .sk-orbit:nth-child(2) { transform: rotate(40deg); }
+.loading-settings .sk-orbit:nth-child(2) .sk-dot { animation-delay: -0.5s; }
+.loading-settings .sk-orbit:nth-child(3) { transform: rotate(80deg); }
+.loading-settings .sk-orbit:nth-child(3) .sk-dot { animation-delay: -1s; }
+
+.loading-settings .sk-dot {
     position: absolute;
-    top: 0;
-    left: 0;
-    animation: rollercoaster 1.2s infinite linear;
-    transform: rotate(135deg);
-}
-
-#settingsPanel .roller:last-child {
-    left: auto;
-    right: 0;
-    transform: rotate(-45deg);
-    animation: rollercoaster2 1.2s infinite linear;
-}
-
-#settingsPanel .roller:before,
-#settingsPanel .roller:last-child:before {
-    content: "";
-    display: block;
-    width: 15px;
-    height: 15px;
-    /* aslinya #000 — diganti putih agar kontras di latar gelap */
-    background: #fff;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.55);
+    background: var(--accent-color, #d4a843);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--accent-color, #d4a843) 55%, transparent);
 }
 
-/* ── Stagger: ketiga loader TIDAK serentak ──
-   Aturan terpenting untuk "bentuk" loader: tanpa animation-delay ini
-   ketiganya bergerak bersamaan sehingga tidak seperti roller coaster.
-   Aslinya: 0.15s & 0.3s. */
-#loader2 .roller,
-#loader2:after {
-    animation-delay: 0.15s;
+/* Tiga titik per orbit: satu di atas-tengah, dua di kiri/kanan bawah —
+   sama seperti referensi, hanya angkanya diskalakan ke 84px. */
+.loading-settings .sk-dot:nth-child(1) {
+    top: 0;
+    left: calc(50% - 4px);
+    animation: sk-dot-1 2s infinite;
+}
+.loading-settings .sk-dot:nth-child(2) {
+    bottom: calc(28% - 4px);
+    left: calc(11% - 4px);
+    animation: sk-dot-2 2s infinite;
+}
+.loading-settings .sk-dot:nth-child(3) {
+    bottom: calc(28% - 4px);
+    right: calc(11% - 4px);
+    animation: sk-dot-3 2s infinite;
 }
 
-#loader3 .roller,
-#loader3:after {
-    animation-delay: 0.3s;
+@keyframes sk-orbit-spin {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(-359deg); }
 }
 
-/* ── Keyframes — disalin PERSIS dari referensi ── */
-@keyframes rollercoaster {
-    0%    { transform: rotate(135deg); }
-    8%    { transform: rotate(240deg); }
-    20%   { transform: rotate(300deg); }
-    40%   { transform: rotate(380deg); }
-    45%   { transform: rotate(440deg); }
-    50%   { transform: rotate(495deg); opacity: 1; }
-    50.1% { transform: rotate(495deg); opacity: 0; }
-    100%  { transform: rotate(495deg); opacity: 0; }
+/* Jarak translate diskalakan dari referensi (100px) ke 84px: x0.84. */
+@keyframes sk-dot-1 {
+    0%   { transform: translate(0, 0); }
+    100% { transform: translate(-34px, 56px); }
+}
+@keyframes sk-dot-2 {
+    0%   { transform: translate(0, 0); }
+    100% { transform: translate(65px, 0); }
+}
+@keyframes sk-dot-3 {
+    0%   { transform: translate(0, 0); }
+    100% { transform: translate(-33px, -56px); }
 }
 
-/* Bola ke-2 menghilang di paruh PERTAMA, baru muncul & berputar di paruh
-   KEDUA — kalau berputar dari 0%, kedua bola tampil bersamaan. */
-@keyframes rollercoaster2 {
-    0%    { opacity: 0; }
-    49.9% { opacity: 0; }
-    50%   { opacity: 1; transform: rotate(-45deg); }
-    58%   { transform: rotate(-160deg); }
-    70%   { transform: rotate(-240deg); }
-    80%   { transform: rotate(-300deg); }
-    90%   { transform: rotate(-340deg); }
-    100%  { transform: rotate(-405deg); }
-}
-
-/* Bayangan memakai scale(x, y) — bukan scaleX. */
-@keyframes shadow {
-    0%    { opacity: 0.3; transform: translateX(65px) scale(0.5, 0.5); }
-    8%    { transform: translateX(30px) scale(2, 2); }
-    13%   { transform: translateX(0px) scale(1.3, 1.3); }
-    30%   { transform: translateX(-15px) scale(0.5, 0.5); opacity: 0.1; }
-    50%   { transform: translateX(60px) scale(1.2, 1.2); opacity: 0.3; }
-    60%   { transform: translateX(130px) scale(2, 2); opacity: 0.05; }
-    65%   { transform: translateX(145px) scale(1.2, 1.2); }
-    80%   { transform: translateX(120px) scale(0.5, 0.5); opacity: 0.1; }
-    90%   { transform: translateX(80px) scale(0.8, 0.8); }
-    100%  { transform: translateX(60px); opacity: 0.3; }
+@media (prefers-reduced-motion: reduce) {
+    .loading-settings .sk-loader,
+    .loading-settings .sk-dot { animation-duration: 3s; }
 }
 
 /* ── Section cards (wa-details) — kaca liquid utama ────── */
@@ -1594,10 +1573,12 @@ body.dashboard-mode::before {
 
 /* ── Tahan tampilan sampai WebAwesome terdefinisi ─────────────
    Tanpa ini, <wa-details>/<wa-input>/… dirender sebagai elemen inline tak
-   bergaya beberapa ratus ms pertama — label kartu berantakan (FOUC). Mode
-   dashboard tidak punya overlay #loading untuk menutupinya. visibility
-   dipakai, bukan display:none, supaya tinggi panel tetap terukur. Pengaman:
-   script menghapus kelas ini dalam 5 detik bila CDN gagal. */
+   bergaya beberapa ratus ms pertama — label kartu berantakan (FOUC).
+   Overlay #loading menutupi viewport, tapi ia memudar begitu settings.json
+   selesai; panel di bawahnya harus sudah utuh saat itu, jadi gerbang ini
+   tetap diperlukan. visibility dipakai, bukan display:none, supaya tinggi
+   panel tetap terukur. Pengaman: script melepas kelas ini dalam 8 detik
+   bila CDN WebAwesome gagal dimuat. */
 body.wa-pending #settingsPanel,
 body.wa-pending #settings footer {
     visibility: hidden;
@@ -1866,4 +1847,260 @@ wa-slider::part(thumb):active {
 
 @media (prefers-reduced-motion: reduce) {
     * { transition-duration: 0.01ms !important; }
+}
+
+/* ══ Mode dashboard — TANPA liquid glass (flat solid) ═══════════════════
+   HANYA berlaku di dock OBS (?dashboard=1 -> body.dashboard-mode). Halaman
+   Settings standalone tetap liquid glass sepenuhnya.
+
+   Dua langkah, sengaja dipisah supaya jelas:
+
+   1) Netralkan TOKEN kacanya. Semua aturan asli memakai var(--glass-*),
+      jadi cukup diarahkan ke nilai netral: tidak ada yang perlu diubah di
+      ratusan baris di atas, dan tidak ada !important bertebaran.
+        - --glass-filter / --glass-filter-svg -> none  (matikan blur + url(#…))
+        - --glass-sheen  -> none            (matikan kilau gradien)
+        - --glass-bevel-outer/inner -> none (matikan bevel 3D berlapis)
+        - --glass-reflex-* -> 0             (sisa color-mix jadi transparan)
+
+   2) Repaint PERMUKAAN jadi warna padat dari palet situs, dengan garis
+      rambut (hairline) sebagai pemisah — bukan bayangan berlapis.
+      Nilainya sengaja ditulis eksplisit (bukan var(--c-glass) 42% yang
+      transparan), karena permukaan solid adalah inti gaya flat ini. */
+
+/* 1 ─ netralkan token kaca */
+body.dashboard-mode {
+    --glass-filter: none;
+    --glass-filter-svg: none;
+    --glass-sheen: none;
+    --glass-bevel-outer: none;
+    --glass-bevel-inner: none;
+    --glass-reflex-dark: 0;
+    --glass-reflex-light: 0;
+}
+
+/* 2 ─ permukaan solid */
+
+/* Kartu section: permukaan situs --raised, hairline, radius tetap 24px.
+   Tiga selector eksplisit karena aturan aslinya memakai :not(...) berlapis
+   dan varian .category-section/.nested-section yang spesifisitasnya lebih
+   tinggi — prefix body.dashboard-mode dinaikkan supaya pasti menang. */
+body.dashboard-mode #settings wa-details.section:not(.category-section):not(.nested-section)::part(base),
+body.dashboard-mode #settings wa-details.section.category-section::part(base),
+body.dashboard-mode #settings wa-details.section.nested-section::part(base) {
+    background: #1a1920;
+    background-image: none;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow: none;
+}
+body.dashboard-mode #settings wa-details.section:hover {
+    background-color: transparent;
+}
+/* Header kartu: pemisah tipis, bukan kilau. */
+body.dashboard-mode #settings wa-details.section:not(.category-section):not(.nested-section)::part(header),
+body.dashboard-mode #settings wa-details.section.category-section::part(header),
+body.dashboard-mode #settings wa-details.section.nested-section::part(header) {
+    background-color: transparent;
+    box-shadow: none;
+}
+body.dashboard-mode #settings wa-details.section:not(.category-section):not(.nested-section)::part(header):hover,
+body.dashboard-mode #settings wa-details.section.category-section::part(header):hover,
+body.dashboard-mode #settings wa-details.section.nested-section::part(header):hover {
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+/* Ikon kartu: kotak solid, tanpa kaca/bayangan. */
+body.dashboard-mode #settings .header .title i,
+body.dashboard-mode #settings .header .title img.glass-icon {
+    background-image: none;
+    background-color: #201e28;
+    box-shadow: none;
+    text-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+/* Input & select: kolom gelap solid + hairline. */
+body.dashboard-mode #settings wa-input::part(base),
+body.dashboard-mode #settings wa-number-input::part(base),
+body.dashboard-mode #settings wa-select::part(combobox) {
+    background-color: #0d0c10;
+    background-image: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: none;
+}
+body.dashboard-mode #settings wa-input:focus-within::part(base),
+body.dashboard-mode #settings wa-number-input:focus-within::part(base),
+body.dashboard-mode #settings wa-select::part(combobox):focus-within {
+    border-color: rgba(212, 168, 67, 0.40);
+    box-shadow: none;
+}
+body.dashboard-mode #settings wa-number-input::part(stepper) {
+    background: transparent;
+    box-shadow: none;
+}
+body.dashboard-mode #settings wa-number-input::part(stepper):hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Dropdown & tag: panel solid, teks tetap terbaca. */
+body.dashboard-mode #settings wa-select::part(listbox) {
+    background: #201e28;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+body.dashboard-mode #settings wa-select[multiple]::part(tag) {
+    background-color: #26232f;
+    background-image: none;
+    box-shadow: none;
+}
+body.dashboard-mode #settings wa-select[multiple]::part(tag):hover,
+body.dashboard-mode #settings wa-select[multiple]::part(remove-button__base):hover {
+    background-color: #2f2b3a;
+}
+
+/* Switch: track solid, thumb tetap kontras. */
+body.dashboard-mode #settings wa-switch::part(control) {
+    background-color: #26232f;
+    background-image: none;
+    box-shadow: none;
+}
+body.dashboard-mode #settings wa-switch:state(checked)::part(control) {
+    background-color: var(--accent-color);
+    box-shadow: none;
+}
+body.dashboard-mode #settings wa-switch::part(thumb) {
+    background: #f5f3f7;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* Slider: track solid, isi emas, thumb lingkaran bersih. */
+body.dashboard-mode wa-slider::part(track) {
+    background-color: #26232f;
+    background-image: none;
+    box-shadow: none;
+}
+body.dashboard-mode wa-slider::part(thumb) {
+    background: #f5f3f7;
+    background-image: none;
+    border: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    filter: none;
+}
+body.dashboard-mode wa-slider::part(thumb):hover { transform: none; }
+body.dashboard-mode wa-slider::part(thumb):active { transform: none; }
+
+/* Callout & tombol: solid. */
+body.dashboard-mode #settings wa-callout {
+    background-color: #201e28;
+    background-image: none;
+    box-shadow: none;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+body.dashboard-mode #settings wa-button::part(base) {
+    background-color: #26232f;
+    background-image: none;
+    box-shadow: none;
+}
+body.dashboard-mode #settings wa-button::part(base):hover {
+    background-color: #2f2b3a;
+    transform: none;
+    box-shadow: none;
+}
+body.dashboard-mode #settings wa-button::part(base):active {
+    transform: none;
+    box-shadow: none;
+}
+body.dashboard-mode #settings wa-button[variant="brand"]::part(base) {
+    background-color: var(--accent-color);
+    background-image: none;
+    box-shadow: none;
+    color: var(--accent-on, #1a1408);
+}
+body.dashboard-mode #settings wa-button[variant="brand"]::part(base):hover {
+    background-color: var(--accent-soft, #e8c877);
+    color: var(--accent-on, #1a1408);
+}
+
+/* Tombol footer Save / Load / Reset: solid, tanpa lapisan distorsi. */
+body.dashboard-mode #settings footer .url-bar button {
+    background-color: #26232f;
+    text-shadow: none;
+    box-shadow: none;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+}
+body.dashboard-mode #settings footer .url-bar button::before,
+body.dashboard-mode #settings footer .url-bar button::after {
+    content: none;
+    display: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    filter: none;
+    background: none;
+}
+body.dashboard-mode #settings footer .url-bar button:hover {
+    background-color: #2f2b3a;
+    transform: none;
+    box-shadow: none;
+}
+body.dashboard-mode #settings footer .url-bar button:active {
+    transform: none;
+    box-shadow: none;
+}
+body.dashboard-mode #settings footer .url-bar button.copied {
+    background-color: #1f6b3a;
+    box-shadow: none;
+}
+body.dashboard-mode #settings footer .url-bar button.obs-error {
+    background-color: #7a2b2b !important;
+    box-shadow: none;
+}
+
+/* Popup scene (Load) & modal: panel solid. */
+body.dashboard-mode .scene-dropdown-toggle,
+body.dashboard-mode .scene-dropdown-menu {
+    background-color: #201e28;
+    background-image: none;
+    box-shadow: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+/* Aturan hover asli spesifisitasnya lebih rendah, jadi ditulis ulang di sini. */
+body.dashboard-mode .scene-dropdown-toggle:hover {
+    background-color: #2f2b3a;
+}
+body.dashboard-mode .modal::part(dialog) {
+    background: #1a1920;
+    background-image: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+}
+body.dashboard-mode .modal::part(dialog)::backdrop {
+    background: rgba(6, 6, 8, 0.72);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+body.dashboard-mode .modal wa-input::part(base) {
+    background-color: #0d0c10;
+    background-image: none;
+    box-shadow: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+body.dashboard-mode .modal .button::part(base) {
+    background-color: #26232f;
+    background-image: none;
+    box-shadow: none;
+}
+body.dashboard-mode .modal .button[appearance=outlined]::part(base) {
+    background-color: transparent;
+    box-shadow: none;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+body.dashboard-mode .modal .button:not([appearance=outlined])::part(base):hover {
+    background-color: var(--accent-color);
+    transform: none;
+    color: var(--accent-on, #1a1408);
 }

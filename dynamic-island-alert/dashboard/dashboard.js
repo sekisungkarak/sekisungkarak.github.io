@@ -1,7 +1,8 @@
 // Dashboard khusus dock OBS — dynamic-island-alert/dashboard/
 // Memuat settings-page-builder dengan ?dashboard=1, sehingga builder:
-//   1. TIDAK membuat iframe preview  → hemat CPU/GPU di OBS
-//   2. TIDAK menampilkan layar loading → langsung tampil
+//   1. TIDAK membuat iframe preview → hemat CPU/GPU di OBS
+//   2. Tetap memakai layar loading #loading (overlay layar-penuh) sampai
+//      settings.json selesai, lalu memudar tanpa jeda minimum
 // Catatan: mode ini TIDAK mengubah cara kerja tombol Reset —
 // BroadcastChannel tetap butuh pengirim, yaitu halaman ini.
 

@@ -15,11 +15,12 @@ if (!widgetURL) {
 }
 const showUnmuteIndicator = GetBooleanParam("showUnmuteIndicator", false);
 
-// Mode DASHBOARD: halaman untuk dock OBS. Tanpa pratinjau & tanpa loading.
+// Mode DASHBOARD: halaman untuk dock OBS. Tanpa pratinjau iframe.
+// Layar loading TETAP dipakai di kedua mode (tanpa kunci scroll dan tanpa
+// jeda minimum di dashboard — begitu data siap, overlay langsung memudar).
 const isDashboardMode = urlParams.get('dashboard') === '1';
 if (isDashboardMode) {
     document.body.classList.add('dashboard-mode');
-    // Loading tetap dipakai (tanpa kunci scroll & jeda minimum).
 }
 
 // ── Tahan tampilan sampai WebAwesome terdefinisi ─────────────
@@ -64,7 +65,9 @@ const settingsPanel = document.getElementById('settingsPanel');
 const previewContainer = document.getElementById('preview');
 
 // Layar loading tampil minimal selama ini (ms) supaya tidak sekadar berkedip.
-const MIN_LOADING_MS = 1000;
+// Dashboard memakai 0 — overlay #loading menutupi panel, jadi menahannya
+// lebih lama hanya menambah jeda yang terasa.
+const MIN_LOADING_MS = isDashboardMode ? 0 : 1000;
 const pageLoadStart = Date.now();
 
 // Pratinjau pakai double-buffering: iframe baru dimuat tersembunyi dulu,
@@ -816,7 +819,7 @@ function LoadJSON(settingsJson) {
         .catch(error => {
             console.error('Error loading settings:', error);
             // Layar loading wajib ditutup juga saat GAGAL — kalau tidak,
-            // overlay fixed z-index 1111 akan menutupi pesan error dan
+            // overlay fixed z-index 1111 menutupi pesan error sehingga
             // tombol "Coba Lagi" tidak bisa diklik.
             HideLoadingScreen();
             // Gagal pun wajib membuka gerbang, atau panel terkunci
@@ -1290,35 +1293,32 @@ if (!isDashboardMode) document.body.style.overflow = 'hidden';
 
 function HideLoadingScreen() {
     const loadingScreen = document.getElementById('loading');
-    if (!loadingScreen) {
+
+    const finish = () => {
+        if (loadingScreen) loadingScreen.style.display = 'none';
+        // Lepaskan kunci scroll SETELAH layar loading tertutup penuh
         document.body.style.overflow = '';
-        if (typeof window.__markSettingsReady === 'function') window.__markSettingsReady();
+    };
+
+    if (!loadingScreen) {
+        finish();
         return;
     }
     if (loadingScreen.dataset.dismissed === 'true') return; // idempotent
     loadingScreen.dataset.dismissed = 'true';
 
-    // Mode dashboard TIDAK memakai jeda minimum — begitu data siap,
-    // overlay langsung ditutup. Jeda itu hanya untuk mode settings
-    // supaya transisinya tidak terlalu cepat.
     const elapsed = Date.now() - pageLoadStart;
-    const wait = isDashboardMode ? 0 : Math.max(0, MIN_LOADING_MS - elapsed);
+    const wait = Math.max(0, MIN_LOADING_MS - elapsed);
 
     setTimeout(() => {
-        loadingScreen.addEventListener('transitionend', function onEnd() {
-            loadingScreen.style.display = 'none';
-            // Lepaskan kunci scroll SETELAH layar loading tertutup penuh
-            document.body.style.overflow = '';
-            loadingScreen.removeEventListener('transitionend', onEnd);
-        });
+        // Pengaman utama: apa pun yang terjadi, overlay PASTI hilang.
+        // `transitionend` bisa terlewat (transisi dibatalkan, tab di
+        // background, reduced-motion) dan dulu itu membuat layar loading
+        // nyangkut menutupi panel. Karena itu display:none dipasang lewat
+        // timer, bukan lewat event.
+        setTimeout(finish, 400);
 
         loadingScreen.classList.add('hidden');
-
-        // Pengaman: kalau transitionend terlewat browser
-        setTimeout(() => { 
-            loadingScreen.style.display = 'none';
-            document.body.style.overflow = '';
-        }, 600);
     }, wait);
 }
 

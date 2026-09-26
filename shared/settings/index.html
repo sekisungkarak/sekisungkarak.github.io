@@ -14,11 +14,30 @@
     <link rel="stylesheet" href="https://ka-f.webawesome.com/webawesome@3.10.0/styles/webawesome.css" />
     <script type="module" src="https://ka-f.webawesome.com/webawesome@3.10.0/webawesome.loader.js"></script>
 
-    <link rel="stylesheet" href="style.css?v=136">
+    <link rel="stylesheet" href="style.css?v=142">
     <link rel="icon" type="image/png" href="../../shared/assets/images/avatar.png">
 </head>
 
 <body>
+
+    <!-- ── Layar loading layar-penuh (#loading) ────────────────────────
+         Overlay fixed yang menutupi SELURUH viewport selama settings.json
+         dimuat, jadi yang terlihat pertama kali hanyalah loader di atas
+         motif latar — bukan panel setengah jadi (anti-FOUC).
+
+         Diletakkan di level <body>, BUKAN di dalam #settingsPanel: panel itu
+         di-`innerHTML = ''` tepat sebelum render, jadi loader di dalamnya
+         terhapus seketika dan fade-out-nya tidak pernah sempat terlihat.
+
+         Animasi: tiga lingkaran titik yang mengorbit — referensi CodePen
+         "Loader" oleh Oliver Holretz. -->
+    <div id="loading" class="loading-settings" role="status" aria-live="polite" aria-label="Loading settings">
+        <div class="sk-loader">
+            <div class="sk-orbit"><div class="sk-dot"></div><div class="sk-dot"></div><div class="sk-dot"></div></div>
+            <div class="sk-orbit"><div class="sk-dot"></div><div class="sk-dot"></div><div class="sk-dot"></div></div>
+            <div class="sk-orbit"><div class="sk-dot"></div><div class="sk-dot"></div><div class="sk-dot"></div></div>
+        </div>
+    </div>
     <!-- ── Liquid Glass SVG displacement filter ──
          Chromatic aberration 3-channel: tiap kanal warna dibiaskan dengan
          skala berbeda lalu digabung screen-blend, menghasilkan refraksi
@@ -595,25 +614,7 @@
                     <h1 contenteditable spellcheck="false">Dynamic Island Alert</h1>
                 </header>
 
-                <div id="settingsPanel">
-                    <div class="loading-settings">
-                        <div class="loader-wrapper">
-                            <div class="loader">
-                                <div class="roller"></div>
-                                <div class="roller"></div>
-                            </div>
-                            <div id="loader2" class="loader">
-                                <div class="roller"></div>
-                                <div class="roller"></div>
-                            </div>
-                            <div id="loader3" class="loader">
-                                <div class="roller"></div>
-                                <div class="roller"></div>
-                            </div>
-                        </div>
-                        <div class="loading-text">Loading settings...</div>
-                    </div>
-                </div>
+                <div id="settingsPanel"></div>
 
                 <footer>
                     <div class="url-bar">
@@ -687,7 +688,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/node-vibrant/3.1.6/vibrant.min.js"></script>
     <script src="https://unpkg.com/@streamerbot/client/dist/streamerbot-client.js"></script>
     <script src="obs_source.js?v=12"></script>
-    <script src="script_v2.js?v=157"></script>
+    <script src="script_v2.js?v=158"></script>
 </body>
 
 </html>
