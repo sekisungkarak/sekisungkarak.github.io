@@ -12,17 +12,17 @@
 }
 
 :root {
-    --accent-color: #2196f3;
+    --accent-color: #d4a843;
 
-    --wa-color-surface-default: #14161c;
-    --wa-color-surface-border: #23262e;
+    --wa-color-surface-default: #1a1920;
+    --wa-color-surface-border: #201e28;
 
-    --wa-form-control-background-color: #101218;
-    --wa-form-control-border-color: #23262e;
+    --wa-form-control-background-color: #0d0c10;
+    --wa-form-control-border-color: #201e28;
 
-    --wa-color-surface-raised: #14161c;
+    --wa-color-surface-raised: #1a1920;
 
-    --wa-color-neutral-border-loud: #23262e;
+    --wa-color-neutral-border-loud: #201e28;
 
     --wa-color-fill-quiet: #FFF;
     --wa-color-neutral-fill-quiet: #222;
@@ -37,12 +37,12 @@
     --wa-focus-ring-width: 0px;
 
     /* ── Liquid Glass tokens ─────────────────────────────────── */
-    --c-glass: #a8b2c4;             /* kebiruan dingin, bukan abu mati */
+    --c-glass: #cbbfae;             /* abu hangat, senada situs */
     --c-light: #ffffff;
     --c-dark: #000000;
-    --c-content: #e8ecf4;
-    --c-action: #4cc9ff;
-    --c-bg: #0a0c12;
+    --c-content: #f5f3f7;
+    --c-action: #e8c877;
+    --c-bg: #121114;
 
     --glass-reflex-dark: 2.2;
     --glass-reflex-light: 0.9;
@@ -94,47 +94,44 @@
     --transition: all 380ms var(--glass-ease), opacity ease-in-out 500ms;
 }
 
-/* ══ Ambient background: nebula cahaya utk bahan refraksi kaca ══ */
+/* ══ Latar belakang — motif sama dengan situs ══
+   Resep diambil dari shared/css/atmosphere.css (.bg): dua bloom aksen lebar
+   di atas grid titik halus 26px. Blur 60px DIBUANG supaya grid tetap tajam
+   seperti di situs; bloom-nya sudah gradien lembut, jadi tidak butuh blur. */
 
 body::before {
     content: "";
     position: fixed;
-    inset: -10%;
+    inset: 0;
     z-index: -1;
     pointer-events: none;
     background:
-        radial-gradient(42% 34% at 14% 12%, rgba(33, 150, 243, 0.32), transparent 68%),
-        radial-gradient(38% 30% at 86% 16%, rgba(148, 88, 255, 0.26), transparent 70%),
-        radial-gradient(40% 34% at 74% 84%, rgba(0, 200, 255, 0.20), transparent 70%),
-        radial-gradient(30% 26% at 22% 90%, rgba(233, 60, 140, 0.14), transparent 72%),
-        radial-gradient(60% 50% at 50% 45%, rgba(20, 26, 44, 0.6), transparent 80%);
-    filter: blur(60px);
-    animation: glass-ambient 26s ease-in-out infinite alternate;
-}
-
-@keyframes glass-ambient {
-    0%   { transform: translate3d(0, 0, 0) scale(1); }
-    50%  { transform: translate3d(2%, -1.5%, 0) scale(1.04); }
-    100% { transform: translate3d(-1.5%, 2%, 0) scale(1.02); }
-}
-
-@keyframes bg-move {
-    from { background-position-y: bottom; }
-    to   { background-position-y: 70%; }
+        radial-gradient(1100px 620px at 12% -10%, rgba(212, 168, 67, 0.20), transparent 62%),
+        radial-gradient(900px 520px at 92% 4%, rgba(185, 141, 46, 0.15), transparent 60%),
+        radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+    background-size: auto, auto, 26px 26px;
+    background-position: 0 0, 0 0, 0 0;
 }
 
 html {
     scroll-behavior: smooth;
     overflow-wrap: break-word;
-    background-color: #000;
+    /* WAJIB transparent. Web Awesome menetapkan background pada `html`
+       (--wa-color-surface-default). Kalau `html` punya background opaque,
+       browser berhenti mempropagasikan background `body` ke canvas; body
+       lalu mengecat background-nya sendiri dan menutupi body::before
+       (z-index -1) — motif latar jadi tak terlihat dan halaman tampak
+       hitam pekat. Transparan di sini mengembalikan propagasi itu, sama
+       seperti situs (global.css tidak memberi background pada `html`). */
+    background: transparent;
     /* `width: 100vw` DIHAPUS: memaksa lebar statis, membuat scrollbar
        overlay muncul ke dalam dan menutupi konten. */
 }
 
 body {
-    font-family: "DM Sans", sans-serif;
+    font-family: "Archivo", system-ui, sans-serif;
     font-optical-sizing: auto;
-    background: #383b43;
+    background: #121114;
     color: #FFF;
     /* `overflow-y: auto` & `overflow-x: hidden` DIHAPUS supaya browser
         memakai scrollbar native permanen di pinggir, menyatu dengan ujung
@@ -182,7 +179,7 @@ a { color: var(--accent-color); }
     position: relative;
     padding: 24px 0 16px;
     margin-bottom: 10px;
-    font-family: "Manrope", sans-serif;
+    font-family: "Archivo Black", "Archivo", system-ui, sans-serif;
 }
 
 #settings header > * {
@@ -198,6 +195,10 @@ a { color: var(--accent-color); }
     line-height: 6em;
     min-width: 1em;
     color: #ffffff;
+    /* Explicit: Web Awesome's own h1 rule sets a font-family, which beats the
+       inherited one from #settings header. Restate it so the widget title
+       reads in the same face as the site. */
+    font-family: "Archivo Black", "Archivo", system-ui, sans-serif;
 }
 
 #settingsPanel {
@@ -442,7 +443,7 @@ a { color: var(--accent-color); }
 /* ── Latar kartu = PERSIS gaya modal (.modal::part(dialog)) ──
    Latar kaca 45% + sheen + backdrop-filter + radius 24px + bevel. PENTING:
    1) rounded corner baru terlihat kalau ada latar.
-   2) menimpa bawaan Web Awesome (--wa-color-surface-default #14161c)
+   2) menimpa bawaan Web Awesome (--wa-color-surface-default #1a1920)
       yang kalau dibiarkan mengisi kartu dengan hitam pekat. */
 #settings wa-details.section::part(base) {
     background: color-mix(in srgb, var(--c-bg) 45%, transparent);
@@ -569,13 +570,13 @@ a { color: var(--accent-color); }
 
 /* Ikon menu kartu: KACA SUNGGUHAN — `backdrop-filter: blur()` membiaskan
    apa pun di belakangnya (kartu section), bukan fill gradien statis.
-   Warna mengikuti aksen tema: --h = 207 ≈ #2196f3. Nilai bayangan
+   Warna mengikuti aksen tema: --h = 40 ≈ #d4a843. Nilai bayangan
    referensi (dalam em, ikon 15.5em) dikalikan 34 / 15.5 ≈ 2.19 supaya
    proporsinya identik di ikon 34px. */
 #settings .header .title i {
-    --h: 207;
-    --s: 90%;
-    --l: 90%;
+    --h: 40;
+    --s: 62%;
+    --l: 55%;
 
     color: #fff;
     width: 34px;
@@ -628,12 +629,12 @@ a { color: var(--accent-color); }
     -webkit-backdrop-filter: blur(12px);
     box-shadow:
         0 -0.25px 0.5px hsla(0, 0%, 0%, 0.2),
-        0 0.5px 0.5px hsla(207, 90%, 90%, 0.5),
-        0 0 0 0.5px hsla(207, 90%, 90%, 0.5),
-        0 1px 1px hsla(207, 90%, 90%, 0.5) inset,
-        0 -0.25px 1px hsla(207, 90%, 90%, 0.4) inset,
-        0 -2.5px 4.5px 1px hsla(207, 90%, 90%, 0.3) inset,
-        0 2.5px 0 hsla(207, 90%, 90%, 0.3) inset,
+        0 0.5px 0.5px hsla(40, 62%, 55%, 0.5),
+        0 0 0 0.5px hsla(40, 62%, 55%, 0.5),
+        0 1px 1px hsla(40, 62%, 55%, 0.5) inset,
+        0 -0.25px 1px hsla(40, 62%, 55%, 0.4) inset,
+        0 -2.5px 4.5px 1px hsla(40, 62%, 55%, 0.3) inset,
+        0 2.5px 0 hsla(40, 62%, 55%, 0.3) inset,
         0 11px 6.5px hsla(0, 0%, 0%, 0.4);
 }
 
@@ -760,7 +761,7 @@ a { color: var(--accent-color); }
 
 #settings wa-switch::part(thumb) {
     background:
-        radial-gradient(130% 130% at 30% 20%, #ffffff 0%, #dfe7f2 55%, #b9c4d6 100%);
+        radial-gradient(130% 130% at 30% 20%, #ffffff 0%, #f0e6d2 55%, #cbbfae 100%);
     box-shadow:
         1px -1px 2px hsl(0 0% 100% / 0.5) inset,
         0px -1px 2px hsl(0 0% 100% / 0.5) inset,
@@ -861,7 +862,7 @@ a { color: var(--accent-color); }
     box-shadow:
         var(--glass-bevel-outer),
         var(--glass-bevel-inner),
-        0 0 0 1px color-mix(in srgb, #ff6b6b 55%, transparent) inset;
+        0 0 0 1px color-mix(in srgb, #f87171 55%, transparent) inset;
 }
 
 /* Saat tidak ada tag, combobox tidak boleh menyisakan ruang kosong
@@ -1092,14 +1093,14 @@ a { color: var(--accent-color); }
    - --glass-filter-svg (url(#liquid-glass)) bertumpuk dengan
      backdrop-filter kartu -> gagal dikomposisi -> warna melompat.
    - Lalu backdrop-filter dimatikan & latar dinaikkan, tapi memakai --c-bg
-     (#0a0c12) sampai 78% -> dropdown malah menghitam saat diklik.
+     (#121114) sampai 78% -> dropdown malah menghitam saat diklik.
    - SEKARANG: blur() POLOS + --c-glass. Aman, dan warnanya abu kebiruan
      bening seperti kontrol lain. CATATAN: jangan pakai --c-bg di sini,
      dan jangan pakai --glass-filter-svg. */
 #settings wa-select::part(listbox) {
-    /* --c-bg adalah #0a0c12 (nyaris hitam) — memakainya di sini membuat
+    /* --c-bg adalah #121114 (nyaris hitam) — memakainya di sini membuat
        dropdown tampak menghitam begitu diklik. Diganti ke --c-glass
-       (#a8b2c4), token yang sama dengan input & combobox. Diturunkan ke
+       (#cbbfae), token yang sama dengan input & combobox. Diturunkan ke
        30%: dropdown sudah di atas kartu yang punya latar sendiri. */
     background: color-mix(in srgb, var(--c-glass) 38%, transparent);
     /* Blur DIAKTIFKAN lagi, tapi pakai blur() POLOS. Penyebab glitch adalah
@@ -1228,7 +1229,7 @@ a { color: var(--accent-color); }
        #glass-distortion), kilau tepi oleh ::after. Ukuran & bentuk TIDAK
        diubah: tinggi 42px, lebar 100%, padding 10px 22px, radius 99em
        (pill), font 14px. */
-    font-family: "DM Sans", sans-serif;
+    font-family: "Archivo", system-ui, sans-serif;
     font-weight: 500;
     font-size: 14px;
 
@@ -1292,9 +1293,9 @@ a { color: var(--accent-color); }
 }
 
 #settings footer .url-bar button.copied {
-    background-color: color-mix(in srgb, #00dd63 80%, transparent);
+    background-color: color-mix(in srgb, #4ade80 80%, transparent);
     box-shadow: var(--glass-bevel-outer),
-        0 0 20px 0 color-mix(in srgb, #00dd63 45%, transparent);
+        0 0 20px 0 color-mix(in srgb, #4ade80 45%, transparent);
 }
 
 /* ── Umpan balik tombol Save / Reset ───────────────────────
@@ -1309,9 +1310,9 @@ a { color: var(--accent-color); }
 }
 
 #settings footer .url-bar button.obs-error {
-    background-color: rgba(255, 82, 82, 0.20) !important;
+    background-color: rgba(248, 113, 113, 0.20) !important;
     box-shadow: var(--glass-bevel-outer),
-        0 0 20px 0 color-mix(in srgb, #ff5252 45%, transparent);
+        0 0 20px 0 color-mix(in srgb, #f87171 45%, transparent);
     color: #fff !important;
 }
 
@@ -1359,8 +1360,8 @@ body.dashboard-mode #settings header h1 {
    (feTurbulence + 3x feDisplacementMap + blend layar) DIGANTI blur polos.
    Ini penyumbang terbesar; yang hilang hanya refraksi prismatik di tepi.
    Bevel 3D, sheen, saturasi, dan radius TIDAK disentuh.
-   Catatan: `background-attachment: fixed` SENGAJA dipertahankan
-   (perintah user) — posisi background harus tetap fixed. */
+   Latar belakang di body::before tetap `position: fixed`, jadi
+   motifnya tidak ikut bergeser saat panel di-scroll. */
 body.dashboard-mode {
     --glass-filter-svg: blur(10px) saturate(var(--saturation)) brightness(1.08);
 }
@@ -1470,7 +1471,7 @@ body.dashboard-mode::before {
     overflow-y: auto;
     padding: 6px;
     border-radius: 16px;
-    background-color: rgba(28, 31, 39, 0.72);
+    background-color: rgba(32, 30, 40, 0.72);
     backdrop-filter: var(--glass-filter);
     -webkit-backdrop-filter: var(--glass-filter);
     box-shadow: var(--glass-bevel-outer),
@@ -1502,8 +1503,8 @@ body.dashboard-mode::before {
     margin-left: 8px;
     padding: 1px 6px;
     border-radius: 6px;
-    background-color: rgba(76, 201, 255, 0.18);
-    color: var(--c-action, #4cc9ff);
+    background-color: rgba(212, 168, 67, 0.20);
+    color: var(--c-action, #e8c877);
     font-size: 0.72rem;
     font-weight: 600;
     vertical-align: middle;
@@ -1539,7 +1540,7 @@ body.dashboard-mode::before {
 
 .scene-option-delete:hover {
     background-color: rgba(255, 82, 82, 0.25);
-    color: #ff5252;
+    color: #f87171;
 }
 
 /* Mode "siap hapus": klik pertama mengaktifkan, klik kedua
@@ -1684,7 +1685,7 @@ body.wa-scroll-lock {
 
 .modal::part(dialog)::backdrop {
     backdrop-filter: blur(14px) saturate(140%);
-    background: rgba(5, 6, 10, 0.35);
+    background: rgba(10, 9, 12, 0.45);
 }
 
 .modal::part(body) {
@@ -1784,8 +1785,8 @@ body.wa-scroll-lock {
     color: #FFF;
 }
 
-/* ── Slider — Liquid Glass: track kaca tipis, progress gradient biru 117°,
-   thumb = lensa cair radial dgn specular inset cyan (blob fluid, bukan
+/* ── Slider — Liquid Glass: track kaca tipis, progress gradient emas 117°,
+   thumb = lensa cair radial dgn specular inset emas (blob fluid, bukan
    knob kaku) ── */
 
 wa-slider {
@@ -1805,9 +1806,9 @@ wa-slider::part(track) {
 
 /* Progress (fill): gradient biru iOS */
 wa-slider::part(indicator) {
-    background: linear-gradient(117deg, #49a3fc 0%, #3681ee 100%);
+    background: linear-gradient(117deg, #d4a843 0%, #b98d2e 100%);
     border-radius: 99em;
-    box-shadow: 0 0 12px 0 color-mix(in srgb, #49a3fc 45%, transparent);
+    box-shadow: 0 0 12px 0 color-mix(in srgb, #d4a843 45%, transparent);
 }
 
 /* Area teks/tulisan di dalam Modal Pop-Up */
@@ -1821,21 +1822,21 @@ wa-slider::part(indicator) {
 }
 
 /* Thumb: lensa kaca cair — radial normal-map highlight (liq. blob),
-   specular inset cyan, squash saat digenggam */
+   specular inset emas, squash saat digenggam */
 wa-slider::part(thumb) {
     background:
-        radial-gradient(75% 75% at 50% 50%, rgb(128 128 255 / 55%) 0%, rgb(255 255 255 / 85%) 62%, rgb(255 255 255 / 10%) 78%, transparent 100%),
+        radial-gradient(75% 75% at 50% 50%, rgb(212 168 67 / 55%) 0%, rgb(255 255 255 / 85%) 62%, rgb(255 255 255 / 10%) 78%, transparent 100%),
         color-mix(in srgb, var(--c-glass) 22%, transparent);
     backdrop-filter: blur(4px) saturate(var(--saturation)) brightness(1.15);
     -webkit-backdrop-filter: blur(4px) saturate(var(--saturation)) brightness(1.15);
     border: none;
     box-shadow:
-        inset 1px 1px 0 rgb(105 178 243 / 20%),
-        inset 1px 3px 0 rgb(28 63 90 / 5%),
+        inset 1px 1px 0 rgb(212 168 67 / 22%),
+        inset 1px 3px 0 rgb(40 30 8 / 5%),
         inset 0 0 14px rgb(255 255 255 / 60%),
-        inset -1px -1px 0 rgb(105 178 243 / 12%),
-        0 2px 8px rgb(0 20 40 / 35%),
-        0 0 14px 0 color-mix(in srgb, #49a3fc 35%, transparent);
+        inset -1px -1px 0 rgb(212 168 67 / 14%),
+        0 2px 8px rgb(30 20 5 / 35%),
+        0 0 14px 0 color-mix(in srgb, #d4a843 35%, transparent);
     border-radius: 99em;
     transition: transform 200ms var(--glass-ease), box-shadow 200ms var(--glass-ease);
 }
@@ -1857,13 +1858,12 @@ wa-slider::part(thumb):active {
     #settings footer .url-bar button,
     #settings wa-button::part(base),
     #settings wa-select::part(listbox) {
-        background-color: #1c1f27;
+        background-color: #201e28;
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    body::before { animation: none; }
     * { transition-duration: 0.01ms !important; }
 }

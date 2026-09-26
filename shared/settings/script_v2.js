@@ -825,11 +825,11 @@ function LoadJSON(settingsJson) {
                 window.__markSettingsReady();
             }
             settingsPanel.innerHTML = `
-                <div style="text-align: center; padding: 40px 20px; color: #ff5555;">
+                <div style="text-align: center; padding: 40px 20px; color: #f87171;">
                     <i class="ri-error-warning-line" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
                     <div style="font-weight: bold; margin-bottom: 8px;">Gagal Memuat Settings JSON</div>
-                    <small style="color: #888; display: block; margin-bottom: 16px;">${error.message || error}<br><br>Target: ${settingsJson}</small>
-                    <button onclick="location.reload()" style="background: #333; color: #fff; border: 1px solid #444; padding: 6px 16px; border-radius: 6px; cursor: pointer;">Coba Lagi</button>
+                    <small style="color: #948e9f; display: block; margin-bottom: 16px;">${error.message || error}<br><br>Target: ${settingsJson}</small>
+                    <button onclick="location.reload()" style="background: #26232f; color: #f5f3f7; border: 1px solid rgba(255,255,255,0.14); padding: 6px 16px; border-radius: 6px; cursor: pointer;">Coba Lagi</button>
                 </div>
             `;
         });
@@ -1613,7 +1613,7 @@ async function PopulateFontDatalist() {
 
     const defaultFonts = [
         'Arial', 'Arial Black', 'Bebas Neue', 'Calibri', 'Century Gothic', 'Comic Sans MS',
-        'Consolas', 'Courier New', 'DM Sans', 'Franklin Gothic Medium', 'Futura', 'Georgia',
+        'Archivo', 'Consolas', 'Courier New', 'Franklin Gothic Medium', 'Futura', 'Georgia',
         'Helvetica', 'Impact', 'Inter', 'Lato', 'Lucida Sans', 'Metropolis', 'Montserrat',
         'Noto Sans', 'Open Sans', 'Oswald', 'Outfit', 'Playfair Display', 'Poppins',
         'PT Sans', 'Raleway', 'Roboto', 'Rubik', 'Segoe UI', 'Tahoma', 'Times New Roman',
