@@ -1,0 +1,481 @@
+/* Header, nav, footer and the search modal — every page wears these.
+   Load after global.css, before the page's own stylesheet.
+
+   This file exists so the chrome is defined once. docs.css and home.css both
+   used to carry their own copy of the header and the two drifted. */
+
+:root { --header-h: 64px; }
+
+/* ── tooltip ────────────────────────────────────────── */
+/* Same rules as the settings core's header tooltips, so both surfaces match. */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: #000;
+  border: 1px solid #2f2f2f;
+  color: #e6e6e6;
+  font-size: 0.74rem;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 30;
+}
+
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Nav tooltips clear the accent line, which sits 22px below the label. */
+.nav-link[data-tooltip]::after { top: calc(100% + 30px); }
+.nav-link.is-soon { cursor: default; }
+.nav-link.is-soon:hover { color: var(--muted); }
+
+/* ── filled brand marks ─────────────────────────────── */
+.hdr-icon.is-filled { stroke: none; fill: var(--muted); }
+.hdr-icon.is-filled:hover { stroke: none; fill: var(--ink); }
+
+/* ── header ─────────────────────────────────────────── */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  height: var(--header-h);
+  padding: 0 40px;
+  background: var(--header);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 6px 10px;
+  margin-left: -10px;
+  border-radius: var(--r);
+  color: inherit;
+  transition: background var(--t) var(--ease);
+}
+.brand:hover { background: rgba(255, 255, 255, 0.05); text-decoration: none; }
+.brand img {
+  height: 30px;
+  width: 30px;
+  object-fit: contain;
+  transition: transform 0.34s var(--spring);
+}
+.brand:hover img { transform: scale(1.09) rotate(-4deg); }
+.brand span {
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.site-nav {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  /* The 26px that used to be `gap` now lives inside each link as padding, so the
+     hit areas touch with no dead space; the negative margin keeps the row's
+     visual edges where they were. */
+  margin: 0 -13px;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 13px;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color var(--t) var(--ease);
+}
+.nav-link:hover, .nav-link.is-active { color: var(--ink); text-decoration: none; }
+.nav-link.is-soon { color: #4a4a4a; cursor: default; }
+.nav-link.is-soon:hover { color: #4a4a4a; }
+
+/* One bar for the whole nav; its edges move at different speeds so it stretches. */
+.nav-bar {
+  position: absolute;
+  bottom: -21px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  pointer-events: none;
+  transition-property: left, right;
+  transition-timing-function: var(--ease);
+}
+
+.header-spacer { flex-grow: 1; }
+.header-actions { display: flex; align-items: center; gap: 14px; }
+.header-divider { width: 1px; height: 22px; background: var(--line-mid); }
+
+.hdr-icon {
+  opacity: 0.72;
+  transition: opacity var(--t) var(--ease), stroke var(--t) var(--ease),
+              transform 0.28s var(--spring);
+}
+.hdr-icon:hover { opacity: 1; stroke: var(--ink); transform: translateY(-2px) scale(1.1); }
+
+.search-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--line-hard), #292929);
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: filter var(--t) var(--ease), box-shadow var(--t) var(--ease), transform var(--t) var(--ease);
+}
+.search-pill:hover { filter: brightness(1.3); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45); }
+.search-pill kbd {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+/* ── docs dropdown ──────────────────────────────────── */
+.nav-menu { position: relative; }
+.nav-caret { transition: transform var(--t) var(--ease); }
+/* The caret follows the panel, so it reads hover and unhover on its own. */
+.nav-menu:hover .nav-caret,
+.nav-menu.is-open .nav-caret { transform: rotate(180deg); }
+.nav-menu.is-shut:hover .nav-caret { transform: none; }
+
+.nav-pop {
+  position: absolute;
+  top: calc(100% + 18px);
+  left: -14px;
+  z-index: 60;
+  width: 306px;
+  padding: 7px;
+  border: 1px solid var(--line-mid);
+  border-radius: 12px;
+  background: rgba(22, 22, 22, 0.97);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.62);
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--spring);
+}
+/* Hover is the whole interaction: opens on enter, closes on leave, animating
+   both ways. is-open is only for touch, where there is no hover to read. */
+.nav-menu:hover .nav-pop,
+.nav-menu.is-open .nav-pop { opacity: 1; transform: translateY(0); pointer-events: auto; }
+/* Clicking the tab shuts the panel, until the pointer leaves and comes back. */
+.nav-menu.is-shut:hover .nav-pop { opacity: 0; transform: translateY(-6px); pointer-events: none; }
+/* Invisible bridge across the gap, so the pointer never leaves .nav-menu. */
+.nav-pop::after {
+  content: "";
+  position: absolute;
+  top: -18px;
+  left: 0;
+  right: 0;
+  height: 18px;
+}
+.nav-pop::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: 26px;
+  width: 9px;
+  height: 9px;
+  transform: rotate(45deg);
+  background: var(--raised);
+  border-left: 1px solid var(--line-mid);
+  border-top: 1px solid var(--line-mid);
+}
+
+.nav-pop-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 11px;
+  border-radius: 8px;
+  color: inherit;
+  transition: background var(--t-fast) var(--ease);
+}
+.nav-pop-item:hover { background: #1f1f1f; text-decoration: none; }
+.nav-pop-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line-mid);
+  border-radius: 8px;
+  background: var(--tab);
+  transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+}
+/* Whatever the icon file's own colours are — an Iconify fetch, a downloaded
+   SVG, a PNG — this flattens it to white, so the row never needs a palette. */
+.nav-pop-icon img { filter: brightness(0) invert(1); opacity: 0.92; }
+.nav-pop-item:hover .nav-pop-icon { border-color: var(--line-hard); background: var(--raised-2); }
+.nav-pop-item:hover .nav-pop-icon img { opacity: 1; }
+.nav-pop-text { display: flex; flex-direction: column; line-height: 1.35; min-width: 0; }
+.nav-pop-name { font-size: 0.88rem; font-weight: 600; color: var(--strong); }
+.nav-pop-eyebrow { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.1em; color: var(--faint); }
+.nav-pop-arrow { margin-left: auto; opacity: 0; transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
+.nav-pop-item:hover .nav-pop-arrow { opacity: 1; transform: translateX(2px); }
+
+.nav-pop-foot {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 4px;
+  padding: 9px 11px 5px;
+  border-top: 1px solid var(--line-soft);
+  font-family: var(--mono);
+  font-size: 0.63rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+  transition: color var(--t-fast) var(--ease);
+}
+.nav-pop-foot:hover { color: var(--accent-soft); text-decoration: none; }
+
+/* ── help popover ───────────────────────────────────── */
+.help-wrap { position: relative; }
+.help-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--line-mid);
+  border-radius: 8px;
+  background: var(--tab);
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background var(--t) var(--ease), border-color var(--t) var(--ease);
+}
+.help-pill:hover { background: #222; border-color: var(--line-hard); }
+.help-pop {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 60;
+  width: 290px;
+  padding: 16px 17px;
+  border: 1px solid var(--line-mid);
+  border-radius: 12px;
+  background: rgba(22, 22, 22, 0.97);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--spring);
+}
+.help-pop::after {
+  content: "";
+  position: absolute;
+  top: -12px;
+  left: 0;
+  right: 0;
+  height: 12px;
+}
+.help-wrap:hover .help-pop,
+.help-wrap.is-open .help-pop { opacity: 1; transform: translateY(0); pointer-events: auto; }
+/* A click latches the panel shut while the pointer is still on the pill. */
+.help-wrap.is-shut:hover .help-pop { opacity: 0; transform: translateY(-6px); pointer-events: none; }
+.help-pill { cursor: pointer; }
+.help-pop h4 { margin: 0 0 7px; font-size: 0.95rem; color: var(--ink); }
+.help-pop p { margin: 0 0 13px; font-size: 0.84rem; line-height: 1.55; color: var(--lede); }
+.help-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  border-radius: 8px;
+  background: var(--discord, #5865f2);
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #fff;
+}
+.help-cta:hover { filter: brightness(1.1); color: #fff; text-decoration: none; }
+
+/* ── footer ─────────────────────────────────────────── */
+.site-footer {
+  margin-top: 76px;
+  padding: 32px 0 40px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.soc-row { display: flex; align-items: center; gap: 22px; }
+.soc {
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+  transition: color var(--t) var(--ease), transform 0.28s var(--spring);
+}
+.soc:hover { color: var(--strong); transform: translateY(-2px); }
+.copyright { font-family: var(--mono); font-size: 0.7rem; color: var(--faint); }
+
+/* ── search modal ───────────────────────────────────── */
+.search-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  padding: 12vh 20px 20px;
+  background: rgba(8, 8, 8, 0.72);
+  /* Closed state. visibility (not display) so both directions can animate. */
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  backdrop-filter: blur(0px);
+  transition: opacity 0.18s var(--ease), backdrop-filter 0.18s var(--ease), visibility 0s 0.18s;
+}
+.search-modal.is-open {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  backdrop-filter: blur(3px);
+  transition: opacity 0.18s var(--ease), backdrop-filter 0.18s var(--ease), visibility 0s;
+}
+.search-panel { transform: scale(0.94); opacity: 0; transition: transform 0.18s var(--ease), opacity 0.18s var(--ease); }
+.search-modal.is-open .search-panel { transform: scale(1); opacity: 1; transition-timing-function: var(--spring); }
+
+@media (prefers-reduced-motion: reduce) {
+  .search-modal, .search-panel { transition-duration: 0.01s; }
+  .search-panel { transform: none; }
+}
+
+.search-panel {
+  width: 100%;
+  max-width: 560px;
+  max-height: 66vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line-mid);
+  border-radius: 14px;
+  background: var(--raised);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+.search-field { display: flex; align-items: center; gap: 11px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.search-field input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--ink);
+  outline: none;
+}
+.search-field input::placeholder { color: var(--faint); }
+.search-field kbd {
+  padding: 2px 7px;
+  border: 1px solid var(--line-mid);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+
+.search-results { overflow-y: auto; padding: 7px; }
+.sr-group {
+  padding: 10px 11px 5px;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.sr-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  color: inherit;
+}
+.sr-item.is-on { background: #1f1f1f; }
+.sr-item:hover { text-decoration: none; }
+.sr-icon { flex: none; }
+.sr-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; margin: 0 4px; }
+.sr-label { font-size: 0.9rem; color: var(--strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr-sub { margin-left: auto; font-family: var(--mono); font-size: 0.62rem; color: var(--faint); }
+.sr-empty { padding: 22px; text-align: center; font-size: 0.88rem; color: var(--faint); }
+
+
+/* ── narrow ─────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .site-header { gap: 16px; padding: 0 18px; }
+  .site-nav, .search-pill .search-text, .search-pill kbd { display: none; }
+  .site-footer { margin-top: 40px; }
+  .soc-row { gap: 20px; }
+}
+
+@media (max-width: 720px) {
+  .site-header { gap: 12px; padding: 0 16px; height: 56px; }
+  .help-pill span { display: none; }
+  .help-pill { padding: 0 11px; }
+}
+
+/* ── navigation progress ────────────────────────────── */
+/* Shown while nav.js holds the current page and warms the next one. */
+.nav-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 200;
+  background: linear-gradient(90deg, var(--accent, #8A2BE2), var(--accent-soft, #b98cf0));
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 1.6s cubic-bezier(0.12, 0.7, 0.2, 1), opacity 0.2s ease;
+}
+.nav-progress.is-on { opacity: 1; }
+.nav-progress.is-done { transition: transform 0.18s ease, opacity 0.3s ease 0.12s; opacity: 0; }
+
+/* The pointer says 'working' too, so the held page does not feel unresponsive. */
+html:has(.nav-progress.is-on) a { cursor: progress; }

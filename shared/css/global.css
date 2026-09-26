@@ -1,0 +1,99 @@
+/* Site-wide tokens and base. Load before any page stylesheet.
+   Palette mirrors shared/core/docs/docs.css — change it here first. */
+:root {
+  /* surfaces */
+  --page: #101010;
+  --header: rgba(20, 20, 20, 0.82);
+  --raised: #161616;
+  --raised-2: #181818;
+  --tab: #1b1b1b;
+
+  /* lines */
+  --line-soft: #232323;
+  --line: #272727;
+  --line-mid: #2f2f2f;
+  --line-hard: #3d3d3d;
+
+  /* text */
+  --ink: #fff;
+  --strong: #e4e4e4;
+  --body: #c9c9c9;
+  --lede: #a8a8a8;
+  --soft: #b6b6b6;
+  --muted: #8b8b8b;
+  --faint: #5c5c5c;
+
+  /* accent */
+  --accent: #3b82f6;
+  --accent-deep: #1c3faa;
+  --accent-soft: #7fa6e6;
+  --accent-pale: #9fbdf2;
+  --accent-ink: #cfe0ff;
+  --accent-glow: rgba(59, 130, 246, 0.28);
+
+  /* semantic */
+  --ok: #2f9e51;
+  --warn: #dbd394;
+  --err: #ef4444;
+  --live: #ff4646;
+
+  /* platform brand marks */
+  --twitch: #9146ff;
+  --kick: #53fc18;
+  --tiktok: #25f4ee;
+  --youtube: #ff0033;
+  --x: #e7e9ea;
+  --patreon: #ff8438;
+  --kofi: #ff5e5b;
+  --discord: #5865f2;
+  --github: #e6edf3;
+
+  /* type */
+  --sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --display: 'Space Grotesk', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  /* geometry + motion */
+  --r-sm: 6px;
+  --r: 10px;
+  --r-lg: 16px;
+  --r-pill: 999px;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --t-fast: 0.18s;
+  --t: 0.24s;
+  --t-slow: 0.42s;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--body);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent-soft); text-decoration: none; }
+a:hover { color: var(--accent-pale); }
+img { max-width: 100%; }
+::selection { background: rgba(138, 43, 226, 0.35); }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--r-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

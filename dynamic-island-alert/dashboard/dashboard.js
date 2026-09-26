@@ -7,8 +7,8 @@
 
 const dashFrame = document.getElementById('dashFrame');
 
-// Dari dynamic-island-alert/dashboard/ -> .utilities/ ada 2 level atas.
-const settingsPageURL = '../../.utilities/settings-page-builder/index.html';
+// Dari dynamic-island-alert/dashboard/ -> shared/settings/ ada 2 level atas.
+const settingsPageURL = '../../shared/settings/index.html';
 
 // settings.json sejajar dengan dashboard (folder settings/ sudah dihapus).
 const settingsDir = new URL('./', window.location.href).href;
@@ -18,6 +18,6 @@ const widgetURL = new URL('../index.html', window.location.href).href;
 
 dashFrame.src =
     settingsPageURL +
-    '?v=2&settingsJson=' + encodeURIComponent(settingsDir + 'settings.json') +
+    '?v=3&settingsJson=' + encodeURIComponent(settingsDir + 'settings.json') +
     '&widgetURL=' + encodeURIComponent(widgetURL) +
     '&dashboard=1';

@@ -2658,9 +2658,7 @@ if (window.BroadcastChannel) {
 	const bc = new BroadcastChannel('geseki_island_channel');
 	bc.onmessage = function(event) {
 		if (!event.data) return;
-		if (event.data.type === 'trigger_test') {
-			window.testWidgetSelect(event.data.testType);
-		} else if (event.data.type === 'set_scale') {
+		if (event.data.type === 'set_scale') {
 			window.setWidgetScale(event.data.scale);
 		} else if (event.data.type === 'callFunction') {
 			// Perintah dari settings page (mis. tombol Reset First Chatter), lewat BroadcastChannel

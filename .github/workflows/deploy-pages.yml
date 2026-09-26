@@ -28,7 +28,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Seluruh repo ikut — widget, resources, dan dashboard.
+          # Seluruh repo ikut — situs (index/404), shared/, widget, resources, dashboard.
           path: .
 
       - name: Deploy to GitHub Pages

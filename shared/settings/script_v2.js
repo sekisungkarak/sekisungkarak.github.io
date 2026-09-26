@@ -1080,9 +1080,9 @@ function BuildInput(setting) {
         if (setting.id === 'testAlertType') {
             if (value && value !== 'none') {
                 // Cukup CallWidgetFunction: ia SUDAH menyiarkan lewat BroadcastChannel
-// (menjangkau browser source OBS) sekaligus postMessage ke iframe pratinjau.
-// Dulu ada bc.postMessage({type:'trigger_test'}) tambahan di sini; akibatnya
-// widget dipanggil DUA kali tiap pilihan -> alert test ikut dobel.
+                // (menjangkau browser source OBS) sekaligus postMessage ke iframe pratinjau.
+                // Dulu ada bc.postMessage({type:'trigger_test'}) tambahan di sini; akibatnya
+                // widget dipanggil DUA kali tiap pilihan -> alert test ikut dobel.
                 CallWidgetFunction('testWidgetSelect', [value]);
             }
             return; // Skip save & refresh

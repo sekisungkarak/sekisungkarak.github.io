@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="shared/assets/images/logo.png">
+  <title>Geseki — Widget overlay OBS</title>
+  <meta name="description" content="Koleksi widget overlay OBS untuk streaming: alert TikTok bergaya Dynamic Island, dipasang sebagai browser source tanpa build step.">
+
+  <!-- Pratinjau berbagi -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Geseki">
+  <meta property="og:title" content="Widget overlay OBS">
+  <meta property="og:description" content="Koleksi widget overlay OBS untuk streaming — dipasang sebagai browser source, tanpa build step dan tanpa framework.">
+  <meta property="og:image" content="https://sekisungkarak.github.io/shared/assets/images/logo.png">
+  <!-- Garis kiri embed Discord. -->
+  <meta name="theme-color" content="#8A2BE2">
+  <meta name="twitter:card" content="summary">
+
+  <!-- Mark bersama, diambil bersama HTML supaya tidak muncul belakangan. -->
+  <link rel="preload" as="image" href="shared/assets/images/tiktok/logo-tiktok.svg">
+  <link rel="preload" as="image" href="shared/assets/images/logo.png">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="shared/css/global.css">
+  <link rel="stylesheet" href="shared/css/atmosphere.css">
+  <link rel="stylesheet" href="shared/css/chrome.css">
+  <link rel="stylesheet" href="shared/core/home/home.css">
+</head>
+<body>
+
+  <!-- Grid statis + wash. Tanpa cursor glow di sini. -->
+  <div class="bg is-wide"></div>
+
+  <!-- Hanya teks hero di sini. Semua kartu datang dari shared/core/catalog.js. -->
+  <script type="application/json" id="homeBoot">
+  {
+    "eyebrow": "WIDGET OVERLAY OBS",
+    "title": "Widget overlay OBS yang siap pakai",
+    "lede": "Koleksi widget overlay untuk streaming. Dipasang sebagai browser source di OBS — tanpa build step, tanpa framework."
+  }
+  </script>
+
+  <script src="shared/core/catalog.js"></script>
+  <script src="shared/core/site.js"></script>
+  <script src="shared/core/chrome.js"></script>
+  <script src="shared/core/home/home.js"></script>
+  <script src="shared/core/search.js"></script>
+  <script src="shared/core/nav.js"></script>
+</body>
+</html>
