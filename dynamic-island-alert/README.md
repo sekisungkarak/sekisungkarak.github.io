@@ -1,88 +1,95 @@
-# Dynamic Island Alert
+## Requirements
 
-Alert bergaya Dynamic Island untuk event TikTok — **follow**, **subscribe**, **share**,
-**gift** — dan **first chatter**, plus panel **Now Playing** dari media yang sedang
-diputar. Widget berupa HTML/CSS/JS polos: tanpa build step, tanpa framework.
+- **OBS Studio 30+** with the built-in **obs-websocket** enabled.
+- A TikTok live connection via **TikFinity** or **IndoFinity** — whichever you use to feed events.
+- Now Playing via SMTC bridge (https://github.com/nuttylmao/smtc-bridge)
 
-## Fitur
+---
 
-- **Antrean alert** dengan flag lock, sehingga animasi tidak tumpang-tindih.
-- **Rotasi ambient** — panel info (jam, tanggal, Now Playing, cuaca) berputar terus,
-  dan tetap mengikuti rotasi walau sempat terpotong antrean alert.
-- **Badge penonton** di kanan username (maksimal 2, 16px).
-- **Ikon per event** — tiap jenis event TikTok bisa dinyalakan/dimatikan ikonnya.
-- **Ukuran username** dibatasi 15 graphemes agar island tidak melebar.
-- **Gaya visual** — Liquid Glass dan Solid Black, dengan warna aksen yang bisa diatur.
+## Installation
 
-## Sumber event
+The dashboard is loaded into OBS as a **Custom Browser Dock**. From that dock you
+configure the OBS connection, then press **Save** — the dashboard creates the
+browser source for you in the active scene.
 
-- Event TikTok via websocket **TikFinity** (`ws://localhost:21213/`) dan
-  **IndoFinity** (`ws://localhost:62024/`) — reconnect tiap 5 detik.
-- Event **Streamer.Bot** via `@streamerbot/client` (host/port dari URL param).
-- **Now Playing** via SMTC bridge (https://github.com/nuttylmao/smtc-bridge).
+### Step 1 — Add the dashboard dock
 
-## 1. Buka dashboard
+1. In OBS, open the top menu **Docks → Custom Browser Docks**.
+2. In the dialog, add one row:
+
+   | Field | Value |
+   |---|---|
+   | **Dock Name** | `Dynamic Island Alert` |
+   | **URL** | `https://sekisungkarak.github.io/dynamic-island-alert/dashboard/` |
+
+3. Click **Apply**, then **Close**. The dashboard appears as a dock inside OBS.
+
+![OBS menu → Docks → Custom Browser Docks](docs/assets/install-1-docks-menu.png)
+
+![Add the dock name and dashboard URL, then Apply](docs/assets/install-2-add-dock.png)
+
+### Step 2 — Check the OBS WebSocket port
+
+The dashboard talks to OBS over **obs-websocket**, so the port must match on both
+sides.
+
+1. In OBS, open **Tools → WebSocket Server Settings**.
+2. Make sure **Enable WebSocket server** is checked, and note the **Server Port**.
+3. Click **Apply** to save.
+
+![OBS → Tools → WebSocket Server Settings](docs/assets/install-3-websocket-server-settings.png)
+
+![Enable the server and note the Server Port, then Apply](docs/assets/install-3-same-port.png)
+
+### Step 3 — Fill in the OBS Connection
+
+In the dock, open the **OBS Connection** section and enter the values of your
+**own** OBS WebSocket server — the **Port** must be the same number you noted in
+Step 2:
+
+| Field | Value |
+|---|---|
+| **Server IP** | `127.0.0.1` |
+| **Port** | the same **Server Port** as in Step 2 (default `4455`) |
+| **Password** | the password from the same OBS dialog (leave empty if disabled) |
+
+The status dot turns **green** once the dock connects to OBS. If it stays red,
+the port or password does not match your OBS WebSocket settings — fix it here
+before continuing.
+
+![OBS Connection — Server IP, Port and Password](docs/assets/install-3-obs-connection.png)
+
+### Step 4 — Press Save
+
+Click **Save** at the bottom of the dock. The dashboard then creates a **Browser
+Source** in the **currently active scene**, named after the scene:
 
 ```
-https://sekisungkarak.github.io/dynamic-island-alert/dashboard/index.html
+{Scene} | Dynamic Island Alert
 ```
 
-Dashboard adalah satu-satunya halaman kontrol — untuk browser biasa maupun dock OBS.
-Jadikan **dock OBS** lewat *View → Docks → Custom Browser Docks*.
+It is sized **1080 × 500** and anchored **top-center**. If a source with that
+name already exists it is updated in place, so pressing Save again never creates
+duplicates.
 
-## 2. Pasang widget di OBS
+![Save creates the browser source](docs/assets/install-4-buttons.png)
 
-Isi **OBS Connection** (Server IP / Port / Password) bila beda dari default
-`127.0.0.1:4455`. Lalu klik **Save** — source otomatis dibuat atau diperbarui di scene
-aktif OBS lewat obs-websocket.
+![The browser source appears in the active scene](docs/assets/install-5-overlay-result.png)
 
-| Tombol | Fungsi |
-| --- | --- |
-| **Save** | Simpan settings, lalu buat/perbarui browser source di scene aktif |
-| **Load** | Muat settings tersimpan per scene |
-| **Reset** | Kembalikan ke default (koneksi OBS tidak ikut tereset) |
+> **Tip** — switch to the scene you want the alert in **before** pressing Save,
+> and add it to each scene you stream.
 
-> [!TIP]
-> Kalau ingin memasang manual, arahkan Browser Source OBS ke URL widget di bawah dan
-> atur ukurannya `1080 × 500`.
+### Step 5 — Load saved settings
 
-## 3. URL Browser Source
+**Load** pulls a saved configuration back into the dock for a chosen scene.
 
-```
-https://sekisungkarak.github.io/dynamic-island-alert/
-```
+1. Click **Load Current Scene** at the bottom of the dock.
+2. In the **Load Saved Settings** dialog, pick the **Scene** whose settings you
+   want to load.
+3. Click **Load**.
 
-Tiap param punya default, jadi widget tetap jalan walau dibuka tanpa param.
+![Load Current Scene](docs/assets/install-6-load-buttons.png)
 
-## Pengembangan lokal
+![Pick the scene and click Load](docs/assets/install-6-load-saved-settings.png)
 
-Halaman bisa dibuka langsung dari berkas, tetapi beberapa fitur butuh HTTP:
-
-```bash
-python -m http.server 3000
-```
-
-Lalu buka `http://127.0.0.1:3000/dynamic-island-alert/dashboard/index.html`.
-
-> [!WARNING]
-> Pages disajikan lewat HTTPS, sementara TikFinity, IndoFinity, Streamer.Bot, dan SMTC
-> bridge berjalan di `localhost` mesin streaming. Koneksi ke `ws://localhost` dari
-> halaman HTTPS bisa diblokir browser. Bila websocket gagal tersambung, jalankan widget
-> lewat server HTTP lokal dan arahkan Browser Source OBS ke
-> `http://127.0.0.1:3000/dynamic-island-alert/`.
-
-## Catatan teknis
-
-- **Koneksi lokal tetap di mesin sendiri** — halaman yang di-deploy di Pages menghubungi
-  layanan `localhost` lewat browser, jadi layanan harus hidup di komputer yang sama
-  dengan yang membuka widget. Ini bukan koneksi server-ke-server.
-- **Settings tersimpan di localStorage** — kunci utama `<widget>-settings`, dan
-  `geseki-scene-<nama scene>` untuk profil per scene. Settings menempel pada browser dan
-  origin tertentu: pindah dari `127.0.0.1:3000` ke Pages berarti pengaturan tidak ikut
-  pindah.
-- **Reset via BroadcastChannel** — kanal `geseki_island_channel` menjangkau widget di OBS
-  sungguhan. Halaman dashboard harus hidup (di-dock atau terbuka) sebagai pengirim, dan
-  harus satu origin + satu browser profile dengan widget.
-- **Suara notifikasi** — checkbox *Notification Sound* per overlay (default aktif).
-  Matikan di overlay yang tidak perlu berbunyi supaya suara tidak dobel saat widget
-  dipasang di beberapa scene.
+Use **Reset** to return every option to its defaults.

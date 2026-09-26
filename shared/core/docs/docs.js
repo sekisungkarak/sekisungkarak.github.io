@@ -5,7 +5,8 @@
   'use strict';
 
   var C = window.CHROME;
-  var site = window.SITE || {};
+  var T = (C && C.T) || function (s) { return s; };
+  var LANG = (C && C.i18n && C.i18n.lang) || 'en';
   var boot = JSON.parse(document.getElementById('docsBoot').textContent);
   var entry = (C && C.entry(boot.id)) || {};
 
@@ -16,21 +17,24 @@
   // The hero paragraph is 'lede' everywhere on the site; the catalog calls it 'description'.
   if (boot.lede === undefined) boot.lede = entry.description;
   if (boot.title === undefined) boot.title = entry.name || '';
-  if (!boot.source && entry.widgetUrl) boot.source = C.root(entry.widgetUrl + 'README.md');
+  // The walkthrough follows the reader's language: a translated README is used
+  // when the widget ships one, and the English original otherwise.
+  if (!boot.source && entry.widgetUrl) {
+    boot.source = C.root(entry.widgetUrl + (LANG === 'id' ? 'README.id.md' : 'README.md'));
+  }
   if (!boot.widgetUrl && entry.widgetUrl) boot.widgetUrl = C.root(entry.widgetUrl);
-  if (!boot.settingsUrl && entry.settingsUrl) boot.settingsUrl = C.root(entry.settingsUrl);
   if (!boot.breadcrumb) boot.breadcrumb = ['Docs', boot.title];
 
   // The shim's <title> is a generic no-JS fallback; the real one is the widget's.
-  if (boot.title) document.title = boot.title + ' — Panduan Pasang';
+  if (boot.title) document.title = boot.title + ' — ' + T('Install Guide');
 
   var ICON = C.ICON, PLATFORM = C.PLATFORM;
   var svg = C.svg, mark = C.mark, el = C.el, esc = C.esc;
 
   var ALERT = {
-    NOTE: { cls: 'note', stroke: '#3b82f6', path: 'M12 11v5M12 8h.01', circle: true },
-    TIP: { cls: 'tip', stroke: '#2f9e51', path: 'M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z' },
-    IMPORTANT: { cls: 'important', stroke: '#ddc54a', path: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 8v5M12 16h.01' },
+    NOTE: { cls: 'note', stroke: '#d4a843', path: 'M12 11v5M12 8h.01', circle: true },
+    TIP: { cls: 'tip', stroke: '#4ade80', path: 'M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z' },
+    IMPORTANT: { cls: 'important', stroke: '#fbbf24', path: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 8v5M12 16h.01' },
     WARNING: { cls: 'warning', stroke: '#ef4444', path: 'M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01' },
     CAUTION: { cls: 'caution', stroke: '#ef4444', path: 'M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01' }
   };
@@ -47,8 +51,6 @@
       return (last ? '<span class="here">' + esc(c) + '</span>' : '<span>' + esc(c) + '</span>');
     }).join('<span>/</span>');
 
-    var widgetUrl = new URL(boot.widgetUrl || '../', location.href).href;
-
     return el(
       '<div>' +
         '<div class="breadcrumb">' + crumbs + '</div>' +
@@ -57,36 +59,25 @@
           (boot.version ? '<span class="version-pill">v' + esc(boot.version) + '</span>' : '') +
         '</div>' +
         '<h1 class="doc-title">' + esc(boot.title || '') + '</h1>' +
-        (boot.lede ? '<p class="doc-lede">' + esc(boot.lede) + '</p>' : '') +
+        (boot.lede ? '<p class="doc-lede">' + esc(T(boot.lede)) + '</p>' : '') +
         (chips || boot.updated ? '<div class="meta-row">' + chips +
-          (boot.updated ? '<span class="updated">Updated ' + esc(boot.updated) + '</span>' : '') + '</div>' : '') +
-        '<div class="install-card">' +
-          '<div class="install-label">' + svg(ICON.link, { size: 15, stroke: '#7fa6e6' }) + 'URL browser source</div>' +
-          '<div class="install-row">' +
-            '<div class="install-url">' + esc(widgetUrl) + '</div>' +
-            '<button class="install-copy" type="button" data-url="' + esc(widgetUrl) + '">' +
-              svg(ICON.copy, { size: 15, stroke: '#fff' }).replace('<path', '<rect x="9" y="9" width="12" height="12" rx="2"></rect><path') +
-              '<span>Salin</span></button>' +
-          '</div>' +
-          (boot.settingsUrl ? '<div class="install-links" id="configure-widget">' + svg(ICON.link, { size: 14, stroke: '#7fa6e6' }) +
-            '<a href="' + esc(boot.settingsUrl) + '">Atur widget ini di editor pengaturan</a></div>' : '') +
-        '</div>' +
+          (boot.updated ? '<span class="updated">' + esc(T('Updated')) + ' ' + esc(boot.updated) + '</span>' : '') + '</div>' : '') +
       '</div>'
     );
   }
 
   // Widgets keep their Streamer.bot actions in <widget>/import.sb; when one is
-  // there, the hero gets a second copy box beside the browser source URL.
+  // there, the hero gets a copy box above the body.
   function buildImportCard(code) {
     var preview = code.length > 220 ? code.slice(0, 220) + '…' : code;
     var card = el(
       '<div class="install-card is-sb" id="import-code">' +
-        '<div class="install-label">' + svg(ICON.bolt, { size: 15, stroke: '#c9a5ff' }) + 'Kode impor Streamer.bot</div>' +
+        '<div class="install-label">' + svg(ICON.bolt, { size: 15, stroke: 'currentColor' }) + esc(T('Streamer.bot import code')) + '</div>' +
         '<div class="install-row">' +
           '<div class="install-url">' + esc(preview) + '</div>' +
           '<button class="install-copy" type="button">' +
             svg(ICON.copy, { size: 15, stroke: '#fff' }).replace('<path', '<rect x="9" y="9" width="12" height="12" rx="2"></rect><path') +
-            '<span>Salin</span></button>' +
+            '<span>' + esc(T('Copy')) + '</span></button>' +
         '</div>' +
       '</div>'
     );
@@ -100,23 +91,14 @@
     var cards = '';
     if (boot.prev) {
       cards += '<a class="foot-card prev" href="' + esc(boot.prev.href) + '">' +
-        '<div class="foot-dir">← SEBELUMNYA</div><div class="foot-label">' + esc(boot.prev.label) + '</div></a>';
+        '<div class="foot-dir">← ' + esc(T('PREVIOUS')) + '</div><div class="foot-label">' + esc(boot.prev.label) + '</div></a>';
     }
     if (boot.next) {
       cards += '<a class="foot-card next" href="' + esc(boot.next.href) + '">' +
-        '<div class="foot-dir">BERIKUTNYA →</div><div class="foot-label">' + esc(boot.next.label) + '</div></a>';
+        '<div class="foot-dir">' + esc(T('NEXT')) + ' →</div><div class="foot-label">' + esc(boot.next.label) + '</div></a>';
     }
 
-    var edit = '';
-    if (site.repo) {
-      // Repo-relative path. Assumes a user/org page, where the site root is the repo root.
-      var path = new URL(boot.source, location.href).pathname.replace(/^\//, '');
-      var href = 'https://github.com/' + site.repo + '/edit/' + (site.branch || 'main') + '/' + path;
-      edit = '<div class="edit-link">' + svg(ICON.pencil, { size: 14, stroke: '#5c5c5c' }) +
-        '<a href="' + esc(href) + '" target="_blank" rel="noopener">Edit halaman ini di GitHub</a></div>';
-    }
-
-    return el('<div>' + (cards ? '<div class="doc-footer">' + cards + '</div>' : '') + edit + '</div>');
+    return el('<div>' + (cards ? '<div class="doc-footer">' + cards + '</div>' : '') + '</div>');
   }
 
   /* ── markdown post-processing ───────────────────────── */
@@ -137,7 +119,7 @@
       var box = el(
         '<div class="callout callout-' + spec.cls + '">' +
           svg(spec.path, { size: 18, stroke: spec.stroke, width: 1.9, circle: spec.circle }) +
-          '<div><div class="callout-title">' + kind.charAt(0) + kind.slice(1).toLowerCase() + '</div>' +
+          '<div><div class="callout-title">' + T(kind.charAt(0) + kind.slice(1).toLowerCase()) + '</div>' +
           '<div class="callout-body"></div></div>' +
         '</div>'
       );
@@ -174,7 +156,7 @@
       if (seen[slug]) slug += '-' + (++seen[slug]); else seen[slug] = 1;
       h.id = slug;
 
-      h.appendChild(el('<a class="anchor" href="#' + slug + '" aria-label="Link to this section">#</a>'));
+      h.appendChild(el('<a class="anchor" href="#' + slug + '" aria-label="' + esc(T('Link to this section')) + '">#</a>'));
     });
   }
 
@@ -187,8 +169,8 @@
         '<figure class="code-figure">' +
           '<div class="code-head"><span>' + esc(lang) + '</span>' +
             '<button class="code-copy" type="button">' +
-              svg(ICON.copy, { size: 13, stroke: '#5c5c5c' }).replace('<path', '<rect x="9" y="9" width="12" height="12" rx="2"></rect><path') +
-              '<span>Salin</span></button>' +
+              svg(ICON.copy, { size: 13, stroke: 'currentColor' }).replace('<path', '<rect x="9" y="9" width="12" height="12" rx="2"></rect><path') +
+              '<span>' + esc(T('Copy')) + '</span></button>' +
           '</div>' +
         '</figure>'
       );
@@ -201,8 +183,42 @@
     });
   }
 
+  // A "Field | Value" table whose rows include a URL renders as a copy card —
+  // the same shape as the old browser-source box, but for the dock details.
+  function buildFieldCard(rows) {
+    var items = rows.map(function (r) {
+      return '<div class="field-item">' +
+        '<div class="install-label">' + svg(ICON.link, { size: 15, stroke: 'currentColor' }) + esc(r.key) + '</div>' +
+        '<div class="install-row">' +
+          '<div class="install-url">' + esc(r.val) + '</div>' +
+          '<button class="install-copy" type="button" data-url="' + esc(r.val) + '">' +
+            svg(ICON.copy, { size: 15, stroke: '#fff' }).replace('<path', '<rect x="9" y="9" width="12" height="12" rx="2"></rect><path') +
+            '<span>' + esc(T('Copy')) + '</span></button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    var card = el('<div class="install-card field-card">' + items + '</div>');
+    card.querySelectorAll('.install-copy').forEach(function (btn) {
+      btn.addEventListener('click', function () { copy(this.dataset.url, this); });
+    });
+    return card;
+  }
+
   function upgradeTables(root) {
     root.querySelectorAll('table').forEach(function (t) {
+      // Pull the table out as key/value pairs first; a plain table stays a table.
+      var head = Array.prototype.map.call(t.querySelectorAll('thead th'), function (th) {
+        return th.textContent.trim().toLowerCase();
+      });
+      var rows = Array.prototype.map.call(t.querySelectorAll('tbody tr'), function (tr) {
+        var td = tr.querySelectorAll('td');
+        return { key: td[0] ? td[0].textContent.trim() : '', val: td[1] ? td[1].textContent.trim() : '' };
+      }).filter(function (r) { return r.key || r.val; });
+
+      var isFieldValue = head[0] === 'field' && head[1] === 'value';
+      var hasUrl = rows.some(function (r) { return /^url$/i.test(r.key); });
+      if (isFieldValue && hasUrl) { t.replaceWith(buildFieldCard(rows)); return; }
+
       var wrap = el('<div class="table-wrap"></div>');
       t.replaceWith(wrap);
       wrap.appendChild(t);
@@ -233,8 +249,8 @@
   }
 
   function lightbox(root) {
-    var box = el('<div class="lightbox"><button class="lightbox-close" type="button" aria-label="Close">' +
-      svg(ICON.close, { size: 20, stroke: '#d4d4d4', width: 2 }) + '</button><img alt=""></div>');
+    var box = el('<div class="lightbox"><button class="lightbox-close" type="button" aria-label="' + esc(T('Close')) + '">' +
+      svg(ICON.close, { size: 20, stroke: 'currentColor', width: 2 }) + '</button><img alt=""></div>');
     document.body.appendChild(box);
 
     var full = box.querySelector('img');
@@ -258,7 +274,7 @@
     navigator.clipboard.writeText(text).then(function () {
       var label = btn.querySelector('span');
       var was = label.textContent;
-      label.textContent = 'Tersalin';
+      label.textContent = T('Copied');
       btn.classList.add('is-done');
       setTimeout(function () {
         label.textContent = was;
@@ -294,14 +310,14 @@
     var rail = el(
       '<div class="rail"><div class="rail-inner">' +
         '<div class="rail-ticks">' + ticks + '</div>' +
-        '<div class="rail-panel"><div class="rail-label">DI HALAMAN INI</div>' + links + '</div>' +
+        '<div class="rail-panel"><div class="rail-label">' + esc(T('ON THIS PAGE')) + '</div>' + links + '</div>' +
       '</div></div>'
     );
     document.body.appendChild(rail);
 
     var toc = el(
-      '<details class="toc-mobile"><summary>' + svg(ICON.list, { size: 16, stroke: '#7fa6e6', width: 1.9 }) +
-      'Di halaman ini</summary><div class="toc-list">' + links + '</div></details>'
+      '<details class="toc-mobile"><summary>' + svg(ICON.list, { size: 16, stroke: 'currentColor', width: 1.9 }) +
+      esc(T('On this page')) + '</summary><div class="toc-list">' + links + '</div></details>'
     );
     root.parentElement.insertBefore(toc, root);
 
@@ -383,7 +399,7 @@
 
   function fail(msg) {
     document.body.appendChild(el(
-      '<div class="doc-wrap"><h1 class="doc-title">Dokumentasi ini gagal dimuat</h1>' +
+      '<div class="doc-wrap"><h1 class="doc-title">' + esc(T("Couldn't load these docs")) + '</h1>' +
       '<p class="doc-lede">' + esc(msg) + '</p></div>'
     ));
   }
@@ -401,8 +417,9 @@
 
   externalize(wrap);
 
-  wrap.querySelector('.install-copy').addEventListener('click', function () {
-    copy(this.dataset.url, this);
+  // Every copy box on the page (hero import card, dock-details card) shares one handler.
+  wrap.querySelectorAll('.install-copy').forEach(function (btn) {
+    btn.addEventListener('click', function () { copy(this.dataset.url, this); });
   });
 
   var importUrl = boot.importUrl || new URL('import.sb', new URL(boot.widgetUrl || '../', location.href)).href;
@@ -412,16 +429,28 @@
       // A missing file can come back as the host's 404 page, so require an .sb payload.
       if (!code || /^\s*</.test(code)) return;
       var card = buildImportCard(code.trim());
-      wrap.querySelector('.install-card').after(card);
+      var anchor = wrap.querySelector('.install-card');
+      if (anchor) anchor.after(card); else wrap.querySelector('.doc-body').before(card);
       if (location.hash === '#' + card.id) card.scrollIntoView();
     })
     .catch(function () {});
 
-  fetch(boot.source)
-    .then(function (r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.text();
-    })
+  // Fetch the chosen README; a missing translation silently falls back to the
+  // English original, so a widget without a README.id.md still renders.
+  function loadMarkdown(url) {
+    return fetch(url).then(function (r) {
+      if (r.ok) return r.text();
+      if (LANG === 'id') {
+        return fetch(C.root(entry.widgetUrl + 'README.md')).then(function (r2) {
+          if (!r2.ok) throw new Error('HTTP ' + r2.status);
+          return r2.text();
+        });
+      }
+      throw new Error('HTTP ' + r.status);
+    });
+  }
+
+  loadMarkdown(boot.source)
     .then(function (md) {
       // Drop a leading H1 — the hero already carries the title.
       md = md.replace(/^\s*#\s+.*\n+/, '');
@@ -446,7 +475,7 @@
       }
     })
     .catch(function (e) {
-      fail('Tidak bisa membaca ' + boot.source + ' (' + e.message + '). Kalau ini dibuka dari ' +
-        'sistem berkas, sajikan foldernya lewat http — fetch tidak bekerja pada URL file://.');
+      fail(T('Could not read') + ' ' + boot.source + ' (' + e.message + '). ' +
+        T('If you are opening this from the file system, serve the folder over http instead — fetch does not work on file:// URLs.'));
     });
 })();

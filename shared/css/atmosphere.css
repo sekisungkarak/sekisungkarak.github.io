@@ -1,48 +1,72 @@
-/* Page atmosphere: a dot grid under a wash from the top edge, plus an optional
-   glow that follows the cursor. Load after global.css.
+/* Page atmosphere: two soft accent blooms over a faint dot grid, plus the
+   lamp that follows the cursor. Load after global.css.
+
+   This theme has no hard edges anywhere — the backdrop is blurred light, and
+   the cursor reveal is a soft pool rather than a disc.
 
    A page opts in by placing the layers itself:
-     <div class="bg"></div>                     — grid + wash, static
-     <div class="bg"></div><div class="spot"></div>   — and the cursor glow
+     <div class="bg"></div>                            — blooms and grid, static
+     <div class="bg"></div><div class="spot"></div>     — and the cursor lamp
 
-   The homepage uses .bg alone on purpose. .spot needs the pointer script in
-   socials/script.js to feed it --mx/--my. */
+   chrome.js mounts both, so a page gets them by loading the chrome. The values
+   below are the dark theme; the light theme overrides them at the bottom. */
 
-@property --a { syntax: '<angle>'; inherits: false; initial-value: 0turn; }
+/* z-index -1, not 0: a positioned box at 0 paints above in-flow content, so the
+   backdrop would sit on top of any page whose content is not itself positioned.
+   At -1 it paints above the canvas background and below everything else. */
+.bg, .spot { position: fixed; inset: 0; pointer-events: none; z-index: -1; }
 
-.bg, .spot { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
-
+/* Two wide accent blooms over a faint dot grid, so the surface has depth and
+   texture without a single drawn line. */
 .bg {
   background:
-    radial-gradient(90% 46% at 50% 0, rgba(138, 43, 226, 0.17), transparent 60%),
-    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.05) 1px, transparent 0) 0 0 / 20px 20px;
+    radial-gradient(1100px 620px at 12% -10%, rgba(212, 168, 67, 0.20), transparent 62%),
+    radial-gradient(900px 520px at 92% 4%, rgba(185, 141, 46, 0.15), transparent 60%),
+    radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: auto, auto, 26px 26px;
+  background-position: 0 0, 0 0, 0 0;
 }
 
-/* The landing page is wider than the socials column, so the wash spreads
-   further before it fades. Same ceiling, same recipe. */
+/* The landing page is taller, so the blooms reach further down before clearing. */
 .bg.is-wide {
   background:
-    radial-gradient(120% 52% at 50% 0, rgba(138, 43, 226, 0.17), transparent 62%),
-    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.05) 1px, transparent 0) 0 0 / 20px 20px;
+    radial-gradient(1200px 760px at 10% -12%, rgba(212, 168, 67, 0.22), transparent 64%),
+    radial-gradient(1000px 620px at 94% 2%, rgba(185, 141, 46, 0.17), transparent 62%),
+    radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: auto, auto, 26px 26px;
 }
 
+/* The lamp under the pointer: one blurred accent light, no rim. --mx/--my are
+   written by chrome.js on pointermove; until the pointer moves, it sits high
+   and centre so a page that is never touched still looks lit. */
 .spot {
   opacity: 0;
-  transition: opacity 0.5s var(--ease);
-  background: radial-gradient(340px circle at var(--mx, 50%) var(--my, 40%),
-    rgba(138, 43, 226, 0.30), rgba(138, 43, 226, 0.10) 44%, transparent 70%);
+  transition: opacity var(--t) var(--ease);
+  background: radial-gradient(circle 320px at var(--mx, 50%) var(--my, 38%),
+    rgba(212, 168, 67, 0.18), rgba(212, 168, 67, 0.07) 48%, transparent 74%);
 }
 
-/* The same dot grid, brighter and accent-tinted, revealed only where the glow
-   lands. Origin and cell size must match .bg so the lit dots sit exactly on
-   the dim ones. */
-.spot::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 1px 1px, rgba(201, 165, 255, 0.5) 1px, transparent 0) 0 0 / 20px 20px;
-  -webkit-mask: radial-gradient(300px circle at var(--mx, 50%) var(--my, 40%), #000, rgba(0, 0, 0, 0.35) 55%, transparent 72%);
-  mask: radial-gradient(300px circle at var(--mx, 50%) var(--my, 40%), #000, rgba(0, 0, 0, 0.35) 55%, transparent 72%);
-}
-
+/* Rides the pointer without a lag, since the gradient is re-drawn each move. */
 body.is-near .spot { opacity: 1; }
+
+/* ── light ──────────────────────────────────────────── */
+/* Warm paper: the same blooms, deeper so they read on a light ground, and a
+   grid of dark dots instead of light ones. */
+html[data-theme="light"] .bg {
+  background:
+    radial-gradient(1100px 620px at 12% -10%, rgba(212, 168, 67, 0.34), transparent 62%),
+    radial-gradient(900px 520px at 92% 4%, rgba(185, 141, 46, 0.24), transparent 60%),
+    radial-gradient(rgba(24, 20, 12, 0.07) 1px, transparent 1px);
+  background-size: auto, auto, 26px 26px;
+}
+html[data-theme="light"] .bg.is-wide {
+  background:
+    radial-gradient(1200px 760px at 10% -12%, rgba(212, 168, 67, 0.36), transparent 64%),
+    radial-gradient(1000px 620px at 94% 2%, rgba(185, 141, 46, 0.26), transparent 62%),
+    radial-gradient(rgba(24, 20, 12, 0.07) 1px, transparent 1px);
+  background-size: auto, auto, 26px 26px;
+}
+html[data-theme="light"] .spot {
+  background: radial-gradient(circle 320px at var(--mx, 50%) var(--my, 38%),
+    rgba(212, 168, 67, 0.30), rgba(212, 168, 67, 0.12) 48%, transparent 74%);
+}

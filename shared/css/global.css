@@ -1,68 +1,147 @@
 /* Site-wide tokens and base. Load before any page stylesheet.
-   Palette mirrors shared/core/docs/docs.css — change it here first. */
+
+   Theme: dark glass, with a light counterpart. A near-black ground with a
+   faint warm tint in it, surfaces that sit just above it behind a hairline,
+   and soft corners throughout. Depth comes from blur and a low shadow rather
+   than from heavy outlines, so nothing on the page shouts.
+
+   Palette is one place only — change it here and every page follows. The light
+   values live in the [data-theme="light"] block at the bottom; every token the
+   two themes share keeps its name, so no rule below needs to know which is on. */
+
 :root {
   /* surfaces */
-  --page: #101010;
-  --header: rgba(20, 20, 20, 0.82);
-  --raised: #161616;
-  --raised-2: #181818;
-  --tab: #1b1b1b;
+  --page: #121114;
+  --header: rgba(18, 17, 20, 0.72);
+  --raised: #1a1920;
+  --raised-2: #201e28;
+  --tab: #26232f;
+  --well: #0d0c10;
 
-  /* lines */
-  --line-soft: #232323;
-  --line: #272727;
-  --line-mid: #2f2f2f;
-  --line-hard: #3d3d3d;
+  /* lines — hairlines. Anything heavier would read as a drawn border, which
+     is not this theme. */
+  --line: rgba(255, 255, 255, 0.10);
+  --line-soft: rgba(255, 255, 255, 0.06);
+  --line-mid: rgba(255, 255, 255, 0.14);
+  --line-hard: rgba(255, 255, 255, 0.20);
 
   /* text */
-  --ink: #fff;
-  --strong: #e4e4e4;
-  --body: #c9c9c9;
-  --lede: #a8a8a8;
-  --soft: #b6b6b6;
-  --muted: #8b8b8b;
-  --faint: #5c5c5c;
+  --ink: #f5f3f7;
+  --strong: #e4e0ea;
+  --body: #c2bdcb;
+  --lede: #a9a3b4;
+  --soft: #948e9f;
+  --muted: #837d8e;
+  --faint: #6a6474;
 
-  /* accent */
-  --accent: #3b82f6;
-  --accent-deep: #1c3faa;
-  --accent-soft: #7fa6e6;
-  --accent-pale: #9fbdf2;
-  --accent-ink: #cfe0ff;
-  --accent-glow: rgba(59, 130, 246, 0.28);
+  /* accent — the one warm colour on the page. --accent is the fill; --accent-on
+     is what sits on top of it, and it is dark because the fill is light. */
+  --accent: #d4a843;
+  --accent-on: #1a1408;
+  --accent-deep: #b98d2e;
+  --accent-soft: #e8c877;
+  --accent-pale: #f0dda6;
+  --accent-ink: #f5e6bb;
+  --accent-wash: rgba(212, 168, 67, 0.20);
+  --accent-hover: rgba(212, 168, 67, 0.35);
+  --accent-tint: rgba(212, 168, 67, 0.12);
+  --accent-line: rgba(212, 168, 67, 0.40);
+  --accent-glow: rgba(212, 168, 67, 0.35);
 
   /* semantic */
-  --ok: #2f9e51;
-  --warn: #dbd394;
-  --err: #ef4444;
+  --ok: #4ade80;
+  --ok-wash: rgba(74, 222, 128, 0.12);
+  --warn: #fbbf24;
+  --warn-wash: rgba(251, 191, 36, 0.12);
+  --err: #f87171;
+  --err-wash: rgba(248, 113, 113, 0.12);
   --live: #ff4646;
 
   /* platform brand marks */
-  --twitch: #9146ff;
-  --kick: #53fc18;
-  --tiktok: #25f4ee;
-  --youtube: #ff0033;
+  --twitch: #a970ff;
+  --kick: #6ee32c;
+  --tiktok: #4de8e0;
+  --youtube: #ff4d6a;
   --x: #e7e9ea;
-  --patreon: #ff8438;
-  --kofi: #ff5e5b;
-  --discord: #5865f2;
+  --patreon: #ff9a55;
+  --kofi: #ff7a77;
+  --discord: #7b88ff;
   --github: #e6edf3;
 
   /* type */
-  --sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --display: 'Space Grotesk', system-ui, sans-serif;
-  --mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --sans: 'Archivo', system-ui, -apple-system, sans-serif;
+  --display: 'Archivo Black', 'Archivo', system-ui, sans-serif;
+  --mono: 'Space Mono', ui-monospace, 'SFMono-Regular', monospace;
 
-  /* geometry + motion */
-  --r-sm: 6px;
-  --r: 10px;
-  --r-lg: 16px;
+  /* geometry — soft by default, pill for controls */
+  --r-sm: 10px;
+  --r: 14px;
+  --r-lg: 24px;
   --r-pill: 999px;
+
+  /* kit: hairline weight, the glass blur, and the soft shadows */
+  --bw: 1px;
+  --bw-heavy: 1px;
+  --slab-gap: 16px;
+  --blur: blur(12px) saturate(1.4);
+  --blur-heavy: blur(24px) saturate(1.6);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow: 0 2px 12px rgba(0, 0, 0, 0.34);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.40);
+  --lift: 0 10px 28px rgba(0, 0, 0, 0.38);
+  --ring: 0 0 0 1px var(--accent-line);
+
+  /* motion — eased, never snappy */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --t-fast: 0.18s;
-  --t: 0.24s;
-  --t-slow: 0.42s;
+  --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --t-fast: 0.15s;
+  --t: 0.22s;
+  --t-slow: 0.34s;
+}
+
+/* ── light ──────────────────────────────────────────── */
+/* Same names, lighter values. Warm paper rather than white, so the accent
+   still reads as the same colour it is on the dark ground. */
+html[data-theme="light"] {
+  --page: #f4f1ea;
+  --header: rgba(244, 241, 234, 0.78);
+  --raised: #ffffff;
+  --raised-2: #faf8f3;
+  --tab: #ece7db;
+  --well: #e9e3d5;
+
+  --line: rgba(24, 20, 12, 0.14);
+  --line-soft: rgba(24, 20, 12, 0.08);
+  --line-mid: rgba(24, 20, 12, 0.20);
+  --line-hard: rgba(24, 20, 12, 0.28);
+
+  --ink: #16150f;
+  --strong: #2a2820;
+  --body: #3f3c33;
+  --lede: #55514a;
+  --soft: #6a6559;
+  --muted: #7a7466;
+  --faint: #8b8474;
+
+  --accent: #d4a843;
+  --accent-on: #1a1408;
+  --accent-deep: #b98d2e;
+  --accent-soft: #8a6d23;
+  --accent-pale: #6f5616;
+  --accent-ink: #5c4712;
+  --accent-wash: rgba(212, 168, 67, 0.26);
+  --accent-hover: rgba(212, 168, 67, 0.42);
+  --accent-tint: rgba(212, 168, 67, 0.16);
+  --accent-line: rgba(180, 140, 40, 0.46);
+
+  --ok: #1c8a45;
+  --warn: #a16207;
+  --err: #c0392b;
+
+  --shadow-sm: 0 1px 2px rgba(60, 48, 20, 0.10);
+  --shadow: 0 2px 12px rgba(60, 48, 20, 0.12);
+  --shadow-lg: 0 16px 48px rgba(60, 48, 20, 0.16);
+  --lift: 0 10px 28px rgba(60, 48, 20, 0.16);
 }
 
 * { box-sizing: border-box; }
@@ -76,18 +155,26 @@ body {
   font-size: 16px;
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
+  transition: background-color var(--t-slow) var(--ease), color var(--t-slow) var(--ease);
 }
 
 a { color: var(--accent-soft); text-decoration: none; }
-a:hover { color: var(--accent-pale); }
+a:hover { color: var(--accent-pale); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 img { max-width: 100%; }
-::selection { background: rgba(138, 43, 226, 0.35); }
+::selection { background: var(--accent); color: var(--accent-on); }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-soft);
   outline-offset: 3px;
   border-radius: var(--r-sm);
 }
+
+/* Thin scrollbars so they do not cut a bright line into the page. */
+* { scrollbar-width: thin; scrollbar-color: var(--tab) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--tab); border-radius: var(--r-pill); }
+*::-webkit-scrollbar-thumb:hover { background: var(--raised-2); }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }

@@ -6,6 +6,10 @@
 
   var site = window.SITE || {};
   var catalog = window.CATALOG || [];
+  // i18n.js loads before this file; the fallback keeps the chrome usable if it
+  // is ever missing, so a broken dictionary can never blank the header.
+  var I18N = window.I18N;
+  var T = I18N && I18N.t ? I18N.t : function (s) { return s; };
 
   // This file lives at <root>/shared/core/, so every shared path resolves from
   // its own src. Nothing here is depth-bound — a page at any level works.
@@ -49,7 +53,7 @@
     var size = opts.size || 16;
     var extra = opts.circle ? '<circle cx="12" cy="12" r="9"></circle>' : '';
     return '<svg class="' + (opts.cls || '') + '" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" ' +
-      'fill="none" stroke="' + (opts.stroke || '#8b8b8b') + '" stroke-width="' + (opts.width || 1.8) + '" ' +
+      'fill="none" stroke="' + (opts.stroke || 'currentColor') + '" stroke-width="' + (opts.width || 1.8) + '" ' +
       'stroke-linecap="round" stroke-linejoin="round">' + extra + '<path d="' + path + '"></path></svg>';
   }
 
@@ -58,6 +62,82 @@
     var size = opts.size || 18;
     return '<svg class="' + (opts.cls || '') + '" width="' + size + '" height="' + size + '" ' +
       'viewBox="0 0 24 24" fill="' + (opts.fill || 'currentColor') + '" stroke="none">' + MARK[name] + '</svg>';
+  }
+
+  /* ── theme ──────────────────────────────────────────── */
+
+  // The reader's last choice, or the system preference if they have never
+  // picked one. The head sets data-theme before first paint from the same
+  // key, so this only has to keep the two in step after that.
+  var THEME_KEY = 'sk-theme';
+
+  function storedTheme() {
+    try { return localStorage.getItem(THEME_KEY); } catch (e) { return null; }
+  }
+
+  function systemTheme() {
+    return window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+
+  function applyTheme(mode) {
+    document.documentElement.setAttribute('data-theme', mode);
+    // Tells the browser which way to draw native widgets and scrollbars.
+    document.documentElement.style.colorScheme = mode;
+  }
+
+  function setTheme(mode, remember) {
+    applyTheme(mode);
+    if (remember) { try { localStorage.setItem(THEME_KEY, mode); } catch (e) {} }
+  }
+
+  function bootTheme() {
+    applyTheme(storedTheme() || systemTheme());
+  }
+
+  // Follow the system only while the reader has not chosen for themselves.
+  function watchSystem() {
+    if (!window.matchMedia) return;
+    var mq = matchMedia('(prefers-color-scheme: light)');
+    var onChange = function (e) { if (!storedTheme()) applyTheme(e.matches ? 'light' : 'dark'); };
+    if (mq.addEventListener) mq.addEventListener('change', onChange);
+    else if (mq.addListener) mq.addListener(onChange);
+  }
+
+  bootTheme();
+  watchSystem();
+
+  /* ── atmosphere ─────────────────────────────────────── */
+
+  // The ruled ground and the lamp under the pointer. Mounted here rather than
+  // written into each page's HTML, so a page gets the backdrop by loading the
+  // chrome and a new page cannot forget it. The layers sit behind everything
+  // (z-index 0) and the page content rides above them.
+  function mountAtmosphere() {
+    var wide = document.documentElement.classList.contains('is-landing');
+    var bg = el('<div class="bg' + (wide ? ' is-wide' : '') + '" aria-hidden="true"></div>');
+    var spot = el('<div class="spot" aria-hidden="true"></div>');
+    document.body.insertBefore(spot, document.body.firstChild);
+    document.body.insertBefore(bg, document.body.firstChild);
+
+    // The lamp trails the pointer. Writing the two custom properties is all it
+    // takes — the gradient is re-drawn by the compositor, not by layout.
+    var near = false;
+    document.addEventListener('pointermove', function (e) {
+      spot.style.setProperty('--mx', e.clientX + 'px');
+      spot.style.setProperty('--my', e.clientY + 'px');
+      if (!near) { near = true; document.body.classList.add('is-near'); }
+    }, { passive: true });
+
+    // The disc follows the pointer exactly, so there is nothing to animate out;
+    // it just stops being lit once the pointer leaves the window.
+    document.addEventListener('pointerleave', function () {
+      near = false;
+      document.body.classList.remove('is-near');
+    });
+    document.addEventListener('pointerenter', function () {
+      near = true;
+      document.body.classList.add('is-near');
+    });
   }
 
   function el(html) {
@@ -112,35 +192,52 @@
       var url = iconUrl(c.icon, '#ffffff');
       var glyph = url
         ? '<img src="' + esc(url) + '" alt="" width="16" height="16">'
-        : svg(ICON.list, { size: 15, stroke: '#ffffff' });
+        : svg(ICON.list, { size: 15, stroke: 'currentColor' });
       return '<a class="nav-pop-item" href="' + esc(root(c.docsUrl)) + '">' +
         '<span class="nav-pop-icon">' + glyph + '</span>' +
         '<span class="nav-pop-text"><span class="nav-pop-name">' + esc(c.name) + '</span>' +
         (c.eyebrow ? '<span class="nav-pop-eyebrow">' + esc(c.eyebrow) + '</span>' : '') + '</span>' +
-        svg(ICON.arrow, { size: 14, stroke: '#7fa6e6', width: 2.3, cls: 'nav-pop-arrow' }) +
+        svg(ICON.arrow, { size: 14, stroke: 'currentColor', width: 2.3, cls: 'nav-pop-arrow' }) +
       '</a>';
     }).join('');
 
     return '<div class="nav-pop">' + rows +
       '<a class="nav-pop-foot" href="' + esc(root('#widgets')) + '">' +
-        svg(ICON.list, { size: 12, stroke: 'currentColor', width: 2.2 }) + 'Semua widget di beranda</a>' +
+        svg(ICON.list, { size: 12, stroke: 'currentColor', width: 2.2 }) + esc(T('Every widget on the homepage')) + '</a>' +
+    '</div>';
+  }
+
+  // Contact Me: a nav tab that opens a small panel holding the Discord invite.
+  // Sourced from site.discord — the one place the invite link lives.
+  function contactPop() {
+    if (!site.discord) {
+      return '<div class="nav-pop nav-pop-contact">' +
+        '<div class="nav-pop-empty">' + esc(T('Discord invite coming soon.')) + '</div></div>';
+    }
+    return '<div class="nav-pop nav-pop-contact">' +
+      '<div class="contact-head">' + mark('discord', { size: 22, fill: '#5865f2' }) +
+        '<div><div class="contact-title">' + esc(T('Join my Discord')) + '</div>' +
+        '<div class="contact-sub">' + esc(T('Say hi, ask for help, or share feedback.')) + '</div></div>' +
+      '</div>' +
+      '<a class="contact-cta" href="' + esc(site.discord) + '" target="_blank" rel="noopener">' +
+        mark('discord', { size: 16, fill: '#fff' }) + esc(T('Join the Discord')) + '</a>' +
     '</div>';
   }
 
   function buildHeader() {
     var nav = (site.nav || []).map(function (n) {
       if (n.soon) {
-        return '<span class="nav-link is-soon" data-tooltip="Segera">' + esc(n.label) + '</span>';
+        return '<span class="nav-link is-soon" data-tooltip="' + esc(T('Coming Soon')) + '">' + esc(T(n.label)) + '</span>';
       }
       var on = activeNav(n) ? ' is-active' : '';
-      if (n.menu === 'catalog') {
+      if (n.contact || n.menu === 'catalog') {
         return '<span class="nav-menu">' +
-          '<button class="nav-link has-menu' + on + '" type="button" aria-expanded="false">' + esc(n.label) +
+          '<button class="nav-link has-menu' + on + '" type="button" aria-expanded="false">' + esc(T(n.label)) +
             svg(ICON.chevron, { size: 11, stroke: 'currentColor', width: 2.6, cls: 'nav-caret' }) +
-          '</button>' + docsMenu() +
+          '</button>' + (n.contact ? contactPop() : docsMenu()) +
         '</span>';
       }
-      return '<a class="nav-link' + on + '" href="' + esc(root(n.href)) + '">' + esc(n.label) + '</a>';
+      return '<a class="nav-link' + on + '" href="' + esc(root(n.href)) + '">' + esc(T(n.label)) + '</a>';
     }).join('');
 
     var links = (site.links || []).map(function (l) {
@@ -151,23 +248,16 @@
         esc(l.label) + '" data-tooltip="' + esc(l.label) + '">' + glyph + '</a>';
     }).join('');
 
-    var help = site.discord
-      ? '<div class="help-wrap">' +
-          '<button class="help-pill" type="button" aria-expanded="false">' + mark('discord', { size: 16, fill: '#5865f2' }) +
-            '<span>Butuh bantuan?</span></button>' +
-          '<div class="help-pop">' +
-            '<h4>Ada yang macet?</h4>' +
-            '<p>Buka thread di kanal dukungan Discord saya. ' +
-            'Sertakan nama widget dan apa yang sudah dicoba.</p>' +
-            '<a class="help-cta" href="' + esc(site.discord) + '" target="_blank" rel="noopener">' +
-              mark('discord', { size: 16, fill: '#fff' }) + 'Gabung Discord</a>' +
-          '</div>' +
-        '</div>'
-      : '';
+    // Two-letter codes rather than flags: a language is not a country.
+    var lang = (I18N && I18N.langs || ['en']).map(function (code) {
+      var on = I18N && I18N.lang === code ? ' is-on' : '';
+      return '<button class="lang-btn' + on + '" type="button" data-lang="' + esc(code) + '" ' +
+        'aria-pressed="' + (on ? 'true' : 'false') + '">' + esc(code.toUpperCase()) + '</button>';
+    }).join('');
 
     var header = el(
       '<header class="site-header">' +
-        '<a class="brand" href="' + esc(root()) + '" aria-label="Geseki home">' +
+        '<a class="brand" href="' + esc(root()) + '" aria-label="Sekisungkarak home">' +
           '<img src="' + esc(root(site.logo || '')) + '" alt="">' +
           '<span>' + esc(site.brand || '') + '</span>' +
         '</a>' +
@@ -175,18 +265,46 @@
         '<div class="header-spacer"></div>' +
         '<div class="header-actions">' + links +
           '<div class="header-divider"></div>' +
+          '<div class="lang-switch" role="group" aria-label="' + esc(T('Switch language')) + '">' + lang + '</div>' +
           '<button class="search-pill" type="button">' +
-            svg('M21 21l-4.3-4.3', { size: 14, stroke: '#fff', width: 2 })
+            svg('M21 21l-4.3-4.3', { size: 14, stroke: 'currentColor', width: 2 })
               .replace('<path', '<circle cx="11" cy="11" r="7"></circle><path') +
-            '<span class="search-text">Cari</span><kbd>/</kbd>' +
-          '</button>' + help +
+            '<span class="search-text">' + esc(T('Search')) + '</span><kbd>/</kbd>' +
+          '</button>' +
+          '<button class="theme-toggle" type="button" aria-label="' + esc(T('Switch theme')) + '" data-tooltip="' + esc(T('Switch theme')) + '">' +
+            svg('M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z', { size: 17, cls: 'icon-moon', width: 1.9 }) +
+            svg('M12 4V2M12 22v-2M4 12H2M22 12h-2M6.3 6.3 4.9 4.9M19.1 19.1l-1.4-1.4M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4', { size: 17, cls: 'icon-sun', width: 1.9 })
+              .replace('<path', '<circle cx="12" cy="12" r="4"></circle><path') +
+          '</button>' +
         '</div>' +
       '</header>'
     );
 
     wireMenu(header);
-    wireHelp(header);
+    wireTheme(header);
+    wireLang(header);
     return header;
+  }
+
+  // Switching language reloads: every page is drawn by JS on load, so a reload
+  // re-renders it whole. The button that is already lit does nothing.
+  function wireLang(header) {
+    header.querySelectorAll('.lang-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (I18N && I18N.set) I18N.set(btn.dataset.lang);
+      });
+    });
+  }
+
+  // The theme button flips between the two, and remembers the choice. Once a
+  // reader picks, the system preference stops being consulted.
+  function wireTheme(header) {
+    var btn = header.querySelector('.theme-toggle');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      setTheme(next, true);
+    });
   }
 
   // Hover owns both panels. Where there is no hover to read — touch — the tap
@@ -194,85 +312,46 @@
   var HOVERS = !window.matchMedia || matchMedia('(hover: hover)').matches;
 
   function wireMenu(header) {
-    var wrap = header.querySelector('.nav-menu');
-    if (!wrap) return;
-    var btn = wrap.querySelector('.has-menu');
-    var pop = wrap.querySelector('.nav-pop');
-    var expose = function (open) { btn.setAttribute('aria-expanded', open ? 'true' : 'false'); };
+    // Two menus can share the header now (Contact Me, Docs), so each is wired
+    // on its own — one open panel never depends on another's state.
+    header.querySelectorAll('.nav-menu').forEach(function (wrap) {
+      var btn = wrap.querySelector('.has-menu');
+      var pop = wrap.querySelector('.nav-pop');
+      if (!btn || !pop) return;
+      var expose = function (open) { btn.setAttribute('aria-expanded', open ? 'true' : 'false'); };
 
-    if (HOVERS) {
-      // Nothing latches: a click shuts the panel, and leaving resets it so the
-      // next hover opens again.
-      btn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        expose(!wrap.classList.toggle('is-shut'));
-      });
-      wrap.addEventListener('pointerenter', function () {
-        if (!wrap.classList.contains('is-shut')) expose(true);
-      });
-      wrap.addEventListener('pointerleave', function () {
-        wrap.classList.remove('is-shut');
-        expose(false);
-      });
-    } else {
-      btn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        expose(wrap.classList.toggle('is-open'));
-      });
-      pop.addEventListener('click', function (e) { e.stopPropagation(); });
-      document.addEventListener('click', function () {
+      if (HOVERS) {
+        // Nothing latches: a click shuts the panel, and leaving resets it so the
+        // next hover opens again.
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          expose(!wrap.classList.toggle('is-shut'));
+        });
+        wrap.addEventListener('pointerenter', function () {
+          if (!wrap.classList.contains('is-shut')) expose(true);
+        });
+        wrap.addEventListener('pointerleave', function () {
+          wrap.classList.remove('is-shut');
+          expose(false);
+        });
+      } else {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          expose(wrap.classList.toggle('is-open'));
+        });
+        pop.addEventListener('click', function (e) { e.stopPropagation(); });
+        document.addEventListener('click', function () {
+          wrap.classList.remove('is-open');
+          expose(false);
+        });
+      }
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
         wrap.classList.remove('is-open');
+        if (HOVERS) wrap.classList.add('is-shut');
         expose(false);
       });
-    }
-
-    document.addEventListener('keydown', function (e) {
-      if (e.key !== 'Escape') return;
-      wrap.classList.remove('is-open');
-      if (HOVERS) wrap.classList.add('is-shut');
-      expose(false);
-    });
-  }
-
-  // The help panel opens on hover, and a click overrides that either way.
-  function wireHelp(header) {
-    var wrap = header.querySelector('.help-wrap');
-    if (!wrap) return;
-    var pill = wrap.querySelector('.help-pill');
-    var pop = wrap.querySelector('.help-pop');
-    var expose = function (open) { pill.setAttribute('aria-expanded', open ? 'true' : 'false'); };
-
-    if (HOVERS) {
-      // Nothing latches: a click shuts the panel, and leaving resets it so the
-      // next hover opens again.
-      pill.addEventListener('click', function (e) {
-        e.stopPropagation();
-        expose(!wrap.classList.toggle('is-shut'));
-      });
-      wrap.addEventListener('pointerenter', function () {
-        if (!wrap.classList.contains('is-shut')) expose(true);
-      });
-      wrap.addEventListener('pointerleave', function () {
-        wrap.classList.remove('is-shut');
-        expose(false);
-      });
-    } else {
-      pill.addEventListener('click', function (e) {
-        e.stopPropagation();
-        expose(wrap.classList.toggle('is-open'));
-      });
-      pop.addEventListener('click', function (e) { e.stopPropagation(); });
-      document.addEventListener('click', function () {
-        wrap.classList.remove('is-open');
-        expose(false);
-      });
-    }
-
-    document.addEventListener('keydown', function (e) {
-      if (e.key !== 'Escape') return;
-      wrap.classList.remove('is-open');
-      if (HOVERS) wrap.classList.add('is-shut');
-      expose(false);
     });
   }
 
@@ -324,7 +403,14 @@
   };
 
   function buildSiteFooter() {
-    var row = (site.socials || []).map(function (s) {
+    // Discord is derived from site.discord rather than listed again in
+    // site.socials, so the invite link stays in exactly one place.
+    var socials = (site.socials || []).slice();
+    if (site.discord && !socials.some(function (s) { return s.icon === 'discord'; })) {
+      socials.push({ label: 'Discord', href: site.discord, icon: 'discord' });
+    }
+
+    var row = socials.map(function (s) {
       var d = SOCIAL[s.icon];
       if (!d) return '';
       return '<a class="soc" href="' + esc(s.href) + '" target="_blank" rel="noopener" ' +
@@ -340,11 +426,19 @@
     );
   }
 
+  // Mounted once the page's own scripts have run, so .is-landing is already on
+  // the root by the time the backdrop decides whether it needs the wide wash.
+  // Classic scripts all finish before DOMContentLoaded, so this is the first
+  // moment the answer is final.
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountAtmosphere);
+  else mountAtmosphere();
+
   window.CHROME = {
     ICON: ICON, MARK: MARK, PLATFORM: PLATFORM, SOCIAL: SOCIAL,
     svg: svg, mark: mark, el: el, esc: esc, slugify: slugify,
     root: root, core: core, entry: entry, iconUrl: iconUrl,
-    catalog: catalog, site: site,
+    catalog: catalog, site: site, i18n: I18N, T: T,
+    setTheme: setTheme, applyTheme: applyTheme, THEME_KEY: THEME_KEY,
     buildHeader: buildHeader, buildSiteFooter: buildSiteFooter, slideNav: slideNav
   };
 })();

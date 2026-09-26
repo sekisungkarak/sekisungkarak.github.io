@@ -1,5 +1,9 @@
 /* Homepage: the hero and the card grid. Header, footer and the search modal
-   come from ../../css/chrome.css. Loads after global.css + atmosphere.css. */
+   come from ../../css/chrome.css. Loads after global.css + atmosphere.css.
+
+   Theme: dark glass. The hero is a soft translucent panel, the eyebrow is a
+   pill, and cards are rounded surfaces whose thumbnail is inset behind its own
+   radius so the art reads as framed rather than full-bleed. */
 
 /* Flex in both states: justify-content only has free space to distribute while
    min-height is holding the box open, so the landing and the ordinary page are
@@ -9,100 +13,124 @@
 .page-wrap {
   position: relative;
   z-index: 1;
-  max-width: 1200px;
+  max-width: 1220px;
   margin: 0 auto;
   padding: 0 40px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   min-height: 0;
-  transition: min-height 0.55s var(--ease);
+  transition: min-height var(--t-slow) var(--ease);
 }
 
 /* ── hero ───────────────────────────────────────────── */
+/* A glass panel: translucent ground, hairline edge, soft lift. The blur is what
+   separates it from the backdrop — there is no drawn border to do the job. */
 .hero {
-  padding: 92px 0 78px;
-  max-width: 780px;
-  transition: padding 0.55s var(--ease);
+  position: relative;
+  margin: 72px 0 64px;
+  padding: 52px 48px 44px;
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r-lg);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.012));
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow: var(--shadow-lg);
+  transition: margin var(--t-slow) var(--ease), padding var(--t-slow) var(--ease);
 }
-.hero > * { animation: rise 0.6s var(--ease) both; }
-.hero > *:nth-child(2) { animation-delay: 0.09s; }
-.hero > *:nth-child(3) { animation-delay: 0.18s; }
-.hero > *:nth-child(4) { animation-delay: 0.27s; }
-.hero > *:nth-child(5) { animation-delay: 0.36s; }
-@keyframes rise { from { opacity: 0; transform: translateY(16px); } }
+.hero > * { animation: rise 0.42s var(--ease) both; }
+.hero > *:nth-child(2) { animation-delay: 0.06s; }
+.hero > *:nth-child(3) { animation-delay: 0.12s; }
+.hero > *:nth-child(4) { animation-delay: 0.18s; }
+.hero > *:nth-child(5) { animation-delay: 0.24s; }
+@keyframes rise { from { opacity: 0; transform: translateY(12px); } }
+
+/* A pill sitting above the headline, not tabbed onto the edge. */
 .hero .eyebrow {
-  font-family: var(--mono);
-  font-size: 0.7rem;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
   margin-bottom: 20px;
+  padding: 6px 13px;
+  border: var(--bw) solid var(--accent-line);
+  border-radius: var(--r-pill);
+  background: var(--accent-tint);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
 }
 .hero h1 {
   font-family: var(--display);
-  font-size: 3.6rem;
-  font-weight: 700;
-  line-height: 1.04;
-  letter-spacing: -0.035em;
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
   color: var(--ink);
-  margin: 0 0 22px;
+  margin: 0 0 20px;
+  max-width: 16ch;
   text-wrap: balance;
-  transition: font-size 0.55s var(--ease);
+  transition: font-size var(--t-slow) var(--ease);
 }
 .hero p {
-  font-size: 1.16rem;
-  line-height: 1.62;
+  font-size: 1.1rem;
+  line-height: 1.68;
   color: var(--lede);
-  margin: 0 0 34px;
-  max-width: 620px;
+  margin: 0 0 32px;
+  max-width: 580px;
   text-wrap: pretty;
 }
 
-.cta-row { display: flex; align-items: center; gap: 13px; flex-wrap: wrap; margin-bottom: 44px; }
+.cta-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 36px; }
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  height: 46px;
-  padding: 0 22px;
-  border: none;
-  border-radius: 9px;
+  height: 48px;
+  padding: 0 24px;
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--accent-tint);
   font-size: 0.92rem;
   font-weight: 600;
   color: var(--ink);
   cursor: pointer;
-  transition: filter var(--t) var(--ease), transform var(--t) var(--ease), box-shadow var(--t) var(--ease);
+  transition: background var(--t) var(--ease), border-color var(--t) var(--ease),
+              box-shadow var(--t) var(--ease), transform var(--t) var(--ease);
 }
-.btn:hover { filter: brightness(1.12); transform: translateY(-2px); color: var(--ink); text-decoration: none; }
-.btn-primary {
-  background: linear-gradient(180deg, var(--accent), var(--accent-deep));
-  box-shadow: 0 6px 20px rgba(91, 27, 158, 0.45);
-}
-.btn-primary:hover { box-shadow: 0 10px 28px rgba(91, 27, 158, 0.6); }
-.btn-ghost { border: 1px solid var(--line-mid); background: var(--tab); color: var(--strong); }
-.btn-ghost:hover { border-color: var(--line-hard); background: #1f1f1f; color: var(--strong); }
-/* Patreon and Ko-fi. --brand is set inline from site.js. */
-.btn-brand {
-  border: 1px solid color-mix(in srgb, var(--brand) 38%, transparent);
-  background: color-mix(in srgb, var(--brand) 12%, var(--tab));
-  color: var(--strong);
-}
-.btn-brand:hover {
-  border-color: var(--brand);
-  background: color-mix(in srgb, var(--brand) 20%, var(--tab));
+.btn:hover {
+  background: var(--accent-wash);
+  border-color: var(--accent-line);
+  box-shadow: var(--shadow);
+  transform: translateY(-1px);
   color: var(--ink);
+  text-decoration: none;
 }
+.btn:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
+.btn-primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-on);
+  box-shadow: 0 6px 20px var(--accent-wash);
+}
+.btn-primary:hover { background: var(--accent); filter: brightness(1.12); color: #fff; }
+.btn-ghost { background: transparent; }
+/* Patreon and Ko-fi. --brand is set inline from site.js. */
+.btn-brand { background: transparent; }
+.btn-brand:hover { background: var(--accent-tint); }
 
+/* Sits along the panel's bottom edge as a footer strip. */
 .runs-on {
   display: flex;
   align-items: center;
   gap: 20px;
   flex-wrap: wrap;
-  font-family: var(--mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  margin: 0 -48px -44px;
+  padding: 15px 48px;
+  border-top: var(--bw) solid var(--line-soft);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   color: var(--faint);
 }
 .runs-on span { display: flex; align-items: center; gap: 9px; color: var(--muted); }
@@ -111,113 +139,99 @@
 .rule {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin: 0 0 20px;
-  font-family: var(--mono);
-  font-size: 0.66rem;
+  gap: 12px;
+  margin: 0 0 24px;
+  font-size: 0.76rem;
+  font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--faint);
+  color: var(--soft);
 }
-.rule::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line), transparent); }
+.rule::before { content: ""; width: 8px; height: 8px; border-radius: var(--r-pill); background: var(--accent); }
+.rule::after { content: ""; flex: 1; height: var(--bw); background: var(--line); }
 
 /* ── cards ──────────────────────────────────────────── */
 .shelf { padding-bottom: 34px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; }
 
 .tile {
   position: relative;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--line);
-  border-radius: 14px;
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r-lg);
   background: var(--raised);
   overflow: hidden;
   isolation: isolate;
-  transition: transform 0.3s var(--spring), border-color 0.3s var(--ease),
-              background 0.3s var(--ease), box-shadow 0.3s var(--ease);
-}
-/* Hover light that traces the border, tinted to the widget's own accent. */
-.tile::after {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: conic-gradient(from var(--a), transparent 0 0.6turn, var(--brand) 0.78turn, transparent 0.95turn);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  opacity: 0;
-  transition: opacity 0.25s var(--ease);
-  pointer-events: none;
-  z-index: 6;
+  transition: transform var(--t) var(--ease), box-shadow var(--t) var(--ease),
+              background var(--t) var(--ease), border-color var(--t) var(--ease);
 }
 .tile:hover, .tile:focus-within {
   transform: translateY(-4px);
-  border-color: var(--line-mid);
+  border-color: var(--accent-line);
+  box-shadow: var(--lift);
   background: var(--raised-2);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
 }
-.tile:hover::after, .tile:focus-within::after { opacity: 1; animation: trace 1.6s linear infinite; }
 
 /* The card is one big link. It has to be a real element rather than a stretched
    ::after, because a pseudo-element resolves against .tile-body and so never
    reached the thumbnail. */
-.tile-cover { position: absolute; inset: 0; z-index: 4; border-radius: inherit; }
-@keyframes trace { to { --a: 1turn; } }
+.tile-cover { position: absolute; inset: 0; z-index: 4; }
 
+/* Framed art: the thumbnail is inset inside its own radius, so the card reads
+   as a surface around a picture rather than a full-bleed image. */
 .thumb {
   position: relative;
+  margin: 12px 12px 0;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  border-bottom: 1px solid var(--line-soft);
-  background: linear-gradient(145deg, var(--wash-a), var(--wash-b) 52%, rgba(22, 22, 22, 0) 78%), #131313;
+  border-radius: var(--r);
+  background: linear-gradient(135deg, var(--wash-a), var(--wash-b) 64%, var(--raised) 100%), var(--tab);
 }
 .thumb img.art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
 .ghost {
   position: absolute;
-  right: -14px;
-  bottom: -22px;
-  width: 116px;
-  height: 116px;
-  opacity: 0.14;
+  right: -12px;
+  bottom: -20px;
+  width: 122px;
+  height: 122px;
+  opacity: 0.9;
   z-index: 0;
-  transition: opacity 0.3s var(--ease), transform 0.45s var(--spring);
+  transition: transform var(--t-slow) var(--spring);
 }
-.tile:hover .ghost { opacity: 0.26; transform: scale(1.12) rotate(-7deg); }
+.tile:hover .ghost { transform: scale(1.08) rotate(-6deg); }
 
 .eyebrow-chip {
   position: absolute;
-  top: 13px;
-  left: 14px;
+  top: 10px;
+  left: 10px;
   z-index: 2;
   padding: 4px 10px;
-  border: 1px solid;
+  border: var(--bw) solid var(--line);
   border-radius: var(--r-pill);
-  background: rgba(16, 16, 16, 0.7);
+  background: rgba(13, 12, 16, 0.72);
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
-  font-family: var(--mono);
-  font-size: 0.6rem;
-  font-weight: 500;
-  letter-spacing: 0.13em;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--accent-ink);
 }
 
-.tile-body { position: relative; display: flex; flex-direction: column; gap: 11px; padding: 17px 18px 18px; }
+.tile-body { position: relative; display: flex; flex-direction: column; gap: 11px; padding: 16px 18px 18px; }
 .tile-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .tile-name {
   font-family: var(--display);
-  font-size: 1.22rem;
-  font-weight: 700;
-  letter-spacing: -0.015em;
+  font-size: 1.1rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
   color: var(--ink);
 }
 
 .tile-body p {
   margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.55;
+  font-size: 0.88rem;
+  line-height: 1.6;
   color: var(--lede);
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -226,35 +240,40 @@
 }
 
 .badge {
-  padding: 3px 9px;
-  border: 1px solid;
+  padding: 3px 10px;
+  border: var(--bw) solid;
   border-radius: var(--r-pill);
-  font-family: var(--mono);
-  font-size: 0.58rem;
+  font-size: 0.64rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
 }
-.badge-free { border-color: rgba(47, 158, 81, 0.4); background: rgba(47, 158, 81, 0.15); color: #8ad6a5; }
-.badge-pro { border-color: rgba(255, 132, 56, 0.42); background: rgba(255, 132, 56, 0.15); color: #ffb37a; }
+.badge-free { border-color: rgba(74, 222, 128, 0.4); background: var(--ok-wash); color: var(--ok); }
+.badge-pro { border-color: rgba(251, 191, 36, 0.4); background: var(--warn-wash); color: var(--warn); }
 /* Freemium reads as one pill split in two, not two separate badges. */
-.badge-split { display: inline-flex; align-items: stretch; font-family: var(--mono); font-size: 0.58rem; font-weight: 700; letter-spacing: 0.1em; }
-.badge-split .badge { border-radius: 0; }
+.badge-split { display: inline-flex; align-items: stretch; font-size: 0.64rem; font-weight: 700; letter-spacing: 0.08em; }
 .badge-split .badge:first-child { border-right: none; border-radius: var(--r-pill) 0 0 var(--r-pill); }
-.badge-split .badge:last-child { border-radius: 0 var(--r-pill) var(--r-pill) 0; }
+.badge-split .badge:last-child { border-left: none; border-radius: 0 var(--r-pill) var(--r-pill) 0; }
 
-.tile-foot { display: flex; align-items: center; gap: 14px; padding-top: 3px; }
+.tile-foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 3px;
+  padding-top: 14px;
+  border-top: var(--bw) solid var(--line-soft);
+}
 .plat-row { display: flex; align-items: center; gap: 14px; }
 /* Heights differ per logo because each file frames its glyph differently. */
-.plat { display: block; width: auto; flex: none; opacity: 0.92; transition: opacity var(--t) var(--ease); }
-.tile:hover .plat { opacity: 1; }
+.plat { display: block; width: auto; flex: none; opacity: 0.9; transition: opacity var(--t) var(--ease), transform var(--t) var(--ease); }
+.tile:hover .plat { opacity: 1; transform: translateY(-1px); }
 
 /* Above the cover, so these three keep their own destinations. */
 .tile-links { margin-left: auto; display: flex; align-items: center; gap: 14px; position: relative; z-index: 5; }
-.tile-links a { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
-.tile-links a:hover { color: var(--brand); text-decoration: none; }
-.tile-go { display: flex; align-items: center; gap: 6px; color: var(--muted); transition: color var(--t) var(--ease); }
-.tile-go:hover { color: var(--brand); text-decoration: none; }
-.tile:hover .tile-go { color: var(--brand); }
+.tile-links a { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+.tile-links a:hover { color: var(--accent-soft); text-decoration: none; }
+.tile-go { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; color: var(--muted); transition: color var(--t) var(--ease); }
+.tile-go:hover { color: var(--accent-soft); text-decoration: none; }
+.tile:hover .tile-go { color: var(--accent-soft); }
 
 /* ── landing ────────────────────────────────────────── */
 /* A fresh homepage is the hero and the footer, centred together as one group on
@@ -263,8 +282,9 @@
    group rises to the top as the free space around it runs out. No rule here sets
    a layout mode or a keyword — every one of them is a length that interpolates. */
 .is-landing .page-wrap { min-height: calc(100vh - var(--header-h)); }
-.is-landing .hero { padding: 0 0 28px; }
-.is-landing .hero h1 { font-size: clamp(3.6rem, 6.4vw, 5rem); }
+.is-landing .hero { margin: 0 0 24px; padding: 44px 42px 36px; }
+.is-landing .hero h1 { font-size: clamp(2.7rem, 5.6vw, 4.4rem); }
+.is-landing .runs-on { margin: 0 -42px -36px; padding: 14px 42px; }
 
 /* The shelves grow open from nothing rather than hiding in place, so everything
    below them keeps its position in the flow. 0fr → 1fr animates to the content's
@@ -273,20 +293,20 @@
 .shelves {
   display: grid;
   grid-template-rows: 1fr;
-  transition: grid-template-rows 0.55s var(--ease);
+  transition: grid-template-rows var(--t-slow) var(--ease);
 }
 .shelves > div { min-height: 0; }
 .is-landing .shelves { grid-template-rows: 0fr; }
 .is-landing .shelves > div, .is-opening .shelves > div { overflow: hidden; }
 
 .shelf {
-  transition: opacity 0.5s var(--ease) 0.12s, transform 0.5s var(--ease) 0.12s, visibility 0s;
+  transition: opacity var(--t-slow) var(--ease) 0.1s, transform var(--t-slow) var(--ease) 0.1s, visibility 0s;
 }
 .is-landing .shelf {
   opacity: 0;
-  transform: translateY(20px);
+  transform: translateY(16px);
   visibility: hidden;
-  transition-delay: 0s, 0s, 0.55s;
+  transition-delay: 0s, 0s, var(--t-slow);
 }
 
 /* The footer never leaves the flow. On the landing the shelves above it have no
@@ -294,20 +314,33 @@
    them slides it to the bottom of the page. Its rule stays out of the way until
    there is something above it worth dividing. */
 .site-footer {
-  animation: rise 0.6s var(--ease) 0.45s both;
-  transition: margin-top 0.55s var(--ease), border-color 0.55s var(--ease);
+  animation: rise 0.42s var(--ease) 0.3s both;
+  transition: margin-top var(--t-slow) var(--ease), border-color var(--t-slow) var(--ease);
 }
 .is-landing .site-footer { margin-top: 0; border-top-color: transparent; }
 
 /* ── narrow ─────────────────────────────────────────── */
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .page-wrap { padding: 0 18px; }
-  .hero { padding: 46px 0 40px; }
-  .hero h1 { font-size: 2.3rem; letter-spacing: -0.03em; }
+  .hero { margin: 36px 0 40px; padding: 38px 24px 30px; }
+  .hero h1 { font-size: 2.2rem; letter-spacing: -0.025em; }
   .hero p { font-size: 1rem; }
   .cta-row { flex-direction: column; align-items: stretch; }
-  .btn { justify-content: center; height: 48px; }
-  .is-landing .hero { padding-bottom: 24px; }
-  .is-landing .hero h1 { font-size: 2.9rem; }
+  .btn { justify-content: center; height: 50px; }
+  .runs-on { margin: 0 -24px -30px; padding: 14px 24px; }
+  .is-landing .hero { margin-bottom: 20px; padding: 34px 22px 28px; }
+  .is-landing .hero h1 { font-size: 2.6rem; }
+  .is-landing .runs-on { margin: 0 -22px -28px; padding: 13px 22px; }
   .grid { grid-template-columns: 1fr; }
+}
+
+/* ── light ──────────────────────────────────────────── */
+/* The hero is a glass panel: on a light ground the white overlay that lifts it
+   on the dark one disappears, so it gets a dark wash instead. */
+html[data-theme="light"] .hero {
+  background: linear-gradient(180deg, rgba(60, 48, 20, 0.05), rgba(60, 48, 20, 0.02));
+}
+html[data-theme="light"] .eyebrow-chip {
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--accent-ink);
 }

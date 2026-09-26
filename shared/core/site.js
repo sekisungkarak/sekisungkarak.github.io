@@ -1,40 +1,45 @@
-/* Konfigurasi chrome situs. Semua halaman membacanya — ubah di sini, bukan
-   per halaman. Path relatif terhadap root situs; CHROME.root() menyelesaikannya,
-   jadi tidak ada yang terikat pada kedalaman halaman. */
+/* Site-wide chrome config. Every page reads this — change it here, not per page.
+   Paths are relative to the site root; CHROME.root() resolves them, so nothing
+   here is tied to how deep the page lives. */
 window.SITE = {
-  brand: 'Geseki',
-  logo: 'shared/assets/images/logo.png',
+  brand: 'Sekisungkarak',
+  logo: 'shared/assets/images/avatar.png',
 
-  // `soon: true` menampilkan label dengan tooltip "Segera" tanpa tautan.
-  // `menu: 'catalog'` menampilkan dropdown yang dibangun dari catalog.js.
-  // Tab yang menyala dihitung dari URL, tidak pernah ditulis di sini.
+  // Wide 1200x630 card used for link previews (og:image).
+  ogImage: 'shared/assets/images/og-banner.png',
+
+  // `soon: true` renders the label with a "Coming Soon" tooltip and no link.
+  // `menu: 'catalog'` renders a dropdown built from catalog.js.
+  // The lit tab is worked out from the URL, never set here.
   nav: [
-    { label: 'Widget', href: '#widgets' },
-    { label: 'Dokumentasi', menu: 'catalog' },
+    { label: 'Widgets', href: '#widgets' },
+    { label: 'Contact Me', contact: true },
+    { label: 'Docs', menu: 'catalog' },
   ],
 
   links: [
     { label: 'GitHub', href: 'https://github.com/sekisungkarak', icon: 'github' },
   ],
 
-  // Tombol dukungan di hero beranda. `icon` adalah key MARK dari chrome.js.
-  // Kosongkan untuk menyembunyikannya.
+  // Hero support buttons on the homepage. `icon` is a MARK key from chrome.js.
+  // Leave empty to hide them.
   support: [],
 
-  // Ikon di footer.
+  // Footer marks.
   socials: [
+    { label: 'TikTok', href: 'https://tiktok.com/@sekisungkarak', icon: 'tiktok' },
     { label: 'GitHub', href: 'https://github.com/sekisungkarak', icon: 'github' },
   ],
 
-  // Mengisi tombol "Butuh bantuan?" di header. null = tombol disembunyikan.
-  discord: null,
+  // Powers the Contact Me panel in the header and the Discord footer icon.
+  // Leave null to hide both. This is the one place the invite link lives.
+  discord: 'https://discord.gg/c5vDMWYhSt',
 
-  // "Edit on GitHub" disembunyikan seluruhnya selama repo null.
+  // "Edit on GitHub" is hidden entirely while repo is null.
   repo: 'sekisungkarak/sekisungkarak.github.io',
   branch: 'master',
 
-  // Dari mana build ini disajikan. Crawler pratinjau tautan tidak bisa
-  // menyelesaikan URL relatif, jadi stamp-meta.mjs membangun og: URL absolut
-  // dari sini.
+  // Where this build is served from. Link-preview crawlers can't resolve relative
+  // URLs, so stamp-meta.mjs builds absolute og: URLs from this.
   origin: 'https://sekisungkarak.github.io',
 };

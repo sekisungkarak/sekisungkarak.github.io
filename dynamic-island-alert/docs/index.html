@@ -1,45 +1,60 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="../../shared/assets/images/logo.png">
-  <!-- meta:start — dibuat dari shared/core/catalog.js oleh shared/tools/stamp-meta.mjs. Jangan diedit manual. -->
-  <title>Dynamic Island Alert — Panduan Pasang</title>
-  <meta name="description" content="Alert bergaya Dynamic Island untuk event TikTok (follow, subscribe, share, gift) dan first chatter, plus panel Now Playing dari media yang sedang diputar.">
+  <link rel="icon" href="../../shared/assets/images/avatar.png">
+  <!-- meta:start — generated from shared/core/catalog.js by shared/tools/stamp-meta.mjs. Do not edit by hand. -->
+  <title>Dynamic Island Alert — Install Guide</title>
+  <meta name="description" content="Dynamic Island–style alerts for TikTok events (follow, subscribe, share, gift) and first chatter, plus a Now Playing panel for the media that is currently playing.">
   <meta property="og:type" content="article">
-  <meta property="og:site_name" content="Geseki">
+  <meta property="og:site_name" content="Sekisungkarak">
   <meta property="og:url" content="https://sekisungkarak.github.io/dynamic-island-alert/docs/">
   <meta property="og:title" content="Dynamic Island Alert">
-  <meta property="og:description" content="Alert bergaya Dynamic Island untuk event TikTok (follow, subscribe, share, gift) dan first chatter, plus panel Now Playing dari media yang sedang diputar.">
-  <!-- Garis kiri embed Discord. -->
-  <meta name="theme-color" content="#8A2BE2">
+  <meta property="og:description" content="Dynamic Island–style alerts for TikTok events (follow, subscribe, share, gift) and first chatter, plus a Now Playing panel for the media that is currently playing.">
+  <meta property="og:image" content="https://sekisungkarak.github.io/shared/assets/images/thumbs/dynamic-island-alert.png">
+  <!-- Discord embed left rule. -->
+  <meta name="theme-color" content="#D4A843">
+  <meta name="twitter:card" content="summary_large_image">
   <!-- meta:end -->
 
-  <!-- Mark bersama, diambil bersama HTML supaya tidak muncul belakangan. -->
+  <!-- Marks loaded together, fetched with the HTML so they never pop in late. -->
   <link rel="preload" as="image" href="../../shared/assets/images/tiktok/logo-tiktok.svg">
-  <link rel="preload" as="image" href="../../shared/assets/images/logo.png">
+  <link rel="preload" as="image" href="../../shared/assets/images/avatar.png">
 
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap">
   <link rel="stylesheet" href="../../shared/css/global.css">
-  <link rel="stylesheet" href="../../shared/css/chrome.css">
-  <link rel="stylesheet" href="../../shared/core/docs/docs.css">
+  <link rel="stylesheet" href="../../shared/css/chrome.css?v=5">
+  <link rel="stylesheet" href="../../shared/core/docs/docs.css?v=3">
+  <!-- Theme before first paint: the same key chrome.js reads, so the page never
+       flashes the wrong ground. Dark is the default when nothing is stored. -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('sk-theme') ||
+          (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        document.documentElement.setAttribute('data-theme', t);
+        document.documentElement.style.colorScheme = t;
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
 
-  <!-- Satu-satunya hal khusus widget di sini adalah id. Prosa ada di ../README.md,
-       sisanya di shared/core/catalog.js — termasuk blok meta:start di atas, yang
-       distempel oleh pre-commit hook dari id yang sama. -->
+  <!-- The only widget-specific thing here is the id. The prose lives in ../README.md,
+       the rest in shared/core/catalog.js — including the meta:start block above, which
+       the pre-commit hook stamps from that same id. -->
   <script type="application/json" id="docsBoot">
   { "id": "dynamic-island-alert" }
   </script>
 
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
-  <script src="../../shared/core/catalog.js"></script>
-  <script src="../../shared/core/site.js"></script>
-  <script src="../../shared/core/chrome.js"></script>
-  <script src="../../shared/core/docs/docs.js"></script>
-  <script src="../../shared/core/search.js"></script>
+  <script src="../../shared/core/catalog.js?v=2"></script>
+  <script src="../../shared/core/site.js?v=3"></script>
+  <script src="../../shared/core/i18n.js?v=5"></script>
+  <script src="../../shared/core/chrome.js?v=4"></script>
+  <script src="../../shared/core/docs/docs.js?v=5"></script>
+  <script src="../../shared/core/search.js?v=2"></script>
   <script src="../../shared/core/nav.js"></script>
 </body>
 </html>

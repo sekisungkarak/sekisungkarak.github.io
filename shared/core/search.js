@@ -8,6 +8,7 @@
 
   var C = window.CHROME;
   if (!C) return;
+  var T = C.T || function (s) { return s; };
 
   // Keyed on the catalog's own contents, so editing catalog.js drops the
   // stale index instead of serving it for the rest of the session.
@@ -102,7 +103,7 @@
 
   function render() {
     if (!results.length) {
-      list.innerHTML = '<div class="sr-empty">Tidak ada yang cocok.</div>';
+      list.innerHTML = '<div class="sr-empty">' + C.esc(T('Nothing matches that.')) + '</div>';
       return;
     }
     var last = null, html = '';
@@ -117,7 +118,7 @@
         : '<span class="sr-dot" style="background:' + r.accent + '"></span>';
       html += '<a class="sr-item' + (i === cursor ? ' is-on' : '') + '" data-i="' + i + '" href="' + C.esc(r.href) + '">' +
         glyph + '<span class="sr-label">' + C.esc(r.label) + '</span>' +
-        '<span class="sr-sub">' + C.esc(r.kind === 'widget' ? r.sub : 'dokumentasi') + '</span></a>';
+        '<span class="sr-sub">' + C.esc(r.kind === 'widget' ? T(r.sub) : T('docs')) + '</span></a>';
     });
     list.innerHTML = html;
     var on = list.querySelector('.is-on');
@@ -134,7 +135,7 @@
     if (!box) return;
     box.classList.add('is-open');
     input.value = '';
-    list.innerHTML = '<div class="sr-empty">Memuat…</div>';
+    list.innerHTML = '<div class="sr-empty">' + C.esc(T('Loading…')) + '</div>';
     input.focus();
     build().then(function () { run(); });
   }
@@ -151,12 +152,12 @@
 
   function mount() {
     box = C.el(
-      '<div class="search-modal" role="dialog" aria-label="Cari">' +
+      '<div class="search-modal" role="dialog" aria-label="' + C.esc(T('Search')) + '">' +
         '<div class="search-panel">' +
           '<div class="search-field">' +
-            C.svg('M21 21l-4.3-4.3', { size: 16, stroke: '#8b8b8b', width: 2 })
+            C.svg('M21 21l-4.3-4.3', { size: 16, stroke: 'currentColor', width: 2 })
               .replace('<path', '<circle cx="11" cy="11" r="7"></circle><path') +
-            '<input type="text" placeholder="Cari widget dan dokumentasi" autocomplete="off" spellcheck="false">' +
+            '<input type="text" placeholder="' + C.esc(T('Search widgets and docs')) + '" autocomplete="off" spellcheck="false">' +
             '<kbd>esc</kbd>' +
           '</div>' +
           '<div class="search-results"></div>' +

@@ -5,6 +5,7 @@
 
   var C = window.CHROME;
   var site = C.site;
+  var T = C.T || function (s) { return s; };
   var boot = JSON.parse(document.getElementById('homeBoot').textContent);
 
   // Per-widget glyphs for the placeholder thumbnail, keyed by catalog id.
@@ -51,27 +52,25 @@
   function card(c) {
     var href = C.root(c.docsUrl);
     // Cards do use a colour, but leaving it out should never break a build.
-    var accent = c.accent || '#8A2BE2';
+    var accent = c.accent || '#D4A843';
     // The placeholder is the card's own background, so a card with no art still
     // looks designed. A real thumb.png layers over it and removes itself if missing.
     var art = c.thumb
       ? '<img class="art" src="' + C.esc(C.root(c.thumb)) + '" alt="" onerror="this.remove()">'
       : '';
 
-    // Settings and Get PRO go elsewhere, so they sit above the cover link.
+    // Get PRO goes elsewhere, so it sits above the cover link.
     var extra = '';
-    if (c.settingsUrl) extra += '<a href="' + C.esc(C.root(c.settingsUrl)) + '">Pengaturan</a>';
-    if (c.proHref) extra += '<a href="' + C.esc(c.proHref) + '" target="_blank" rel="noopener">Get PRO</a>';
+    if (c.proHref) extra += '<a href="' + C.esc(c.proHref) + '" target="_blank" rel="noopener">' + C.esc(T('Get PRO')) + '</a>';
 
     return '<article class="tile" style="--brand:' + accent +
-        ';--wash-a:' + hex(accent, 0.22) + ';--wash-b:' + hex(accent, 0.05) + '">' +
+        ';--wash-a:' + hex(accent, 0.34) + ';--wash-b:' + hex(accent, 0.12) + '">' +
       // Covers the card — thumbnail, title and body all lead to the docs.
-      '<a class="tile-cover" href="' + C.esc(href) + '" aria-label="' + C.esc(c.name) + ' documentation"></a>' +
+      '<a class="tile-cover" href="' + C.esc(href) + '" aria-label="' + C.esc(c.name + ' ' + T('documentation')) + '"></a>' +
       '<div class="thumb">' + art +
         '<svg class="ghost" viewBox="0 0 24 24" fill="' + accent + '"><path d="' + (GLYPH[c.id] || GLYPH._) + '"></path></svg>' +
         (c.eyebrow
-          ? '<span class="eyebrow-chip" style="border-color:' + hex(accent, 0.38) + ';color:' + accent + '">' +
-            C.esc(c.eyebrow) + '</span>'
+          ? '<span class="eyebrow-chip">' + C.esc(c.eyebrow) + '</span>'
           : '') +
       '</div>' +
       '<div class="tile-body">' +
@@ -82,7 +81,7 @@
         '<p>' + C.esc(c.description || '') + '</p>' +
         '<div class="tile-foot">' + platforms(c.platforms) +
           '<span class="tile-links">' + extra +
-            '<a class="tile-go" href="' + C.esc(href) + '">Dokumentasi' + C.svg(C.ICON.arrow, { size: 14, stroke: 'currentColor', width: 2.4 }) + '</a>' +
+            '<a class="tile-go" href="' + C.esc(href) + '">' + C.esc(T('Docs')) + C.svg(C.ICON.arrow, { size: 14, stroke: 'currentColor', width: 2.4 }) + '</a>' +
           '</span>' +
         '</div>' +
       '</div>' +
@@ -114,15 +113,15 @@
     }).join('');
 
     return '<section class="hero">' +
-      '<div class="eyebrow">' + C.esc(boot.eyebrow) + '</div>' +
-      '<h1>' + C.esc(boot.title) + '</h1>' +
-      '<p>' + C.esc(boot.lede) + '</p>' +
+      '<div class="eyebrow">' + C.esc(T(boot.eyebrow)) + '</div>' +
+      '<h1>' + C.esc(T(boot.title)) + '</h1>' +
+      '<p>' + C.esc(T(boot.lede)) + '</p>' +
       '<div class="cta-row">' +
-        '<a class="btn btn-primary" href="#widgets">Lihat widget' +
-          C.svg(C.ICON.arrow, { size: 17, stroke: '#fff', width: 2.4 }) + '</a>' +
+        '<a class="btn btn-primary" href="#widgets">' + C.esc(T('Browse widgets')) +
+          C.svg(C.ICON.arrow, { size: 17, stroke: 'currentColor', width: 2.4 }) + '</a>' +
         support +
       '</div>' +
-      '<div class="runs-on"><span style="color:inherit">Mendukung</span>' + runs + '</div>' +
+      '<div class="runs-on"><span style="color:inherit">' + C.esc(T('Supports')) + '</span>' + runs + '</div>' +
     '</section>';
   }
 
@@ -150,9 +149,9 @@
   // cannot do it themselves, since 0fr sizing needs a single child to measure.
   main.innerHTML = hero() +
     '<div class="shelves"><div>' +
-      shelf('widgets', 'Widget & tool', free) +
+      shelf('widgets', T('Widgets & tools'), free) +
       // Renders nothing at all while there are no pro entries — no empty shelf.
-      shelf('exclusive', 'Eksklusif Patreon', pro) +
+      shelf('exclusive', T('Patreon-exclusive'), pro) +
     '</div></div>';
   document.body.appendChild(main);
 

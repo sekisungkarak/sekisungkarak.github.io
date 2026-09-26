@@ -1,5 +1,5 @@
 #!/bin/sh
-# Menjaga tag pratinjau tautan tiap shim docs selaras dengan entri katalognya,
-# sehingga menambah widget tetap: salin shim, ubah id, commit.
+# Keeps each docs shim's link-preview tags in sync with its catalog entry, so
+# adding a widget stays: copy a shim, change the id, commit.
 node shared/tools/stamp-meta.mjs || exit 1
 git add -u -- '*/docs/index.html'

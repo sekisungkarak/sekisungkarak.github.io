@@ -1,6 +1,10 @@
 /* Header, nav, footer and the search modal — every page wears these.
    Load after global.css, before the page's own stylesheet.
 
+   Theme: dark glass. The header is a floating bar with a blurred, translucent
+   ground; the brand is a small mark beside the wordmark; the nav is a row of
+   pills. The footer is a three-column band closed by a hairline.
+
    This file exists so the chrome is defined once. docs.css and home.css both
    used to carry their own copy of the header and the two drifted. */
 
@@ -15,20 +19,21 @@
 [data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%) translateY(-4px);
-  padding: 5px 9px;
-  border-radius: 6px;
-  background: #000;
-  border: 1px solid #2f2f2f;
-  color: #e6e6e6;
-  font-size: 0.74rem;
+  padding: 5px 10px;
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--raised-2);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  font-size: 0.72rem;
   font-weight: 500;
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
   z-index: 30;
 }
 
@@ -38,132 +43,183 @@
   transform: translateX(-50%) translateY(0);
 }
 
-/* Nav tooltips clear the accent line, which sits 22px below the label. */
-.nav-link[data-tooltip]::after { top: calc(100% + 30px); }
+/* Nav tooltips clear the pill, which sits a little below the label. */
+.nav-link[data-tooltip]::after { top: calc(100% + 16px); }
 .nav-link.is-soon { cursor: default; }
-.nav-link.is-soon:hover { color: var(--muted); }
+.nav-link.is-soon:hover { color: var(--faint); }
 
 /* ── filled brand marks ─────────────────────────────── */
-.hdr-icon.is-filled { stroke: none; fill: var(--muted); }
-.hdr-icon.is-filled:hover { stroke: none; fill: var(--ink); }
+.hdr-icon.is-filled { stroke: none; fill: var(--strong); }
+.hdr-icon.is-filled:hover { stroke: none; fill: var(--accent-soft); }
 
 /* ── header ─────────────────────────────────────────── */
+/* A floating bar: translucent, blurred, closed by a hairline. It stays legible
+   over the moving backdrop because the blur does the work, not an opaque fill. */
 .site-header {
   position: sticky;
   top: 0;
   z-index: 50;
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 22px;
   height: var(--header-h);
-  padding: 0 40px;
+  padding: 0 32px;
   background: var(--header);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--line);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: var(--blur-heavy);
+  backdrop-filter: var(--blur-heavy);
+  border-bottom: var(--bw) solid var(--line);
 }
 
+/* The brand is a mark beside a wordmark — no block, no rule. */
 .brand {
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 6px 10px;
-  margin-left: -10px;
-  border-radius: var(--r);
-  color: inherit;
-  transition: background var(--t) var(--ease);
+  height: 40px;
+  padding: 0;
+  color: var(--ink);
+  transition: opacity var(--t) var(--ease);
 }
-.brand:hover { background: rgba(255, 255, 255, 0.05); text-decoration: none; }
+.brand:hover { opacity: 0.85; text-decoration: none; }
 .brand img {
-  height: 30px;
-  width: 30px;
-  object-fit: contain;
-  transition: transform 0.34s var(--spring);
+  height: 32px;
+  width: 32px;
+  object-fit: cover;
+  border-radius: var(--r-pill);
+  box-shadow: 0 0 0 1px var(--line);
 }
-.brand:hover img { transform: scale(1.09) rotate(-4deg); }
 .brand span {
   font-family: var(--display);
-  font-size: 1.5rem;
-  font-weight: 800;
+  font-size: 1.06rem;
+  font-weight: 400;
   color: var(--ink);
   letter-spacing: -0.01em;
+  line-height: 1;
 }
 
 .site-nav {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0;
-  /* The 26px that used to be `gap` now lives inside each link as padding, so the
-     hit areas touch with no dead space; the negative margin keeps the row's
-     visual edges where they were. */
-  margin: 0 -13px;
-  font-size: 0.88rem;
+  gap: 4px;
+  margin: 0;
+  font-size: 0.9rem;
   font-weight: 500;
 }
+/* Each tab is a pill. The lit one gets the accent tint, never a filled block. */
 .nav-link {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 0 13px;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
   border: none;
+  border-radius: var(--r-pill);
   background: none;
   font: inherit;
   color: var(--muted);
   cursor: pointer;
-  transition: color var(--t) var(--ease);
+  transition: color var(--t) var(--ease), background var(--t) var(--ease);
 }
-.nav-link:hover, .nav-link.is-active { color: var(--ink); text-decoration: none; }
-.nav-link.is-soon { color: #4a4a4a; cursor: default; }
-.nav-link.is-soon:hover { color: #4a4a4a; }
+.nav-link:hover { color: var(--ink); background: var(--accent-tint); text-decoration: none; }
+.nav-link.is-active { color: var(--ink); background: var(--accent-wash); }
+.nav-link.is-soon { color: var(--faint); cursor: default; }
+.nav-link.is-soon:hover { color: var(--faint); background: none; }
 
-/* One bar for the whole nav; its edges move at different speeds so it stretches. */
-.nav-bar {
-  position: absolute;
-  bottom: -21px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--accent);
-  pointer-events: none;
-  transition-property: left, right;
-  transition-timing-function: var(--ease);
-}
+/* The moving bar is retired — the lit pill is its own indicator now. It stays
+   in the markup so chrome.js has nothing to special-case, but renders nothing. */
+.nav-bar { display: none; }
 
 .header-spacer { flex-grow: 1; }
-.header-actions { display: flex; align-items: center; gap: 14px; }
-.header-divider { width: 1px; height: 22px; background: var(--line-mid); }
+.header-actions { display: flex; align-items: center; gap: 12px; }
+.header-divider { width: var(--bw); height: 24px; background: var(--line); }
+
+/* Language switch: a small segmented control — the lit half is the live one. */
+.lang-switch {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--accent-tint);
+}
+.lang-btn {
+  padding: 0 9px;
+  height: 28px;
+  border: none;
+  border-radius: var(--r-pill);
+  background: none;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color var(--t) var(--ease), background var(--t) var(--ease);
+}
+.lang-btn:hover { color: var(--ink); }
+.lang-btn.is-on { color: var(--accent-on); background: var(--accent); }
 
 .hdr-icon {
-  opacity: 0.72;
-  transition: opacity var(--t) var(--ease), stroke var(--t) var(--ease),
-              transform 0.28s var(--spring);
+  opacity: 0.8;
+  transition: opacity var(--t) var(--ease), transform var(--t) var(--ease);
 }
-.hdr-icon:hover { opacity: 1; stroke: var(--ink); transform: translateY(-2px) scale(1.1); }
+.hdr-icon:hover { opacity: 1; transform: translateY(-1px); }
+
+/* Theme switch: the same pill as the search box, icon only. */
+.theme-toggle {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--accent-tint);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background var(--t) var(--ease), border-color var(--t) var(--ease), box-shadow var(--t) var(--ease);
+}
+.theme-toggle:hover { background: var(--accent-wash); border-color: var(--accent-line); box-shadow: var(--shadow-sm); }
+.theme-toggle svg { transition: transform var(--t-slow) var(--spring); }
+.theme-toggle:hover svg { transform: rotate(18deg); }
+/* Only one glyph is ever shown — the pair swap on the root attribute. */
+.theme-toggle .icon-moon { display: block; }
+.theme-toggle .icon-sun { display: none; }
+html[data-theme="light"] .theme-toggle .icon-moon { display: none; }
+html[data-theme="light"] .theme-toggle .icon-sun { display: block; }
+
+/* Before the theme script runs, hide both glyphs so neither flashes. */
+html:not([data-theme]) .theme-toggle svg { visibility: hidden; }
 
 .search-pill {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 34px;
+  height: 36px;
   padding: 0 14px;
-  border: none;
-  border-radius: 8px;
-  background: linear-gradient(180deg, var(--line-hard), #292929);
-  font-family: inherit;
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--accent-tint);
   font-size: 0.84rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink);
   cursor: pointer;
-  transition: filter var(--t) var(--ease), box-shadow var(--t) var(--ease), transform var(--t) var(--ease);
+  transition: background var(--t) var(--ease), border-color var(--t) var(--ease), box-shadow var(--t) var(--ease);
 }
-.search-pill:hover { filter: brightness(1.3); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45); }
+.search-pill:hover {
+  background: var(--accent-wash);
+  border-color: var(--accent-line);
+  box-shadow: var(--shadow-sm);
+}
 .search-pill kbd {
   padding: 1px 6px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.08);
+  border: var(--bw) solid var(--line);
+  border-radius: 6px;
+  background: var(--tab);
   font-family: var(--mono);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   color: var(--muted);
 }
 
@@ -177,17 +233,15 @@
 
 .nav-pop {
   position: absolute;
-  top: calc(100% + 18px);
-  left: -14px;
+  top: calc(100% + 20px);
+  left: 0;
   z-index: 60;
-  width: 306px;
-  padding: 7px;
-  border: 1px solid var(--line-mid);
-  border-radius: 12px;
-  background: rgba(22, 22, 22, 0.97);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.62);
+  width: 320px;
+  padding: 8px;
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r);
+  background: var(--raised-2);
+  box-shadow: var(--shadow-lg);
   opacity: 0;
   transform: translateY(-6px);
   pointer-events: none;
@@ -203,22 +257,10 @@
 .nav-pop::after {
   content: "";
   position: absolute;
-  top: -18px;
+  top: -20px;
   left: 0;
   right: 0;
-  height: 18px;
-}
-.nav-pop::before {
-  content: "";
-  position: absolute;
-  top: -5px;
-  left: 26px;
-  width: 9px;
-  height: 9px;
-  transform: rotate(45deg);
-  background: var(--raised);
-  border-left: 1px solid var(--line-mid);
-  border-top: 1px solid var(--line-mid);
+  height: 20px;
 }
 
 .nav-pop-item {
@@ -226,30 +268,31 @@
   align-items: center;
   gap: 12px;
   padding: 10px 11px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   color: inherit;
   transition: background var(--t-fast) var(--ease);
 }
-.nav-pop-item:hover { background: #1f1f1f; text-decoration: none; }
+.nav-pop-item:hover { background: var(--accent-tint); text-decoration: none; }
 .nav-pop-icon {
   flex: none;
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
-  border: 1px solid var(--line-mid);
-  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r-sm);
   background: var(--tab);
-  transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+  transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
 }
 /* Whatever the icon file's own colours are — an Iconify fetch, a downloaded
-   SVG, a PNG — this flattens it to white, so the row never needs a palette. */
-.nav-pop-icon img { filter: brightness(0) invert(1); opacity: 0.92; }
-.nav-pop-item:hover .nav-pop-icon { border-color: var(--line-hard); background: var(--raised-2); }
+   SVG, a PNG — this flattens it to cream, so the row never needs a palette. */
+.nav-pop-icon img { filter: brightness(0) invert(1); opacity: 0.9; }
+html[data-theme="light"] .nav-pop-icon img { filter: brightness(0); opacity: 0.72; }
+.nav-pop-item:hover .nav-pop-icon { background: var(--accent-wash); border-color: var(--accent-line); }
 .nav-pop-item:hover .nav-pop-icon img { opacity: 1; }
 .nav-pop-text { display: flex; flex-direction: column; line-height: 1.35; min-width: 0; }
 .nav-pop-name { font-size: 0.88rem; font-weight: 600; color: var(--strong); }
-.nav-pop-eyebrow { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.1em; color: var(--faint); }
+.nav-pop-eyebrow { font-size: 0.72rem; color: var(--faint); }
 .nav-pop-arrow { margin-left: auto; opacity: 0; transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease); }
 .nav-pop-item:hover .nav-pop-arrow { opacity: 1; transform: translateX(2px); }
 
@@ -258,101 +301,75 @@
   align-items: center;
   gap: 7px;
   margin-top: 4px;
-  padding: 9px 11px 5px;
-  border-top: 1px solid var(--line-soft);
-  font-family: var(--mono);
-  font-size: 0.63rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  padding: 10px 11px 6px;
+  border-top: var(--bw) solid var(--line-soft);
+  font-size: 0.74rem;
   color: var(--faint);
   transition: color var(--t-fast) var(--ease);
 }
 .nav-pop-foot:hover { color: var(--accent-soft); text-decoration: none; }
 
-/* ── help popover ───────────────────────────────────── */
-.help-wrap { position: relative; }
-.help-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 34px;
-  padding: 0 14px;
-  border: 1px solid var(--line-mid);
-  border-radius: 8px;
-  background: var(--tab);
-  font-family: inherit;
-  font-size: 0.84rem;
-  font-weight: 600;
-  color: var(--ink);
-  cursor: pointer;
-  transition: background var(--t) var(--ease), border-color var(--t) var(--ease);
-}
-.help-pill:hover { background: #222; border-color: var(--line-hard); }
-.help-pop {
-  position: absolute;
-  top: calc(100% + 12px);
-  right: 0;
-  z-index: 60;
-  width: 290px;
-  padding: 16px 17px;
-  border: 1px solid var(--line-mid);
-  border-radius: 12px;
-  background: rgba(22, 22, 22, 0.97);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6);
-  opacity: 0;
-  transform: translateY(-6px);
-  pointer-events: none;
-  transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--spring);
-}
-.help-pop::after {
-  content: "";
-  position: absolute;
-  top: -12px;
-  left: 0;
-  right: 0;
-  height: 12px;
-}
-.help-wrap:hover .help-pop,
-.help-wrap.is-open .help-pop { opacity: 1; transform: translateY(0); pointer-events: auto; }
-/* A click latches the panel shut while the pointer is still on the pill. */
-.help-wrap.is-shut:hover .help-pop { opacity: 0; transform: translateY(-6px); pointer-events: none; }
-.help-pill { cursor: pointer; }
-.help-pop h4 { margin: 0 0 7px; font-size: 0.95rem; color: var(--ink); }
-.help-pop p { margin: 0 0 13px; font-size: 0.84rem; line-height: 1.55; color: var(--lede); }
-.help-cta {
+/* Contact Me: a narrower panel — one block of copy and the invite button. */
+.nav-pop-contact { width: 288px; padding: 16px; }
+.contact-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.contact-head > svg { flex: none; margin-top: 2px; }
+.contact-title { font-size: 0.95rem; font-weight: 600; color: var(--ink); }
+.contact-sub { margin-top: 3px; font-size: 0.8rem; line-height: 1.5; color: var(--lede); }
+.nav-pop-empty { padding: 6px 2px; font-size: 0.82rem; color: var(--faint); }
+
+/* Discord invite button — used by the Contact Me panel. */
+.contact-cta {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 38px;
-  border-radius: 8px;
+  height: 42px;
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r-pill);
   background: var(--discord, #5865f2);
   font-size: 0.86rem;
   font-weight: 600;
   color: #fff;
+  transition: filter var(--t) var(--ease), box-shadow var(--t) var(--ease);
 }
-.help-cta:hover { filter: brightness(1.1); color: #fff; text-decoration: none; }
+.contact-cta:hover { filter: brightness(1.12); box-shadow: var(--shadow); color: #fff; text-decoration: none; }
 
 /* ── footer ─────────────────────────────────────────── */
+/* A band closed by a hairline: brand marks on the left, copyright on the right. */
 .site-footer {
-  margin-top: 76px;
-  padding: 32px 0 40px;
-  border-top: 1px solid var(--line);
+  margin-top: 80px;
+  padding: 26px 0 32px;
+  border-top: var(--bw) solid var(--line);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 18px;
+  justify-content: space-between;
+  gap: 20px;
 }
-.soc-row { display: flex; align-items: center; gap: 22px; }
+.soc-row { display: flex; align-items: center; gap: 10px; }
 .soc {
   display: grid;
   place-items: center;
-  color: var(--faint);
-  transition: color var(--t) var(--ease), transform 0.28s var(--spring);
+  width: 38px;
+  height: 38px;
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--accent-tint);
+  color: var(--strong);
+  transition: color var(--t) var(--ease), border-color var(--t) var(--ease),
+              background var(--t) var(--ease), transform var(--t) var(--ease);
 }
-.soc:hover { color: var(--strong); transform: translateY(-2px); }
-.copyright { font-family: var(--mono); font-size: 0.7rem; color: var(--faint); }
+.soc:hover {
+  color: var(--accent-on);
+  background: var(--accent);
+  border-color: var(--accent-line);
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+.copyright {
+  font-size: 0.82rem;
+  color: var(--faint);
+  text-align: right;
+}
 
 /* ── search modal ───────────────────────────────────── */
 .search-modal {
@@ -362,23 +379,23 @@
   display: flex;
   justify-content: center;
   padding: 12vh 20px 20px;
-  background: rgba(8, 8, 8, 0.72);
+  background: rgba(8, 7, 10, 0.66);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   /* Closed state. visibility (not display) so both directions can animate. */
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
-  backdrop-filter: blur(0px);
-  transition: opacity 0.18s var(--ease), backdrop-filter 0.18s var(--ease), visibility 0s 0.18s;
+  transition: opacity var(--t-fast) var(--ease), visibility 0s var(--t-fast);
 }
 .search-modal.is-open {
   visibility: visible;
   opacity: 1;
   pointer-events: auto;
-  backdrop-filter: blur(3px);
-  transition: opacity 0.18s var(--ease), backdrop-filter 0.18s var(--ease), visibility 0s;
+  transition: opacity var(--t-fast) var(--ease), visibility 0s;
 }
-.search-panel { transform: scale(0.94); opacity: 0; transition: transform 0.18s var(--ease), opacity 0.18s var(--ease); }
-.search-modal.is-open .search-panel { transform: scale(1); opacity: 1; transition-timing-function: var(--spring); }
+.search-panel { transform: translateY(-10px); opacity: 0; transition: transform var(--t-fast) var(--ease), opacity var(--t-fast) var(--ease); }
+.search-modal.is-open .search-panel { transform: translateY(0); opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {
   .search-modal, .search-panel { transition-duration: 0.01s; }
@@ -387,23 +404,23 @@
 
 .search-panel {
   width: 100%;
-  max-width: 560px;
+  max-width: 570px;
   max-height: 66vh;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--line-mid);
-  border-radius: 14px;
-  background: var(--raised);
-  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.7);
+  border: var(--bw) solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--raised-2);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
 }
-.search-field { display: flex; align-items: center; gap: 11px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.search-field { display: flex; align-items: center; gap: 11px; padding: 15px 17px; border-bottom: var(--bw) solid var(--line-soft); }
 .search-field input {
   flex: 1;
   min-width: 0;
   border: none;
   background: none;
-  font-family: inherit;
+  font-family: var(--sans);
   font-size: 1rem;
   color: var(--ink);
   outline: none;
@@ -411,19 +428,19 @@
 .search-field input::placeholder { color: var(--faint); }
 .search-field kbd {
   padding: 2px 7px;
-  border: 1px solid var(--line-mid);
-  border-radius: 4px;
+  border: var(--bw) solid var(--line);
+  border-radius: 6px;
   font-family: var(--mono);
-  font-size: 0.65rem;
+  font-size: 0.66rem;
   color: var(--muted);
 }
 
-.search-results { overflow-y: auto; padding: 7px; }
+.search-results { overflow-y: auto; padding: 8px; }
 .sr-group {
   padding: 10px 11px 5px;
-  font-family: var(--mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--faint);
 }
@@ -431,31 +448,32 @@
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 9px 11px;
-  border-radius: 8px;
+  padding: 10px 11px;
+  border-radius: var(--r-sm);
   color: inherit;
 }
-.sr-item.is-on { background: #1f1f1f; }
-.sr-item:hover { text-decoration: none; }
+.sr-item.is-on { background: var(--accent-wash); }
+.sr-item:hover { text-decoration: none; background: var(--accent-wash); }
 .sr-icon { flex: none; }
-.sr-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; margin: 0 4px; }
+.sr-dot { flex: none; width: 10px; height: 10px; border-radius: var(--r-pill); }
 .sr-label { font-size: 0.9rem; color: var(--strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sr-sub { margin-left: auto; font-family: var(--mono); font-size: 0.62rem; color: var(--faint); }
-.sr-empty { padding: 22px; text-align: center; font-size: 0.88rem; color: var(--faint); }
+.sr-sub { margin-left: auto; font-size: 0.76rem; color: var(--faint); }
+.sr-empty { padding: 24px; text-align: center; font-size: 0.88rem; color: var(--faint); }
 
 
 /* ── narrow ─────────────────────────────────────────── */
-@media (max-width: 860px) {
-  .site-header { gap: 16px; padding: 0 18px; }
+@media (max-width: 900px) {
+  .site-header { gap: 14px; padding: 0 18px; }
   .site-nav, .search-pill .search-text, .search-pill kbd { display: none; }
-  .site-footer { margin-top: 40px; }
-  .soc-row { gap: 20px; }
+  .site-footer { margin-top: 44px; flex-direction: column; gap: 16px; }
+  .copyright { text-align: center; }
 }
 
 @media (max-width: 720px) {
-  .site-header { gap: 12px; padding: 0 16px; height: 56px; }
-  .help-pill span { display: none; }
-  .help-pill { padding: 0 11px; }
+  .site-header { gap: 10px; padding: 0 16px; height: 58px; }
+  .brand img { height: 28px; width: 28px; }
+  .brand span { font-size: 0.98rem; }
+  .lang-btn { padding: 0 7px; height: 26px; }
 }
 
 /* ── navigation progress ────────────────────────────── */
@@ -465,9 +483,9 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 2px;
+  height: 3px;
   z-index: 200;
-  background: linear-gradient(90deg, var(--accent, #8A2BE2), var(--accent-soft, #b98cf0));
+  background: var(--accent-soft);
   transform: scaleX(0);
   transform-origin: 0 50%;
   opacity: 0;
@@ -479,3 +497,11 @@
 
 /* The pointer says 'working' too, so the held page does not feel unresponsive. */
 html:has(.nav-progress.is-on) a { cursor: progress; }
+
+/* ── light ──────────────────────────────────────────── */
+/* The chrome is glass on both grounds, so only the pieces that hardcode a
+   light value need saying again here. */
+html[data-theme="light"] .nav-pop-icon img { filter: brightness(0); opacity: 0.72; }
+html[data-theme="light"] .search-modal { background: rgba(40, 33, 15, 0.34); }
+html[data-theme="light"] .search-pill kbd,
+html[data-theme="light"] .search-field kbd { background: var(--tab); }
