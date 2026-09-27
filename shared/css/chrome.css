@@ -496,17 +496,20 @@ html[data-theme="light"] .nav-pop-icon img { filter: brightness(0); opacity: 0.7
   .lang-btn { padding: 0 7px; height: 26px; }
 }
 
-/* Below ~400px the wordmark + three action buttons no longer fit on one row
-   (brand 164 + actions 168 + gaps + padding > 360), which pushed the header
-   wider than the viewport. The logo stays as the home link; the name is
-   already in the hero right underneath. */
-@media (max-width: 400px) {
-  .site-header { gap: 8px; padding: 0 14px; }
-  .brand span { display: none; }
-  .brand img { height: 30px; width: 30px; }
-  .header-actions { gap: 8px; }
-  .lang-btn { padding: 0 6px; }
-  .search-pill { padding: 0 10px; }
+/* Below ~430px the wordmark + three action buttons stop fitting at their
+   default sizes, which pushed the header wider than the viewport. Everything
+   is tightened instead of dropping the name, so the brand stays visible —
+   the text still fits at 320px with no horizontal overflow. */
+@media (max-width: 430px) {
+  .site-header { gap: 8px; padding: 0 12px; }
+  .brand { gap: 8px; }
+  .brand img { height: 26px; width: 26px; }
+  .brand span { font-size: 0.86rem; }
+  .header-actions { gap: 6px; }
+  .lang-switch { padding: 1px; gap: 1px; }
+  .lang-btn { padding: 0 5px; height: 24px; font-size: 0.7rem; }
+  .search-pill { height: 32px; padding: 0 9px; }
+  .theme-toggle { width: 32px; height: 32px; }
 }
 
 /* ── navigation progress ────────────────────────────── */
