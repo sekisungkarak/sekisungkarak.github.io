@@ -8,7 +8,15 @@
    This file exists so the chrome is defined once. docs.css and home.css both
    used to carry their own copy of the header and the two drifted. */
 
-:root { --header-h: 64px; }
+:root {
+  --header-h: 64px;
+  /* The header's own blur, and it must stay small. A blur this size is
+     measured against the 15.5px dot grid: 24px (the kit's --blur-heavy)
+     leaves 1% of the grid's contrast, 6px leaves 3%, 2px leaves 24%.
+     The grid is the point of the backdrop, so the bar frosts it just
+     enough to soften it and no further. */
+  --blur-header: blur(2px) saturate(1.4);
+}
 
 /* ── tooltip ────────────────────────────────────────── */
 /* Same rules as the settings core's header tooltips, so both surfaces match. */
@@ -65,8 +73,8 @@
   height: var(--header-h);
   padding: 0 32px;
   background: var(--header);
-  -webkit-backdrop-filter: var(--blur-heavy);
-  backdrop-filter: var(--blur-heavy);
+  -webkit-backdrop-filter: var(--blur-header);
+  backdrop-filter: var(--blur-header);
   border-bottom: var(--bw) solid var(--line);
 }
 

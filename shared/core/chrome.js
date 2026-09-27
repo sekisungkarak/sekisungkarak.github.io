@@ -108,13 +108,13 @@
 
   /* ── atmosphere ─────────────────────────────────────── */
 
-  // The ruled ground and the particle field under the pointer. Mounted here
-  // rather than written into each page's HTML, so a page gets the backdrop by
-  // loading the chrome and a new page cannot forget it. The layers sit behind
-  // everything (z-index -1) and the page content rides above them.
+  // The dot field that bulges away from the pointer. Mounted here rather than
+  // written into each page's HTML, so a page gets the backdrop by loading the
+  // chrome and a new page cannot forget it. The layer sits behind everything
+  // (z-index -1) and the page content rides above it.
   function mountAtmosphere() {
     // Only pages that opted in by linking atmosphere.css get the backdrop.
-    // Without that stylesheet the layers have no positioning at all, so the
+    // Without that stylesheet the layer has no positioning at all, so the
     // canvas would stretch over the page and swallow clicks — the docs page
     // deliberately has no backdrop, so it must be skipped here.
     var hasCss = Array.prototype.some.call(
@@ -123,43 +123,28 @@
     );
     if (!hasCss) return;
 
-    var wide = document.documentElement.classList.contains('is-landing');
-    var bg = el('<div class="bg' + (wide ? ' is-wide' : '') + '" aria-hidden="true"></div>');
-    document.body.insertBefore(bg, document.body.firstChild);
-
-    // The particle field (React Bits' Antigravity, ported to plain three.js in
-    // shared/core/antigravity.js). Its colour is read from --accent so the
-    // theme stays the one place a palette lives, and it is loaded lazily: the
-    // 670 KB three.js build must never sit on the critical path of a page that
-    // only needs the header.
-    var layer = el('<div class="antigravity" aria-hidden="true"></div>');
+    // The dot field (React Bits' DotField, ported to a plain module in
+    // shared/core/dotfield.js). It has no dependencies, so it is a normal lazy
+    // import: the page paints first and the grid appears a moment later.
+    var layer = el('<div class="dotfield" aria-hidden="true"></div>');
     // Inline, not only via the stylesheet: the canvas must never be able to
     // intercept a click, whatever happens to the CSS.
     layer.style.pointerEvents = 'none';
-    document.body.insertBefore(layer, bg.nextSibling);
+    document.body.insertBefore(layer, document.body.firstChild);
 
-    var reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduced) return;
-
-    import(CORE + 'antigravity.js?v=2').then(function (mod) {
-      var accent = getComputedStyle(document.documentElement)
-        .getPropertyValue('--accent').trim() || '#d4a843';
+    import(CORE + 'dotfield.js?v=3').then(function (mod) {
       var field = mod.mount(layer, {
-        count: 300,
-        magnetRadius: 6,
-        ringRadius: 7,
-        waveSpeed: 0.4,
-        waveAmplitude: 1,
-        particleSize: 1.5,
-        lerpSpeed: 0.05,
-        color: accent,
-        autoAnimate: true,
-        particleVariance: 1,
+        dotRadius: 1.5,
+        dotSpacing: 14,
+        bulgeStrength: 67,
+        glowRadius: 160,
+        sparkle: false,
+        waveAmplitude: 0,
       });
       if (field) layer.classList.add('is-ready');
     }).catch(function (e) {
-      // A backdrop is never worth breaking a page over: leave the blooms.
-      console.debug('[Sekisungkarak] Antigravity tidak dimuat:', e);
+      // A backdrop is never worth breaking a page over: leave the plain page.
+      console.debug('[Sekisungkarak] DotField tidak dimuat:', e);
     });
   }
 
@@ -449,10 +434,9 @@
     );
   }
 
-  // Mounted once the page's own scripts have run, so .is-landing is already on
-  // the root by the time the backdrop decides whether it needs the wide wash.
-  // Classic scripts all finish before DOMContentLoaded, so this is the first
-  // moment the answer is final.
+  // Mounted once the page's own scripts have run, so the root's classes are
+  // already final by the time the backdrop is created. Classic scripts all
+  // finish before DOMContentLoaded, so this is the first moment that is true.
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountAtmosphere);
   else mountAtmosphere();
 

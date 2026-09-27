@@ -1,60 +1,36 @@
-/* Page atmosphere: two soft accent blooms over a faint dot grid, plus the
-   particle field that gathers around the cursor. Load after global.css.
+/* Page backdrop: the DotField grid, ported from React Bits in
+   shared/core/dotfield.js. Load after global.css.
 
-   This theme has no hard edges anywhere — the backdrop is blurred light.
+   The page's own colour comes from --page on <body>; everything on top of it is
+   the dot grid and the glow that trails the cursor. The three --dot-* values
+   are the field's palette, kept here so a theme swap is a CSS change and never
+   a rebuild of the grid.
 
-   A page opts in by placing the layers itself:
-     <div class="bg"></div>                       — blooms and grid, static
-     <div class="bg"></div><div class="antigravity"></div>  — and the particles
-
-   chrome.js mounts both, so a page gets them by loading the chrome. The values
-   below are the dark theme; the light theme overrides them at the bottom. */
+   A page opts in by linking this file — chrome.js mounts the field only when it
+   finds this stylesheet, so a page without it (the docs page) is left plain. */
 
 /* z-index -1, not 0: a positioned box at 0 paints above in-flow content, so the
    backdrop would sit on top of any page whose content is not itself positioned.
    At -1 it paints above the canvas background and below everything else. */
-.bg, .antigravity { position: fixed; inset: 0; pointer-events: none; z-index: -1; }
+.dotfield { position: fixed; inset: 0; pointer-events: none; z-index: -1; }
 
-/* The particle canvas is drawn by shared/core/antigravity.js; this layer is
-   only its container. It fades in once the first frame is on screen, so a page
-   never flashes an empty black rectangle while three.js boots. */
-.antigravity { opacity: 0; transition: opacity 0.6s var(--ease); }
-.antigravity.is-ready { opacity: 1; }
+/* The grid itself is drawn by shared/core/dotfield.js; this layer is only its
+   container. It fades in once the first frame is on screen, so a page never
+   flashes an empty rectangle while the module loads. */
+.dotfield { opacity: 0; transition: opacity 0.6s var(--ease); }
+.dotfield.is-ready { opacity: 1; }
 
-/* Two wide accent blooms over a faint dot grid, so the surface has depth and
-   texture without a single drawn line. */
-.bg {
-  background:
-    radial-gradient(1100px 620px at 12% -10%, rgba(212, 168, 67, 0.20), transparent 62%),
-    radial-gradient(900px 520px at 92% 4%, rgba(185, 141, 46, 0.15), transparent 60%),
-    radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
-  background-size: auto, auto, 26px 26px;
-  background-position: 0 0, 0 0, 0 0;
-}
-
-/* The landing page is taller, so the blooms reach further down before clearing. */
-.bg.is-wide {
-  background:
-    radial-gradient(1200px 760px at 10% -12%, rgba(212, 168, 67, 0.22), transparent 64%),
-    radial-gradient(1000px 620px at 94% 2%, rgba(185, 141, 46, 0.17), transparent 62%),
-    radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
-  background-size: auto, auto, 26px 26px;
+:root {
+  --dot-from: #151515;
+  --dot-to: #a17f32;
+  --dot-glow: #121114;
 }
 
 /* ── light ──────────────────────────────────────────── */
-/* Warm paper: the same blooms, deeper so they read on a light ground, and a
-   grid of dark dots instead of light ones. */
-html[data-theme="light"] .bg {
-  background:
-    radial-gradient(1100px 620px at 12% -10%, rgba(212, 168, 67, 0.34), transparent 62%),
-    radial-gradient(900px 520px at 92% 4%, rgba(185, 141, 46, 0.24), transparent 60%),
-    radial-gradient(rgba(24, 20, 12, 0.07) 1px, transparent 1px);
-  background-size: auto, auto, 26px 26px;
-}
-html[data-theme="light"] .bg.is-wide {
-  background:
-    radial-gradient(1200px 760px at 10% -12%, rgba(212, 168, 67, 0.36), transparent 64%),
-    radial-gradient(1000px 620px at 94% 2%, rgba(185, 141, 46, 0.26), transparent 62%),
-    radial-gradient(rgba(24, 20, 12, 0.07) 1px, transparent 1px);
-  background-size: auto, auto, 26px 26px;
+/* Warm paper: the same grid in a darker gold so it reads as ink on paper, over
+   a pale glow — a dark pool would look like a smudge. */
+html[data-theme="light"] {
+  --dot-from: #8a6d23;
+  --dot-to: #b98d2e;
+  --dot-glow: #f4f1ea;
 }

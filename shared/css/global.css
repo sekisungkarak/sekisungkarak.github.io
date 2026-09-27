@@ -12,7 +12,7 @@
 :root {
   /* surfaces */
   --page: #121114;
-  --header: rgba(18, 17, 20, 0.72);
+  --header: rgba(18, 17, 20, 0.45);
   --raised: #1a1920;
   --raised-2: #201e28;
   --tab: #26232f;
@@ -104,7 +104,7 @@
    still reads as the same colour it is on the dark ground. */
 html[data-theme="light"] {
   --page: #f4f1ea;
-  --header: rgba(244, 241, 234, 0.78);
+  --header: rgba(244, 241, 234, 0.55);
   --raised: #ffffff;
   --raised-2: #faf8f3;
   --tab: #ece7db;

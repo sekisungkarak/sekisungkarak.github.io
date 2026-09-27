@@ -94,10 +94,10 @@
     --transition: all 380ms var(--glass-ease), opacity ease-in-out 500ms;
 }
 
-/* ══ Latar belakang — motif sama dengan situs ══
-   Resep diambil dari shared/css/atmosphere.css (.bg): dua bloom aksen lebar
-   di atas grid titik halus 26px. Blur 60px DIBUANG supaya grid tetap tajam
-   seperti di situs; bloom-nya sudah gradien lembut, jadi tidak butuh blur. */
+/* ══ Latar belakang — motif bloom situs ══
+   Dua bloom aksen lebar di atas grid titik halus 26px. Blur 60px DIBUANG
+   supaya grid tetap tajam seperti di situs; bloom-nya sudah gradien lembut,
+   jadi tidak butuh blur. */
 
 body::before {
     content: "";
