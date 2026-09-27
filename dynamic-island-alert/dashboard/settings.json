@@ -281,6 +281,14 @@
       "defaultValue": true,
       "group": "General"
     },
+    {
+      "id": "enableBadgeIcon",
+      "label": "Show Badge Icon",
+      "description": "Tampilkan badge TikTok (grade / Top Gifter) di samping username pada kartu alert.",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "General"
+    },
 	{
       "id": "widgetScale",
       "label": "Widget Scale (Zoom)",

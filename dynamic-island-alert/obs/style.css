@@ -179,21 +179,52 @@ body {
 }
 
 /* ══ Badge TikTok (grade / Top Gifter) ══
-   Anak #islandTitleRow, tepat di kanan #islandText -> menempel di ujung
-   username pada baris yang sama (bukan sejajar tengah blok judul+subtext). */
+   Pill berwarna seperti TikTok: latar diambil dari field `color` payload
+   (format #AARRGGBB), isinya ikon badge + label. font-size #islandBadges
+   disamakan dengan username dan tinggi pill 1.3em, jadi tingginya sejajar
+   dengan baris username. Anak #islandTitleRow, tepat di kanan #islandText. */
 #islandBadges {
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
 	flex-shrink: 0;
-	margin-left: 5px;      /* jarak dari ujung kanan username */
+	margin-left: 6px;      /* jarak dari ujung kanan username */
+	font-size: var(--island-font-size, 13px);   /* em badge = ukuran username */
 }
 #islandBadges .island-badge {
-	width: 16px;
-	height: 16px;
-	object-fit: contain;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.26em;
+	height: 1.3em;         /* tinggi pill ≈ tinggi baris username */
+	padding: 0 0.44em 0 0.28em;
+	border-radius: 999px;  /* pill penuh, bukan kotak membulat */
+	background: var(--badge-color, rgba(255, 255, 255, 0.16));
+	box-sizing: border-box;
+	line-height: 1;
 	flex-shrink: 0;
-	filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.55));
+	overflow: hidden;
+}
+#islandBadges .island-badge.icon-only {
+	padding: 0 0.3em;      /* tanpa label: padding kiri-kanan rata */
+}
+#islandBadges .island-badge img {
+	/* 0.86em (bukan 0.95em): ikon badge TikTok hampir persegi dan padat, jadi
+	   di 0.95em ia nyaris menyentuh tepi atas-bawah pill dan terlihat penuh.
+	   Diturunkan sedikit supaya ada napas di dalam pill. */
+	width: 0.86em;
+	height: 0.86em;
+	object-fit: contain;
+	display: block;
+	flex-shrink: 0;
+}
+#islandBadges .island-badge .badge-label {
+	font-size: 0.78em;
+	font-weight: 700;
+	line-height: 1;
+	color: #fff;
+	white-space: nowrap;
+	letter-spacing: 0.01em;
 }
 /* Di kartu musik big/medium badge tidak relevan (bukan event TikTok) */
 #dynamicIsland.alert-music-big #islandBadges,

@@ -41,7 +41,7 @@ sama di kedua sisi.
 
 ![Aktifkan server dan catat Server Port, lalu Apply](docs/assets/install-3-same-port.png)
 
-### Langkah 3 — Isi OBS Connection
+### Langkah 3 — Isi OBS Connection dan Tekan Save
 
 Di dock, buka bagian **OBS Connection** dan masukkan nilai dari server
 **obs-websocket milikmu sendiri** — **Port** harus sama dengan angka yang kamu
@@ -57,38 +57,24 @@ Titik status akan berubah **hijau** begitu dock terhubung ke OBS. Kalau tetap
 merah, port atau password-nya tidak cocok dengan pengaturan OBS WebSocket-mu —
 perbaiki di sini sebelum lanjut.
 
-![OBS Connection — Server IP, Port dan Password](docs/assets/install-3-obs-connection.png)
-
-### Langkah 4 — Tekan Save
-
 Klik **Save** di bagian bawah dock. Dashboard lalu membuat **Browser Source** di
-**scene yang sedang aktif**, dinamai sesuai scene-nya:
+**scene yang sedang aktif**.
 
-```
-{Scene} | Dynamic Island Alert
-```
-
-Ukurannya **1080 × 500** dan ditempatkan di **atas-tengah**. Kalau source dengan
-nama itu sudah ada, ia diperbarui di tempat, jadi menekan Save lagi tidak akan
-membuat duplikat.
-
-![Save membuat browser source](docs/assets/install-4-buttons.png)
+![OBS Connection — Server IP, Port dan Password](docs/assets/install-3-obs-connection.png)
 
 ![Browser source muncul di scene yang aktif](docs/assets/install-5-overlay-result.png)
 
 > **Tips** — pindah ke scene yang kamu inginkan **sebelum** menekan Save, dan
 > tambahkan ke setiap scene yang kamu stream.
 
-### Langkah 5 — Muat pengaturan tersimpan
+### Langkah 4 — Muat pengaturan tersimpan
 
 **Load** menarik kembali konfigurasi tersimpan ke dock untuk scene yang dipilih.
 
-1. Klik **Load Current Scene** di bagian bawah dock.
+1. Klik **Load** di bagian bawah dock.
 2. Di dialog **Load Saved Settings**, pilih **Scene** yang pengaturannya ingin
    kamu muat.
 3. Klik **Load**.
-
-![Load Current Scene](docs/assets/install-6-load-buttons.png)
 
 ![Pilih scene lalu klik Load](docs/assets/install-6-load-saved-settings.png)
 

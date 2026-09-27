@@ -17,9 +17,9 @@ window.SITE = {
     { label: 'Docs', menu: 'catalog' },
   ],
 
-  links: [
-    { label: 'GitHub', href: 'https://github.com/sekisungkarak', icon: 'github' },
-  ],
+  // Header action icons. Deliberately empty: the header carries only nav, the
+  // language switch and search. GitHub still lives in `socials` below (footer).
+  links: [],
 
   // Hero support buttons on the homepage. `icon` is a MARK key from chrome.js.
   // Leave empty to hide them.

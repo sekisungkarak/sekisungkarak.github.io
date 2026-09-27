@@ -41,7 +41,7 @@ sides.
 
 ![Enable the server and note the Server Port, then Apply](docs/assets/install-3-same-port.png)
 
-### Step 3 — Fill in the OBS Connection
+### Step 3 — Fill in the OBS Connection and Press Save
 
 In the dock, open the **OBS Connection** section and enter the values of your
 **own** OBS WebSocket server — the **Port** must be the same number you noted in
@@ -57,38 +57,24 @@ The status dot turns **green** once the dock connects to OBS. If it stays red,
 the port or password does not match your OBS WebSocket settings — fix it here
 before continuing.
 
-![OBS Connection — Server IP, Port and Password](docs/assets/install-3-obs-connection.png)
-
-### Step 4 — Press Save
-
 Click **Save** at the bottom of the dock. The dashboard then creates a **Browser
-Source** in the **currently active scene**, named after the scene:
+Source** in the **currently active scene**.
 
-```
-{Scene} | Dynamic Island Alert
-```
-
-It is sized **1080 × 500** and anchored **top-center**. If a source with that
-name already exists it is updated in place, so pressing Save again never creates
-duplicates.
-
-![Save creates the browser source](docs/assets/install-4-buttons.png)
+![OBS Connection — Server IP, Port and Password](docs/assets/install-3-obs-connection.png)
 
 ![The browser source appears in the active scene](docs/assets/install-5-overlay-result.png)
 
 > **Tip** — switch to the scene you want the alert in **before** pressing Save,
 > and add it to each scene you stream.
 
-### Step 5 — Load saved settings
+### Step 4 — Load saved settings
 
 **Load** pulls a saved configuration back into the dock for a chosen scene.
 
-1. Click **Load Current Scene** at the bottom of the dock.
+1. Click **Load** at the bottom of the dock.
 2. In the **Load Saved Settings** dialog, pick the **Scene** whose settings you
    want to load.
 3. Click **Load**.
-
-![Load Current Scene](docs/assets/install-6-load-buttons.png)
 
 ![Pick the scene and click Load](docs/assets/install-6-load-saved-settings.png)
 

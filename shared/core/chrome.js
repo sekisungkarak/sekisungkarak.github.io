@@ -108,35 +108,58 @@
 
   /* ── atmosphere ─────────────────────────────────────── */
 
-  // The ruled ground and the lamp under the pointer. Mounted here rather than
-  // written into each page's HTML, so a page gets the backdrop by loading the
-  // chrome and a new page cannot forget it. The layers sit behind everything
-  // (z-index 0) and the page content rides above them.
+  // The ruled ground and the particle field under the pointer. Mounted here
+  // rather than written into each page's HTML, so a page gets the backdrop by
+  // loading the chrome and a new page cannot forget it. The layers sit behind
+  // everything (z-index -1) and the page content rides above them.
   function mountAtmosphere() {
+    // Only pages that opted in by linking atmosphere.css get the backdrop.
+    // Without that stylesheet the layers have no positioning at all, so the
+    // canvas would stretch over the page and swallow clicks — the docs page
+    // deliberately has no backdrop, so it must be skipped here.
+    var hasCss = Array.prototype.some.call(
+      document.querySelectorAll('link[rel="stylesheet"]'),
+      function (l) { return (l.getAttribute('href') || '').indexOf('atmosphere.css') >= 0; }
+    );
+    if (!hasCss) return;
+
     var wide = document.documentElement.classList.contains('is-landing');
     var bg = el('<div class="bg' + (wide ? ' is-wide' : '') + '" aria-hidden="true"></div>');
-    var spot = el('<div class="spot" aria-hidden="true"></div>');
-    document.body.insertBefore(spot, document.body.firstChild);
     document.body.insertBefore(bg, document.body.firstChild);
 
-    // The lamp trails the pointer. Writing the two custom properties is all it
-    // takes — the gradient is re-drawn by the compositor, not by layout.
-    var near = false;
-    document.addEventListener('pointermove', function (e) {
-      spot.style.setProperty('--mx', e.clientX + 'px');
-      spot.style.setProperty('--my', e.clientY + 'px');
-      if (!near) { near = true; document.body.classList.add('is-near'); }
-    }, { passive: true });
+    // The particle field (React Bits' Antigravity, ported to plain three.js in
+    // shared/core/antigravity.js). Its colour is read from --accent so the
+    // theme stays the one place a palette lives, and it is loaded lazily: the
+    // 670 KB three.js build must never sit on the critical path of a page that
+    // only needs the header.
+    var layer = el('<div class="antigravity" aria-hidden="true"></div>');
+    // Inline, not only via the stylesheet: the canvas must never be able to
+    // intercept a click, whatever happens to the CSS.
+    layer.style.pointerEvents = 'none';
+    document.body.insertBefore(layer, bg.nextSibling);
 
-    // The disc follows the pointer exactly, so there is nothing to animate out;
-    // it just stops being lit once the pointer leaves the window.
-    document.addEventListener('pointerleave', function () {
-      near = false;
-      document.body.classList.remove('is-near');
-    });
-    document.addEventListener('pointerenter', function () {
-      near = true;
-      document.body.classList.add('is-near');
+    var reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) return;
+
+    import(CORE + 'antigravity.js?v=2').then(function (mod) {
+      var accent = getComputedStyle(document.documentElement)
+        .getPropertyValue('--accent').trim() || '#d4a843';
+      var field = mod.mount(layer, {
+        count: 300,
+        magnetRadius: 6,
+        ringRadius: 7,
+        waveSpeed: 0.4,
+        waveAmplitude: 1,
+        particleSize: 1.5,
+        lerpSpeed: 0.05,
+        color: accent,
+        autoAnimate: true,
+        particleVariance: 1,
+      });
+      if (field) layer.classList.add('is-ready');
+    }).catch(function (e) {
+      // A backdrop is never worth breaking a page over: leave the blooms.
+      console.debug('[Sekisungkarak] Antigravity tidak dimuat:', e);
     });
   }
 
@@ -264,7 +287,7 @@
         '<nav class="site-nav">' + nav + '<span class="nav-bar"></span></nav>' +
         '<div class="header-spacer"></div>' +
         '<div class="header-actions">' + links +
-          '<div class="header-divider"></div>' +
+          (links ? '<div class="header-divider"></div>' : '') +
           '<div class="lang-switch" role="group" aria-label="' + esc(T('Switch language')) + '">' + lang + '</div>' +
           '<button class="search-pill" type="button">' +
             svg('M21 21l-4.3-4.3', { size: 14, stroke: 'currentColor', width: 2 })

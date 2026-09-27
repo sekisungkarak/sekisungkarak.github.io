@@ -113,6 +113,10 @@ const enableFirstChatterIcon = GetBoolParam("enableFirstChatterIcon", true);
 // Overlay yang hanya perlu tampil visual (mis. pratinjau scene lain) bisa OFF.
 const enableSound = GetBoolParam("enableSound", true);
 
+// Badge TikTok (grade / Top Gifter) di samping username. Default true = perilaku
+// lama. OFF -> badge tidak dirender sama sekali, terlepas dari payload userBadges.
+const enableBadgeIcon = GetBoolParam("enableBadgeIcon", true);
+
 // SMTC Bridge & Now Playing settings
 const enableNowPlaying = GetBoolParam("enableNowPlaying", true);
 const includedApplications = urlParams.get("includedApplications") || '';
@@ -424,8 +428,41 @@ function CleanBadgeUrl(raw) {
 	return s;
 }
 
-// Ambil maksimal 2 badge dari payload TikTok. Urutan payload dipertahankan
-// (biasanya grade dulu, lalu top gifter).
+// Warna badge TikTok memakai format #AARRGGBB - alpha di DEPAN, bukan #RRGGBBAA.
+// Payload nyata: #99789EE7 (grade, periwinkle) dan #66FE2C55 (Top Gifter, merah).
+// WAJIB dinormalisasi: CSS membaca hex 8 digit sebagai #RRGGBBAA, jadi kalau
+// string mentah diteruskan, #66FE2C55 tampil HIJAU (66, FE, 2C) bukan merah.
+function ParseBadgeColor(raw) {
+	if (!raw || typeof raw !== 'string') return '';
+	const s = raw.trim();
+	// Sudah berupa warna fungsional (mis. dari pemanggil lain) -> teruskan apa adanya.
+	if (/^rgba?\(/i.test(s) || /^hsla?\(/i.test(s)) return s;
+	const h = s.replace(/^#/, '');
+	if (!/^[0-9a-f]{8}$/i.test(h)) return '';
+	const a = parseInt(h.slice(0, 2), 16) / 255;
+	const r = parseInt(h.slice(2, 4), 16);
+	const g = parseInt(h.slice(4, 6), 16);
+	const b = parseInt(h.slice(6, 8), 16);
+	// Alpha payload (0.4) terlalu pudar di atas pill gelap -> beri lantai 0.55.
+	return `rgba(${r}, ${g}, ${b}, ${Math.max(a, 0.55).toFixed(2)})`;
+}
+
+// Label badge: awalan "No." dilepas, sisanya utuh -> "No. 3" jadi "3".
+function CleanBadgeLabel(raw) {
+	if (!raw || typeof raw !== 'string') return '';
+	const s = raw.trim();
+	const m = s.match(/^No\.?\s*(\d+)$/i);
+	return m ? m[1] : s;
+}
+
+function EscapeBadgeText(s) {
+	return String(s).replace(/[&<>"']/g, (c) => ({
+		'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+	}[c]));
+}
+
+// Ambil maksimal 2 badge dari payload TikTok, lengkap dengan label + warnanya.
+// Urutan payload dipertahankan (biasanya grade dulu, lalu Top Gifter).
 function GetUserBadges(tiktokData) {
 	if (!tiktokData) return [];
 	const list = tiktokData.userBadges || tiktokData.user?.userBadges || [];
@@ -435,23 +472,122 @@ function GetUserBadges(tiktokData) {
 		if (!b || typeof b !== 'object') continue;
 		const url = CleanBadgeUrl(b.image || b.imageUrl || b.url);
 		if (!url) continue;
-		out.push(url);
+		out.push({
+			url,
+			label: CleanBadgeLabel(b.name || b.topBadgeName?.name || ''),
+			color: ParseBadgeColor(b.color)
+		});
 		if (out.length >= 2) break;
 	}
 	return out;
 }
 
-// Tampilkan badge di kartu alert (setelah username). Kosong -> sembunyikan.
+// Badge TikTok PNG punya margin transparan yang TIDAK simetris (mis. Top Gifter:
+// 7px di atas vs 13px di bawah), jadi medal-nya duduk lebih tinggi dari pusat
+// kotak dan sisa margin bawah tampil sebagai "ruang kosong" (putih, bila viewer
+// memakai latar terang). Potong gambar ke kotak isinya sekali per URL, lalu pakai
+// hasilnya sebagai src. Gagal (CORS/canvas) -> pakai URL asli.
+const badgeCropCache = new Map();
+
+function CropBadgeToContent(url, onDone) {
+	if (badgeCropCache.has(url)) {
+		onDone(badgeCropCache.get(url));
+		return;
+	}
+	const img = new Image();
+	img.crossOrigin = 'anonymous';
+	img.onload = () => {
+		let out = url;
+		try {
+			const c = document.createElement('canvas');
+			c.width = img.naturalWidth;
+			c.height = img.naturalHeight;
+			const ctx = c.getContext('2d', { willReadFrequently: true });
+			ctx.drawImage(img, 0, 0);
+			const d = ctx.getImageData(0, 0, c.width, c.height).data;
+			let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
+			for (let y = 0; y < c.height; y++) {
+				for (let x = 0; x < c.width; x++) {
+					if (d[(y * c.width + x) * 4 + 3] > 12) {
+						if (x < x0) x0 = x;
+						if (x > x1) x1 = x;
+						if (y < y0) y0 = y;
+						if (y > y1) y1 = y;
+					}
+				}
+			}
+			if (x1 > x0 && y1 > y0) {
+				// Padding tipis seragam supaya tepi artwork tidak mepet kotak.
+				const pad = Math.round(Math.max(x1 - x0, y1 - y0) * 0.05);
+				x0 = Math.max(0, x0 - pad);
+				y0 = Math.max(0, y0 - pad);
+				x1 = Math.min(c.width - 1, x1 + pad);
+				y1 = Math.min(c.height - 1, y1 + pad);
+				const w = x1 - x0 + 1, h = y1 - y0 + 1;
+				const c2 = document.createElement('canvas');
+				c2.width = w;
+				c2.height = h;
+				c2.getContext('2d').drawImage(c, x0, y0, w, h, 0, 0, w, h);
+				out = c2.toDataURL('image/png');
+			}
+		} catch (e) {
+			// CORS / canvas tidak bisa dibaca -> biarkan URL asli.
+			out = url;
+		}
+		badgeCropCache.set(url, out);
+		onDone(out);
+	};
+	img.onerror = () => {
+		badgeCropCache.set(url, url);
+		onDone(url);
+	};
+	img.src = url;
+}
+
+// Tampilkan badge sebagai pill berwarna (ikon + label) di kanan username.
+// Kosong -> sembunyikan. Label dilewatkan CleanBadgeLabel lagi supaya aturan
+// "buang awalan No." juga berlaku untuk badge contoh (tombol Test).
 function RenderBadges(badges) {
 	if (!islandBadges) return;
+	// Gerbang "Show Badge Icon" (Settings > General, di bawah Notification Sound).
+	// Dicek di sini supaya jalur live DAN tombol Test ikut tunduk pada setelan yang
+	// sama, tanpa perlu menyentuh setiap pemanggil.
+	if (!enableBadgeIcon) {
+		islandBadges.innerHTML = '';
+		islandBadges.classList.add('hidden');
+		return;
+	}
 	if (!Array.isArray(badges) || badges.length === 0) {
 		islandBadges.innerHTML = '';
 		islandBadges.classList.add('hidden');
 		return;
 	}
 	islandBadges.innerHTML = badges
-		.map((u) => `<img class="island-badge" src="${u}" alt="">`)
+		.map((b) => {
+			const url = typeof b === 'string' ? b : b.url;
+			if (!url) return '';
+			const label = typeof b === 'string' ? '' : CleanBadgeLabel(b.label || '');
+			// Selalu lewat ParseBadgeColor: badge contoh membawa hex mentah, dan
+			// hex 8 digit akan salah dibaca CSS sebagai #RRGGBBAA.
+			const color = typeof b === 'string' ? '' : ParseBadgeColor(b.color || '');
+			const style = color ? ` style="--badge-color:${color}"` : '';
+			const cls = label ? 'island-badge' : 'island-badge icon-only';
+			const text = label ? `<span class="badge-label">${EscapeBadgeText(label)}</span>` : '';
+			return `<span class="${cls}"${style}><img src="${url}" alt="">${text}</span>`;
+		})
 		.join('');
+	// Tampilkan dulu dengan URL asli (langsung terlihat), lalu perhalus dengan
+	// versi yang sudah dipotong ke kotak isinya begitu selesai dihitung.
+	for (const el of islandBadges.querySelectorAll('img')) {
+		const original = el.getAttribute('src');
+		CropBadgeToContent(original, (better) => {
+			// Alert bisa sudah berganti saat pemotongan selesai -> pastikan elemen
+			// ini masih terpasang dan src-nya belum diubah pihak lain.
+			if (better && better !== original && el.isConnected && el.getAttribute('src') === original) {
+				el.src = better;
+			}
+		});
+	}
 	islandBadges.classList.remove('hidden');
 }
 
@@ -2287,8 +2423,8 @@ const testAvatar = '../../resources/sekisungkarak_avatar.jpeg';
 // Badge contoh untuk tombol Test di dashboard (grade lv1 + Top Gifter No. 3),
 // diambil dari payload TikTok asli supaya preview = tampilan live.
 const testBadges = [
-	'https://p19-webcast.tiktokcdn.com/webcast-va/grade_badge_icon_lite_lv1_v1.png~tplv-obj.image',
-	'https://p19-webcast.tiktokcdn.com/webcast-sg/new_top_gifter_version_2.png~tplv-obj.image'
+	{ url: 'https://p19-webcast.tiktokcdn.com/webcast-va/grade_badge_icon_lite_lv1_v1.png~tplv-obj.image', label: '1', color: '#99789EE7' },
+	{ url: 'https://p19-webcast.tiktokcdn.com/webcast-sg/new_top_gifter_version_2.png~tplv-obj.image', label: 'No. 3', color: '#66FE2C55' }
 ];
 
 window.testFollow = function () {

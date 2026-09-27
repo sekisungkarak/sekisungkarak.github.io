@@ -1,12 +1,11 @@
 /* Page atmosphere: two soft accent blooms over a faint dot grid, plus the
-   lamp that follows the cursor. Load after global.css.
+   particle field that gathers around the cursor. Load after global.css.
 
-   This theme has no hard edges anywhere — the backdrop is blurred light, and
-   the cursor reveal is a soft pool rather than a disc.
+   This theme has no hard edges anywhere — the backdrop is blurred light.
 
    A page opts in by placing the layers itself:
-     <div class="bg"></div>                            — blooms and grid, static
-     <div class="bg"></div><div class="spot"></div>     — and the cursor lamp
+     <div class="bg"></div>                       — blooms and grid, static
+     <div class="bg"></div><div class="antigravity"></div>  — and the particles
 
    chrome.js mounts both, so a page gets them by loading the chrome. The values
    below are the dark theme; the light theme overrides them at the bottom. */
@@ -14,7 +13,13 @@
 /* z-index -1, not 0: a positioned box at 0 paints above in-flow content, so the
    backdrop would sit on top of any page whose content is not itself positioned.
    At -1 it paints above the canvas background and below everything else. */
-.bg, .spot { position: fixed; inset: 0; pointer-events: none; z-index: -1; }
+.bg, .antigravity { position: fixed; inset: 0; pointer-events: none; z-index: -1; }
+
+/* The particle canvas is drawn by shared/core/antigravity.js; this layer is
+   only its container. It fades in once the first frame is on screen, so a page
+   never flashes an empty black rectangle while three.js boots. */
+.antigravity { opacity: 0; transition: opacity 0.6s var(--ease); }
+.antigravity.is-ready { opacity: 1; }
 
 /* Two wide accent blooms over a faint dot grid, so the surface has depth and
    texture without a single drawn line. */
@@ -36,19 +41,6 @@
   background-size: auto, auto, 26px 26px;
 }
 
-/* The lamp under the pointer: one blurred accent light, no rim. --mx/--my are
-   written by chrome.js on pointermove; until the pointer moves, it sits high
-   and centre so a page that is never touched still looks lit. */
-.spot {
-  opacity: 0;
-  transition: opacity var(--t) var(--ease);
-  background: radial-gradient(circle 320px at var(--mx, 50%) var(--my, 38%),
-    rgba(212, 168, 67, 0.18), rgba(212, 168, 67, 0.07) 48%, transparent 74%);
-}
-
-/* Rides the pointer without a lag, since the gradient is re-drawn each move. */
-body.is-near .spot { opacity: 1; }
-
 /* ── light ──────────────────────────────────────────── */
 /* Warm paper: the same blooms, deeper so they read on a light ground, and a
    grid of dark dots instead of light ones. */
@@ -65,8 +57,4 @@ html[data-theme="light"] .bg.is-wide {
     radial-gradient(1000px 620px at 94% 2%, rgba(185, 141, 46, 0.26), transparent 62%),
     radial-gradient(rgba(24, 20, 12, 0.07) 1px, transparent 1px);
   background-size: auto, auto, 26px 26px;
-}
-html[data-theme="light"] .spot {
-  background: radial-gradient(circle 320px at var(--mx, 50%) var(--my, 38%),
-    rgba(212, 168, 67, 0.30), rgba(212, 168, 67, 0.12) 48%, transparent 74%);
 }
