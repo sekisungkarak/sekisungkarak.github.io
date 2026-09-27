@@ -53,6 +53,18 @@
 
 /* Nav tooltips clear the pill, which sits a little below the label. */
 .nav-link[data-tooltip]::after { top: calc(100% + 16px); }
+
+/* The theme button is the last item in the header, so a centred bubble would
+   stick out past the right edge. `opacity: 0` still counts toward scrollWidth,
+   which added a permanent horizontal scrollbar on narrow windows — so this
+   bubble anchors right instead of centre. */
+.theme-toggle[data-tooltip]::after {
+  left: auto;
+  right: 0;
+  transform: translateY(-4px);
+}
+.theme-toggle[data-tooltip]:hover::after,
+.theme-toggle[data-tooltip]:focus-visible::after { transform: translateY(0); }
 .nav-link.is-soon { cursor: default; }
 .nav-link.is-soon:hover { color: var(--faint); }
 
@@ -482,6 +494,19 @@ html[data-theme="light"] .nav-pop-icon img { filter: brightness(0); opacity: 0.7
   .brand img { height: 28px; width: 28px; }
   .brand span { font-size: 0.98rem; }
   .lang-btn { padding: 0 7px; height: 26px; }
+}
+
+/* Below ~400px the wordmark + three action buttons no longer fit on one row
+   (brand 164 + actions 168 + gaps + padding > 360), which pushed the header
+   wider than the viewport. The logo stays as the home link; the name is
+   already in the hero right underneath. */
+@media (max-width: 400px) {
+  .site-header { gap: 8px; padding: 0 14px; }
+  .brand span { display: none; }
+  .brand img { height: 30px; width: 30px; }
+  .header-actions { gap: 8px; }
+  .lang-btn { padding: 0 6px; }
+  .search-pill { padding: 0 10px; }
 }
 
 /* ── navigation progress ────────────────────────────── */
