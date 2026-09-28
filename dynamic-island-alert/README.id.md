@@ -18,7 +18,7 @@ melihat hasilnya. Tanpa dashboard terpisah, tanpa URL panjang.
 2. Isi URL dengan:
 
    ```
-   https://sekisungkarak.github.io/dynamic-island-alert/
+   https://sekisungkarak.web.id/dynamic-island-alert/
    ```
 
 3. Set **Width** dan **Height** sesuai ukuran canvas OBS kamu — `1920x1080` untuk
@@ -33,7 +33,7 @@ Controls Panel terbuka di atas canvas kamu. **Seret bar judulnya untuk memindahk
 pengaturannya: koneksi dulu, baru jenis alert.
 
 > **Tips** — kamu juga bisa membuka overlay di tab browser biasa
-> (`https://sekisungkarak.github.io/dynamic-island-alert/?controls=1`) supaya
+> (`https://sekisungkarak.web.id/dynamic-island-alert/?controls=1`) supaya
 > lebih nyaman diatur di layar besar. Pengaturan tersimpan di penyimpanan overlay
 > itu sendiri, jadi apa pun yang kamu set di sana sudah terpasang saat OBS
 > memuatnya.
@@ -72,7 +72,7 @@ atau memindahkan source ke scene lain tidak mengubah apa pun.
 > dropdown di atas panel untuk berpindah, **+ Profil** untuk membuat, dan
 > **Hapus** untuk menghapus. Untuk memaku satu source ke profil tertentu,
 > tambahkan `?profile=Nama` di URL-nya, misalnya
-> `https://sekisungkarak.github.io/dynamic-island-alert/?profile=Gameplay`.
+> `https://sekisungkarak.web.id/dynamic-island-alert/?profile=Gameplay`.
 
 ---
 
@@ -89,7 +89,7 @@ tetap bisa dipakai dan bisa jalan berdampingan dengan panel.
    | Field | Nilai |
    |---|---|
    | **Dock Name** | `Dynamic Island Alert` |
-   | **URL** | `https://sekisungkarak.github.io/dynamic-island-alert/dashboard/` |
+   | **URL** | `https://sekisungkarak.web.id/dynamic-island-alert/dashboard/` |
 
 3. Klik **Apply**, lalu **Close**. Dashboard muncul sebagai dock di dalam OBS.
 

@@ -18,7 +18,7 @@ while looking at it. No separate dashboard, no long URL.
 2. Set the URL to:
 
    ```
-   https://sekisungkarak.github.io/dynamic-island-alert/
+   https://sekisungkarak.web.id/dynamic-island-alert/
    ```
 
 3. Set **Width** and **Height** to your OBS canvas size — `1920x1080` for most
@@ -33,7 +33,7 @@ The Controls Panel opens on top of your canvas. **Drag its title bar to move it 
 alert cards and **Now Playing** are under Alerts.
 
 > **Tip** — you can also open the overlay in a normal browser tab
-> (`https://sekisungkarak.github.io/dynamic-island-alert/?controls=1`) to
+> (`https://sekisungkarak.web.id/dynamic-island-alert/?controls=1`) to
 > configure it comfortably on a big screen. Your settings live in the overlay's
 > own storage, so anything you set there is already in place when OBS loads it.
 
@@ -71,7 +71,7 @@ cache or moving the source to another scene changes nothing.
 > **Profiles** — one browser source can hold several setups. Use the dropdown at
 > the top of the panel to switch, **+ Profil** to create one and **Hapus** to
 > delete it. To pin a source to a specific profile, add `?profile=Name` to its
-> URL, for example `https://sekisungkarak.github.io/dynamic-island-alert/?profile=Gameplay`.
+> URL, for example `https://sekisungkarak.web.id/dynamic-island-alert/?profile=Gameplay`.
 
 ---
 
@@ -88,7 +88,7 @@ dashboard still works and can be used side by side with the panel.
    | Field | Value |
    |---|---|
    | **Dock Name** | `Dynamic Island Alert` |
-   | **URL** | `https://sekisungkarak.github.io/dynamic-island-alert/dashboard/` |
+   | **URL** | `https://sekisungkarak.web.id/dynamic-island-alert/dashboard/` |
 
 3. Click **Apply**, then **Close**. The dashboard appears as a dock inside OBS.
 

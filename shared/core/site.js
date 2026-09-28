@@ -41,5 +41,5 @@ window.SITE = {
 
   // Where this build is served from. Link-preview crawlers can't resolve relative
   // URLs, so stamp-meta.mjs builds absolute og: URLs from this.
-  origin: 'https://sekisungkarak.github.io',
+  origin: 'https://sekisungkarak.web.id',
 };
