@@ -1,0 +1,815 @@
+/* ============================================================================
+   CONTROLS PANEL - gaya
+   ----------------------------------------------------------------------------
+   Semua aturan di bawah .cp-root supaya tidak ada satu pun yang bocor ke widget.
+   Panel memakai position:fixed karena #dynamicIsland punya transform sendiri;
+   kalau panel ditaruh di dalamnya, fixed akan terkurung ke elemen itu.
+   ========================================================================== */
+
+.cp-root {
+	position: fixed;
+	inset: 0;
+	z-index: 2147483000;
+	display: flex;
+	align-items: flex-start;
+	justify-content: flex-start;
+	padding: 24px;
+	background: transparent;
+	opacity: 0;
+	transition: opacity 0.18s ease;
+	font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+	font-size: 15px;
+	line-height: 1.5;
+	color: #eae7ee;
+	user-select: text;
+	box-sizing: border-box;
+}
+
+.cp-root.is-open { opacity: 1; }
+
+.cp-root *,
+.cp-root *::before,
+.cp-root *::after { box-sizing: border-box; }
+
+.cp-panel {
+	position: absolute;
+	left: 24px;
+	bottom: 24px;
+	width: 640px;
+	max-width: 640px;
+	min-width: 0;
+	max-height: min(450px, calc(100vh - 48px));
+	display: flex;
+	flex-direction: column;
+	background: #201e28;
+	border: 1px solid rgba(255, 255, 255, 0.10);
+	border-radius: 6px;
+	box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65);
+	overflow: hidden;
+	transform: translateY(-8px) scale(0.99);
+	transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cp-root.is-open .cp-panel { transform: translateY(0) scale(1); }
+
+/* Saat diseret, panel.js mengubah left/top-nya (posisi disimpan). */
+.cp-panel { will-change: transform; }
+
+/* ------------------------------------------------------------------- header */
+
+.cp-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	padding: 10px 12px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	background: rgba(255, 255, 255, 0.02);
+	flex: 0 0 auto;
+	cursor: move;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.cp-head.is-dragging { cursor: grabbing; }
+
+/* Judul tidak menyerap klik supaya seluruh bar judul bisa dipakai menyeret. */
+.cp-head-title { pointer-events: none; }
+
+.cp-title { font-size: 14.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.cp-sub { font-size: 12px; color: #a49dae; margin-top: 1px; }
+
+.cp-head-actions {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex: 0 0 auto;
+}
+
+.cp-select.cp-profile {
+	width: auto;
+	min-width: 118px;
+	max-width: 170px;
+	flex: 0 0 auto;
+}
+
+.cp-select.cp-profile .cp-select-btn {
+	min-height: 30px;
+	padding: 5px 9px;
+	font-size: 14px;
+}
+
+/* ------------------------------------------------------------------ tombol */
+
+.cp-btn {
+	appearance: none;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	background: rgba(255, 255, 255, 0.04);
+	color: #eae7ee;
+	font: inherit;
+	font-size: 13.5px;
+	padding: 6px 11px;
+	border-radius: 4px;
+	cursor: pointer;
+	white-space: nowrap;
+	transition: background 0.14s ease, border-color 0.14s ease;
+	min-height: 30px;
+}
+
+.cp-btn:hover { background: rgba(255, 255, 255, 0.09); border-color: rgba(255, 255, 255, 0.2); }
+.cp-btn:focus-visible { outline: 2px solid #d4a843; outline-offset: 2px; }
+
+.cp-btn-primary {
+	background: #d4a843;
+	border-color: #d4a843;
+	color: #1a1712;
+	font-weight: 650;
+}
+
+.cp-btn-primary:hover { background: #c99a35; border-color: #c99a35; }
+
+.cp-btn-icon {
+	width: 30px;
+	height: 30px;
+	min-height: 30px;
+	padding: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+}
+
+.cp-btn-icon svg { display: block; }
+
+.cp-btn-danger {
+	background: #c9302c;
+	border-color: #c9302c;
+	color: #fff;
+	font-weight: 650;
+}
+
+.cp-btn-danger:hover { background: #b02a26; border-color: #b02a26; }
+
+/* -------------------------------------------------------------------- body */
+
+.cp-body {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: 10px 12px 12px;
+}
+
+.cp-group { margin-bottom: 8px; }
+
+.cp-group-head {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 9px 0;
+	background: none;
+	border: 0;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+	color: #eae7ee;
+	font: inherit;
+	font-size: 12.5px;
+	font-weight: 650;
+	letter-spacing: 0.5px;
+	text-transform: uppercase;
+	cursor: pointer;
+	text-align: left;
+}
+
+.cp-group-head:hover { color: #fff; }
+
+/* Header grup di tab Options bukan tombol, jadi jangan terlihat bisa diklik. */
+div.cp-group-head { cursor: default; }
+div.cp-group-head:hover { color: #eae7ee; }
+
+.cp-caret {
+	display: inline-block;
+	width: 6px;
+	height: 6px;
+	flex: 0 0 auto;
+	border-right: 1.5px solid currentColor;
+	border-bottom: 1.5px solid currentColor;
+	transform: rotate(-45deg);
+	transition: transform 0.16s ease;
+	color: #a49dae;
+}
+
+.cp-caret.is-open { transform: rotate(45deg); }
+
+.cp-group-name { flex: 1 1 auto; }
+
+.cp-group-count {
+	font-size: 12px;
+	font-weight: 500;
+	letter-spacing: 0;
+	color: #a49dae;
+	background: rgba(255, 255, 255, 0.06);
+	border-radius: 999px;
+	padding: 1px 8px;
+}
+
+.cp-group-body {
+	display: none;
+	padding: 6px 0 4px;
+}
+
+.cp-group-body.is-open { display: block; }
+
+/* ------------------------------------------------------------------- field */
+
+.cp-field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 6px 0;
+}
+
+.cp-field.cp-full { grid-column: 1 / -1; }
+
+.cp-label {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.cp-label-text { font-size: 14.5px; font-weight: 550; color: #f2eff5; }
+
+.cp-desc { font-size: 12.5px; color: #b3acbd; font-weight: 400; line-height: 1.45; }
+.cp-desc-block { margin-top: -2px; }
+
+.cp-desc a { color: #d4a843; text-decoration: underline; text-underline-offset: 2px; }
+.cp-desc a:hover { color: #e6bd5f; }
+
+.cp-input {
+	width: 100%;
+	appearance: none;
+	background: #17151c;
+	border: 1px solid rgba(255, 255, 255, 0.36);
+	color: #f2eff5;
+	font: inherit;
+	font-size: 14px;
+	padding: 5px 7px;
+	border-radius: 4px;
+	min-height: 30px;
+	transition: border-color 0.14s ease;
+}
+
+.cp-input:hover { border-color: rgba(255, 255, 255, 0.48); }
+.cp-input:focus { outline: none; border-color: #d4a843; }
+
+/* ---------------------------------------------- dropdown buatan sendiri
+   <select> bawaan tidak bisa dibuka di OBS karena popup-nya dirender oleh
+   sistem operasi, bukan oleh halaman. Dropdown ini memakai elemen biasa. */
+
+.cp-select { position: relative; }
+
+.cp-select-btn {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+	text-align: left;
+	cursor: pointer;
+	padding-right: 9px;
+}
+
+.cp-select-label {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.cp-select-caret {
+	flex: 0 0 auto;
+	width: 7px;
+	height: 7px;
+	border-right: 1.6px solid #a49dae;
+	border-bottom: 1.6px solid #a49dae;
+	transform: rotate(45deg) translateY(-1px);
+	transition: transform 0.16s ease;
+}
+
+.cp-select.is-open .cp-select-caret { transform: rotate(-135deg) translateY(-1px); }
+.cp-select.is-open .cp-select-btn { border-color: #d4a843; }
+
+/* Daftar pilihan ditempel ke .cp-root (position:fixed) supaya tidak terpotong
+   oleh overflow panel. */
+.cp-select-list {
+	position: fixed;
+	z-index: 2147483200;
+	min-width: 120px;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	background: #26232e;
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	border-radius: 4px;
+	box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+	padding: 4px;
+	display: none;
+}
+
+.cp-select-list.is-open { display: block; }
+
+/* Scrollbar daftar dropdown. Tanpa ini Chromium memakai scrollbar bawaan
+   sistem yang tebal & terang, tidak senada dengan .cp-body. Ditulis dua
+   bentuk: scrollbar-width/color (standar, Chromium 121+) dan
+   ::-webkit-scrollbar (Chromium/OBS CEF lama). */
+.cp-select-list {
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+.cp-select-list::-webkit-scrollbar { width: 8px; }
+
+.cp-select-list::-webkit-scrollbar-track { background: transparent; }
+
+.cp-select-list::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.16);
+	border-radius: 999px;
+	border: 2px solid transparent;
+	background-clip: content-box;
+}
+
+.cp-select-list::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.30);
+	background-clip: content-box;
+}
+
+.cp-select-opt {
+	display: block;
+	width: 100%;
+	text-align: left;
+	appearance: none;
+	border: 0;
+	background: none;
+	color: #eae7ee;
+	font: inherit;
+	font-size: 14px;
+	padding: 6px 8px;
+	border-radius: 3px;
+	cursor: pointer;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.cp-select-opt:hover { background: rgba(255, 255, 255, 0.09); }
+
+.cp-select-opt.is-on {
+	background: #d4a843;
+	color: #1a1712;
+	font-weight: 650;
+}
+
+/* checkbox jadi switch */
+
+.cp-field-check { padding: 6px 0; }
+
+.cp-check-line {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	cursor: pointer;
+}
+
+.cp-check-line input {
+	position: absolute;
+	opacity: 0;
+	width: 0;
+	height: 0;
+}
+
+.cp-switch {
+	position: relative;
+	flex: 0 0 auto;
+	width: 38px;
+	height: 21px;
+	border-radius: 10px;
+	background: rgba(255, 255, 255, 0.14);
+	transition: background 0.16s ease;
+}
+
+.cp-switch::after {
+	content: "";
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: #cfc9d6;
+	transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), background 0.16s ease;
+}
+
+.cp-check-line input:checked + .cp-switch { background: #d4a843; }
+.cp-check-line input:checked + .cp-switch::after { transform: translateX(16px); background: #1a1712; }
+.cp-check-line input:focus-visible + .cp-switch { outline: 2px solid #d4a843; outline-offset: 2px; }
+
+.cp-check-text { font-size: 14.5px; font-weight: 550; color: #f2eff5; }
+
+/* slider */
+
+.cp-slider-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 10px;
+}
+
+.cp-slider-val {
+	font-size: 11.5px;
+	font-variant-numeric: tabular-nums;
+	color: #d4a843;
+	font-weight: 650;
+}
+
+.cp-range {
+	width: 100%;
+	appearance: none;
+	background: transparent;
+	height: 22px;
+	cursor: pointer;
+}
+
+.cp-range::-webkit-slider-runnable-track {
+	height: 4px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.16);
+}
+
+.cp-range::-webkit-slider-thumb {
+	appearance: none;
+	width: 16px;
+	height: 16px;
+	margin-top: -6px;
+	border-radius: 50%;
+	background: #d4a843;
+	border: 0;
+}
+
+.cp-range::-moz-range-track {
+	height: 4px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.16);
+}
+
+.cp-range::-moz-range-thumb {
+	width: 16px;
+	height: 16px;
+	border: 0;
+	border-radius: 50%;
+	background: #d4a843;
+}
+
+/* tags */
+
+.cp-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding: 2px 0;
+}
+
+.cp-tag {
+	appearance: none;
+	font: inherit;
+	font-size: 13.5px;
+	padding: 5px 10px;
+	border-radius: 4px;
+	border: 1px solid rgba(255, 255, 255, 0.36);
+	background: rgba(255, 255, 255, 0.04);
+	color: #cfc9d6;
+	cursor: pointer;
+	transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+
+.cp-tag:hover { background: rgba(255, 255, 255, 0.09); }
+
+.cp-tag.is-on {
+	background: #d4a843;
+	border-color: #d4a843;
+	color: #1a1712;
+	font-weight: 650;
+}
+
+/* ------------------------------------------------------------------ footer */
+
+.cp-foot {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding: 12px;
+	border-top: 1px solid rgba(255, 255, 255, 0.08);
+	background: rgba(255, 255, 255, 0.02);
+	flex: 0 0 auto;
+}
+
+.cp-status {
+	flex: 1 1 100%;
+	font-size: 12.5px;
+	color: #a49dae;
+	min-height: 0;
+}
+
+.cp-status:empty { display: none; }
+
+/* ------------------------------------------------------------ modal export */
+
+/* ---------------------------------------- dialog buatan sendiri
+   window.prompt() / window.confirm() tidak dirender di OBS, jadi dipakai ini. */
+
+.cp-dialog-back {
+	position: absolute;
+	inset: 0;
+	z-index: 2147483100;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 16px;
+	background: rgba(6, 5, 8, 0.66);
+}
+
+.cp-dialog {
+	width: min(460px, 100%);
+	max-height: 100%;
+	overflow-y: auto;
+	background: #26232e;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	border-radius: 6px;
+	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.65);
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.cp-dialog-title { font-size: 14.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.cp-dialog-msg { font-size: 13.5px; color: #cfc9d6; line-height: 1.55; }
+
+.cp-dialog-row {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.cp-export {
+	width: 100%;
+	height: 220px;
+	resize: vertical;
+	background: #17151c;
+	color: #cfc9d6;
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 4px;
+	padding: 8px;
+	font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+	font-size: 12.5px;
+	line-height: 1.5;
+}
+
+/* ------------------------------------------------------------- tab menu */
+
+.cp-tabs {
+	display: flex;
+	gap: 2px;
+	padding: 0 12px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	background: rgba(255, 255, 255, 0.015);
+	flex: 0 0 auto;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+
+.cp-tabs::-webkit-scrollbar { display: none; }
+
+.cp-tab {
+	appearance: none;
+	background: none;
+	border: 0;
+	border-bottom: 2px solid transparent;
+	color: #a49dae;
+	font: inherit;
+	font-size: 13.5px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	padding: 11px 4px;
+	cursor: pointer;
+	white-space: nowrap;
+	transition: color 0.14s ease, border-color 0.14s ease;
+	min-height: 0;
+}
+
+.cp-tab:hover { color: #eae7ee; }
+
+.cp-tab.is-active {
+	color: #f2eff5;
+	border-bottom-color: #d4a843;
+}
+
+.cp-tab:focus-visible { outline: 2px solid #d4a843; outline-offset: -2px; }
+
+/* ------------------------------------------------------- kartu jenis alert */
+
+.cp-alert-card {
+	background: rgba(255, 255, 255, 0.025);
+	border: 1px solid rgba(255, 255, 255, 0.09);
+	border-radius: 4px;
+	margin-bottom: 8px;
+	overflow: hidden;
+}
+
+.cp-alert-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 9px;
+	padding: 9px 10px;
+	background: rgba(255, 255, 255, 0.02);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.cp-alert-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; text-align: left; }
+.cp-alert-title { font-size: 14.5px; font-weight: 600; letter-spacing: 0; }
+
+.cp-alert-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex: 0 0 auto;
+}
+
+.cp-alert-switch { display: flex; align-items: center; }
+
+/* Kartu alert bawaannya TERTUTUP; hanya judulnya yang tampak. */
+.cp-alert-body { display: none; padding: 8px 10px 10px; }
+.cp-alert-body.is-open { display: block; }
+
+.cp-alert-card .cp-alert-head { border-bottom-color: transparent; }
+.cp-alert-card.is-open .cp-alert-head { border-bottom-color: rgba(255, 255, 255, 0.07); }
+
+.cp-alert-toggle {
+	flex: 1 1 auto;
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	min-width: 0;
+	padding: 0;
+	background: none;
+	border: 0;
+	color: inherit;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.cp-alert-toggle:hover .cp-alert-title { color: #fff; }
+.cp-alert-toggle .cp-caret { color: #a49dae; }
+.cp-alert-toggle .cp-alert-name { text-align: left; }
+
+/* ------------------------------------------------------------- tab options */
+
+.cp-options .cp-group { margin-bottom: 10px; }
+
+.cp-opt-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	padding: 4px 0;
+}
+
+.cp-opt-info {
+	font-size: 12.5px;
+	color: #a49dae;
+	padding: 6px 0 2px;
+	font-variant-numeric: tabular-nums;
+}
+
+.cp-btn.is-on {
+	background: #d4a843;
+	border-color: #d4a843;
+	color: #1a1712;
+	font-weight: 650;
+}
+
+.cp-btn-sm { padding: 6px 10px; min-height: 28px; font-size: 13px; }
+
+/* Tombol yang disembunyikan lewat properti hidden harus benar-benar hilang. */
+.cp-btn[hidden] { display: none; }
+
+/* ------------------------------------------------------- simpan berdenyut */
+
+.cp-btn-primary.is-dirty {
+	animation: cp-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes cp-pulse {
+	0%, 100% { box-shadow: 0 0 0 0 rgba(212, 168, 67, 0.55); }
+	50%      { box-shadow: 0 0 0 6px rgba(212, 168, 67, 0); }
+}
+
+.cp-root.is-collapsed .cp-tabs,
+.cp-root.is-collapsed .cp-body,
+.cp-root.is-collapsed .cp-foot { display: none; }
+
+.cp-root.is-collapsed .cp-panel {
+	width: auto !important;
+	max-width: none;
+	min-width: 0 !important;
+	/* saat mengecil, panel jadi setinggi bar judul saja */
+	height: auto !important;
+	min-height: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.cp-btn-primary.is-dirty { animation: none; }
+}
+
+/* -------------------------------------------------- tombol pembuka (OBS) */
+
+.cp-launcher {
+	position: fixed;
+	top: 10px;
+	left: 10px;
+	z-index: 2147482999;
+	width: 30px;
+	height: 30px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	border-radius: 4px;
+	border: 1px solid rgba(255, 255, 255, 0.28);
+	background: rgba(20, 18, 24, 0.82);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+	color: #eae7ee;
+	cursor: pointer;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.18s ease;
+}
+
+/* Hanya terlihat saat pointer aktif - yaitu saat OBS sedang di-Interact.
+   Saat overlay terekam tanpa interaksi, tidak ada pointermove, jadi tombol
+   ini tetap opacity:0 dan tidak pernah masuk ke stream. */
+.cp-launcher.is-available {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+.cp-launcher:hover {
+	background: rgba(38, 34, 44, 0.94);
+	border-color: #d4a843;
+	color: #d4a843;
+}
+
+.cp-launcher:focus-visible { outline: 2px solid #d4a843; outline-offset: 2px; }
+
+/* -------------------------------------------------------------- scrollbar */
+
+.cp-body::-webkit-scrollbar { width: 10px; }
+.cp-body::-webkit-scrollbar-track { background: transparent; }
+.cp-body::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.14);
+	border-radius: 999px;
+	border: 3px solid transparent;
+	background-clip: content-box;
+}
+.cp-body::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.24); background-clip: content-box; }
+
+/* ------------------------------------------------- tooltip buatan sendiri ---
+   Tooltip bawaan browser (atribut title) tidak dipakai: di OBS CEF tooltip itu
+   berkedip dan terlalu sensitif. Sebagai gantinya satu kotak tooltip global
+   (.cp-tipbox) diposisikan oleh JS. Karena kotak ini milik <body>, ia tidak
+   pernah terpotong overflow panel, dan hanya muncul setelah pointer berhenti
+   sejenak sehingga tidak berkedip saat pointer bergerak. */
+
+.cp-tipbox {
+	position: fixed;
+	z-index: 2147483300;
+	max-width: 260px;
+	padding: 6px 10px;
+	border-radius: 4px;
+	background: #100e14;
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	color: #f2eff5;
+	font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+	font-size: 12.5px;
+	font-weight: 500;
+	line-height: 1.35;
+	text-align: center;
+	white-space: normal;
+	pointer-events: none;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.12s ease, visibility 0.12s ease;
+}
+
+.cp-tipbox.is-on { opacity: 1; visibility: visible; }

@@ -10,11 +10,6 @@
       "icon": "../../resources/icons/platforms/obs-logo.svg",
       "badge": "obs"
     },
-    "SMTC Connection": {
-      "open": false,
-      "icon": "ri-music-2-fill",
-      "badge": "smtc"
-    },
     "TikTok Connection": {
       "open": true,
       "icon": "ri-tiktok-fill",
@@ -51,6 +46,11 @@
         "label": "Reset",
         "callFunction": "ResetFirstChatter"
       }
+    },
+    "Now Playing": {
+      "open": false,
+      "icon": "ri-music-2-fill",
+      "badge": "smtc"
     }
   },
   "settings": [
@@ -95,10 +95,11 @@
     },
     {
       "id": "enableNowPlaying",
-      "label": "Enable Now Playing",
+      "label": "Show Now Playing",
       "type": "checkbox",
       "defaultValue": true,
-      "group": "SMTC Connection"
+      "group": "Now Playing",
+      "description": "Display the Now Playing panel when a track is detected."
     },
     {
       "id": "smtcBridgePort",
@@ -107,27 +108,28 @@
       "defaultValue": 5000,
       "min": 1024,
       "max": 65535,
-      "group": "SMTC Connection"
+      "group": "Now Playing",
+      "description": "Port used by the SMTC bridge that reads the current track."
     },
     {
       "id": "includedApplications",
       "label": "Included Apps",
-      "description": "Prioritas aplikasi (pisahkan koma). Kosongkan untuk deteksi otomatis.<br><a href=\"http://localhost:5000/sessions\" target=\"_blank\">Lihat sumber aktif</a>",
+      "description": "Priority apps (comma separated). Leave empty for automatic detection.<br><a href=\"http://localhost:5000/sessions\" target=\"_blank\">View active sources</a>",
       "type": "text",
       "defaultValue": "",
-      "group": "SMTC Connection"
+      "group": "Now Playing"
     },
     {
       "id": "excludedApplications",
       "label": "Excluded Apps",
-      "description": "Abaikan aplikasi ini (pisahkan koma).<br><a href=\"http://localhost:5000/sessions\" target=\"_blank\">Lihat sumber aktif</a>",
+      "description": "Ignore these apps (comma separated).<br><a href=\"http://localhost:5000/sessions\" target=\"_blank\">View active sources</a>",
       "type": "text",
       "defaultValue": "",
-      "group": "SMTC Connection"
+      "group": "Now Playing"
     },
     {
       "id": "musicStyle",
-      "label": "Music Alert Style",
+      "label": "Now Playing Style",
       "type": "select",
       "options": [
         {
@@ -144,7 +146,8 @@
         }
       ],
       "defaultValue": "big",
-      "group": "SMTC Connection"
+      "group": "Now Playing",
+      "description": "Layout used by the Now Playing panel."
     },
     {
       "id": "testAlertType",
@@ -174,6 +177,10 @@
         {
           "value": "firstChatter",
           "label": "Test First Chatter"
+        },
+        {
+          "value": "nowPlaying",
+          "label": "Test Now Playing"
         }
       ],
       "defaultValue": "",
@@ -235,7 +242,7 @@
     {
       "id": "timeFormat",
       "label": "Time Format",
-      "description": "Format jam. Contoh: HH:mm:ss (24 Jam) atau hh:mm:ss A (12 Jam).",
+      "description": "Clock format. Example: HH:mm:ss (24-hour) or hh:mm:ss A (12-hour).",
       "type": "text",
       "defaultValue": "HH:mm:ss A",
       "group": "General"
@@ -243,7 +250,7 @@
     {
       "id": "dateFormat",
       "label": "Date Format",
-      "description": "Format tanggal. Contoh: dddd, DD MMMM YYYY (Senin, 31 Desember 2026).",
+      "description": "Date format. Example: dddd, DD MMMM YYYY (Monday, 31 December 2026).",
       "type": "text",
       "defaultValue": "dddd, DD MMMM YYYY",
       "group": "General"
@@ -251,7 +258,7 @@
     {
       "id": "weatherLocation",
       "label": "Weather Location",
-      "description": "Nama kota untuk dimunculkan pada panel info cuaca.",
+      "description": "City name shown on the weather info panel.",
       "type": "text",
       "defaultValue": "Jakarta",
       "group": "General"
@@ -274,7 +281,7 @@
       "defaultValue": 4,
       "group": "General"
     },
-	{
+    {
       "id": "enableSound",
       "label": "Notification Sound",
       "type": "checkbox",
@@ -284,12 +291,12 @@
     {
       "id": "enableBadgeIcon",
       "label": "Show Badge Icon",
-      "description": "Tampilkan badge TikTok (grade / Top Gifter) di samping username pada kartu alert.",
+      "description": "Show the TikTok badge (grade / Top Gifter) next to the username on alert cards.",
       "type": "checkbox",
       "defaultValue": true,
       "group": "General"
     },
-	{
+    {
       "id": "widgetScale",
       "label": "Widget Scale (Zoom)",
       "type": "slider",
@@ -335,7 +342,7 @@
       "group": "General",
       "full": true,
       "minTags": 3,
-      "placeholder": "Tidak ada opsi"
+      "placeholder": "No options"
     },
     {
       "id": "accentPaletteRole",
@@ -356,7 +363,7 @@
         }
       ],
       "defaultValue": "lightVibrant",
-      "group": "SMTC Connection"
+      "group": "Now Playing"
     },
     {
       "id": "tiktokService",
@@ -403,7 +410,7 @@
     {
       "id": "enableLiveDetect",
       "label": "Enable Live Detection",
-      "description": "Deteksi TikTok Studio secara otomatis untuk mengganti panel menjadi mode Offline saat live mati.",
+      "description": "Automatically detect TikTok Studio and switch the panel to Offline mode when the stream ends.",
       "type": "checkbox",
       "defaultValue": true,
       "group": "Live Detection",
@@ -412,7 +419,7 @@
     {
       "id": "liveStudioPort",
       "label": "LIVE Studio Port",
-      "description": "Biarkan 0 untuk otomatis melacak port internal TikTok LIVE Studio.",
+      "description": "Leave 0 to track the internal TikTok LIVE Studio port automatically.",
       "type": "number",
       "min": 0,
       "max": 65535,
@@ -423,7 +430,7 @@
     {
       "id": "offlineText",
       "label": "Offline Text",
-      "description": "Teks label status saat stream sedang Offline.",
+      "description": "Status label shown while the stream is Offline.",
       "type": "text",
       "defaultValue": "Stream Offline",
       "group": "Live Detection",
@@ -432,7 +439,7 @@
     {
       "id": "offlineViewersText",
       "label": "Offline Viewers Text",
-      "description": "Simbol jumlah penonton saat stream sedang Offline.",
+      "description": "Viewer count symbol shown while the stream is Offline.",
       "type": "text",
       "defaultValue": "-",
       "group": "Live Detection",
@@ -441,7 +448,7 @@
     {
       "id": "enableFollow",
       "label": "Follow Alerts",
-      "description": "Nyalakan animasi pop-up saat ada yang mem-follow.",
+      "description": "Play the pop-up animation when someone follows.",
       "type": "checkbox",
       "defaultValue": true,
       "group": "Follow Alert",
@@ -458,7 +465,7 @@
     {
       "id": "followMessage",
       "label": "Follow Message Text",
-      "description": "Pesan di peringatan follow. Tulis {name} untuk memunculkan nama penonton.",
+      "description": "Message on the follow alert. Write {name} to insert the viewer name.",
       "type": "text",
       "defaultValue": "followed!",
       "group": "Follow Alert",
@@ -467,7 +474,7 @@
     {
       "id": "enableSubscribe",
       "label": "Subscribe Alerts",
-      "description": "Nyalakan animasi pop-up saat ada yang men-subscribe.",
+      "description": "Play the pop-up animation when someone subscribes.",
       "type": "checkbox",
       "defaultValue": true,
       "group": "Subscribe Alert",
@@ -484,7 +491,7 @@
     {
       "id": "subscribeMessage",
       "label": "Subscribe Message Text",
-      "description": "Pesan di peringatan subscribe. Tulis {name} untuk memunculkan nama penonton.",
+      "description": "Message on the subscribe alert. Write {name} to insert the viewer name.",
       "type": "text",
       "defaultValue": "subscribed!",
       "group": "Subscribe Alert",
@@ -493,7 +500,7 @@
     {
       "id": "enableShare",
       "label": "Share Alerts",
-      "description": "Nyalakan animasi pop-up saat live dibagikan (share).",
+      "description": "Play the pop-up animation when the live is shared.",
       "type": "checkbox",
       "defaultValue": true,
       "group": "Share Alert",
@@ -510,7 +517,7 @@
     {
       "id": "shareMessage",
       "label": "Share Message Text",
-      "description": "Pesan di peringatan share. Tulis {name} untuk memunculkan nama penonton.",
+      "description": "Message on the share alert. Write {name} to insert the viewer name.",
       "type": "text",
       "defaultValue": "shared the live!",
       "group": "Share Alert",
@@ -519,7 +526,7 @@
     {
       "id": "enableGift",
       "label": "Gift Alerts",
-      "description": "Nyalakan animasi pop-up perayaan saat ada yang mengirim kado (gift).",
+      "description": "Play the celebration pop-up animation when someone sends a gift.",
       "type": "checkbox",
       "defaultValue": true,
       "group": "Gift Alert",
@@ -536,7 +543,7 @@
     {
       "id": "giftMessage",
       "label": "Gift Message Text",
-      "description": "Format pesan kado tersesuaikan lewat tag: {name}, {gift}, dan {count}.",
+      "description": "Gift message format using tags: {name}, {gift}, and {count}.",
       "type": "text",
       "defaultValue": "sent {gift} x{count}!",
       "group": "Gift Alert",
@@ -545,7 +552,7 @@
     {
       "id": "enableFirstChatter",
       "label": "First Chatter Alerts",
-      "description": "Sapa otomatis penonton yang menulis chat perdananya di sesi ini.",
+      "description": "Automatically greet viewers who send their first chat in this session.",
       "type": "checkbox",
       "defaultValue": true,
       "group": "First Chatter",

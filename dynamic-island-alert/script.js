@@ -3,7 +3,142 @@
 ////////////////
 
 const queryString = window.location.search;
-const urlParams = new URLSearchParams(queryString);
+const _urlSearch = new URLSearchParams(queryString);
+
+/* ============================================================================
+   CONTROLS PANEL - sumber konfigurasi
+   ----------------------------------------------------------------------------
+   Dulu seluruh pengaturan dibaca dari query string, dan satu-satunya cara
+   mengubahnya adalah dashboard dock yang menyusun ulang URL. Sekarang widget
+   menyimpan sendiri profilnya di localStorage dan panel di dalam overlay
+   (?controls=1 atau tombol S) yang mengeditnya.
+
+   Prioritas nilai, dari yang paling kuat:
+     1. preferensi sesi  -> yang diedit langsung di overlay (mis. scale)
+     2. query string     -> URL lama & dashboard, tetap didahulukan
+     3. profil aktif     -> hasil panel
+     4. defaultValue     -> salinan settings.json, diisi panel
+
+   Semua call site di bawah tetap memakai urlParams.get()/has(), jadi tidak ada
+   yang perlu disentuh: objeknya saja yang sekarang memetakan ke sumber itu.
+   ========================================================================== */
+const ConfigStore = (() => {
+	const KEY_SCHEMA   = 'geseki:controls:schema';
+	const KEY_PROFILES = 'geseki:controls:profiles';
+	const KEY_ACTIVE   = 'geseki:controls:active';
+	const KEY_PREFS    = 'geseki:controls:prefs';
+	// Cocokkan DUA format kunci: 'geseki-scene-<nama>' (yang ditulis dashboard,
+	// dipakai juga saat panel menyimpan) DAN 'geseki:scene-<nama>'. Dulu hanya
+	// bentuk bertitik-dua yang dikenali, sehingga settings tersimpan dari
+	// dashboard TIDAK pernah terbaca sebagai profil di Controls Panel.
+	const PROFILE_RE   = /^geseki[:-]scene-(.+)$/;
+
+	const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+	const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+	const lsDel = (k) => { try { localStorage.removeItem(k); } catch (e) {} };
+
+	// Nilai bawaan, disalin dari settings.json oleh panel. Sebelum panel pernah
+	// dibuka salinan ini kosong; widget tetap jalan karena setiap call site
+	// sudah punya fallback sendiri.
+	let defaults = {};
+	try { defaults = JSON.parse(lsGet(KEY_SCHEMA) || '{}') || {}; } catch (e) { defaults = {}; }
+
+	// Profil. Nama profil sengaja sama dengan key lama dashboard
+	// (geseki-scene-<nama>) supaya pengaturan yang sudah tersimpan di sana
+	// langsung terpakai tanpa migrasi.
+	const profiles = new Map();
+	try {
+		const raw = lsGet(KEY_PROFILES);
+		if (raw) JSON.parse(raw).forEach(([k, v]) => profiles.set(k, v));
+	} catch (e) { /* abaikan */ }
+	try {
+		for (let i = 0; i < localStorage.length; i++) {
+			const k = localStorage.key(i);
+			const m = k && k.match(PROFILE_RE);
+			if (!m) continue;
+			const val = JSON.parse(lsGet(k) || '{}');
+			const list = Array.isArray(val.settings) ? val.settings : [];
+			if (list.length) profiles.set(m[1], Object.fromEntries(list));
+		}
+	} catch (e) { /* abaikan */ }
+
+	// Profil aktif. `profile` di URL menang supaya satu browser source bisa
+	// dipin ke profil tertentu (mis. ?profile=Gameplay); tanpa itu pakai
+	// pilihan terakhir dari panel.
+	const pinned = _urlSearch.get('profile');
+	let active = pinned || lsGet(KEY_ACTIVE) || '';
+	if (!profiles.has(active)) active = pinned || '';
+
+	let prefs = {};
+	try { prefs = JSON.parse(lsGet(KEY_PREFS) || '{}') || {}; } catch (e) { prefs = {}; }
+
+	const current = () => (profiles.has(active) ? profiles.get(active) : {});
+	const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+
+	// Urutan prioritas: preferensi panel > profil tersimpan > query string > bawaan.
+	// Profil sengaja DI ATAS query string: browser source yang dibuat lewat dashboard
+	// menaruh seluruh pengaturan di URL, dan kalau URL menang maka setiap perubahan
+	// dari Controls Panel tidak akan pernah terpakai. Setelah panel menyimpan sekali,
+	// profil berisi semua nilai (termasuk yang diambil dari URL saat pertama dibuka),
+	// lalu menjadi sumber kebenaran. ?profile=... tetap mem-pin profil seperti biasa.
+	const read = (key) => {
+		if (own(prefs, key))     return prefs[key];
+		const p = current();
+		if (own(p, key))         return p[key];
+		if (_urlSearch.has(key)) return _urlSearch.get(key);
+		if (own(defaults, key))  return defaults[key];
+		return null;
+	};
+
+	// Nilai bisa datang sebagai boolean / array dari profil, sedangkan kode
+	// lama selalu menerima string dari query string. Disamakan di sini.
+	const resolve = (value) => {
+		if (typeof value === 'boolean') return value ? 'true' : 'false';
+		if (Array.isArray(value))       return value.join(',');
+		if (value === null || value === undefined) return '';
+		return String(value);
+	};
+
+	const params = {
+		get: (key) => resolve(read(key)),
+		// .has() tetap khusus query string: dipakai untuk flag URL murni
+		// (musicAlertDuration, dragPreview) yang tidak pernah jadi pengaturan.
+		has: (key) => _urlSearch.has(key)
+	};
+
+	return {
+		params, read, resolve, profiles, current, defaults,
+		urlSearch: _urlSearch,
+		get active() { return active; },
+		setActive(name) {
+			active = name || '';
+			if (active) lsSet(KEY_ACTIVE, active); else lsDel(KEY_ACTIVE);
+		},
+		saveProfile(name, map) {
+			if (!name) return;
+			profiles.set(name, map);
+			const flat = [...profiles.entries()];
+			lsSet(KEY_PROFILES, JSON.stringify(flat));
+			// Tulis juga ke format lama supaya dashboard tetap bisa membacanya.
+			lsSet('geseki-scene-' + name, JSON.stringify({
+				savedAt: Date.now(),
+				settings: Object.entries(map)
+			}));
+		},
+		deleteProfile(name) {
+			profiles.delete(name);
+			lsSet(KEY_PROFILES, JSON.stringify([...profiles.entries()]));
+			lsDel('geseki-scene-' + name);
+		},
+		saveDefaults(map) { defaults = map; lsSet(KEY_SCHEMA, JSON.stringify(map)); },
+		setPref(key, value) { prefs[key] = value; lsSet(KEY_PREFS, JSON.stringify(prefs)); },
+		clearPrefs() { prefs = {}; lsDel(KEY_PREFS); }
+	};
+})();
+
+// Semua kode di bawah memakai urlParams.get()/has() seperti sebelumnya.
+const urlParams = ConfigStore.params;
+window.GesekiConfig = ConfigStore;
 
 // Weather info
 const weatherLocation = urlParams.get("weatherLocation") || "Jakarta";
@@ -2313,7 +2448,31 @@ function TriggerAlert(iconOrOptions, textArg, avatarArg, titleArg, subtextArg) {
 
 let pendingRevealToken = 0;
 
+// Pause semua alert (dari Controls Panel > Options). Nilainya disimpan di
+// preferensi panel, jadi tetap berlaku setelah overlay dimuat ulang.
+function AlertsPaused() {
+	try {
+		const raw = localStorage.getItem('geseki:controls:prefs');
+		if (!raw) return false;
+		return JSON.parse(raw).alertsPaused === '1';
+	} catch (e) { return false; }
+}
+
+// Dipakai panel untuk menjeda/melanjutkan tanpa reload. Saat dilanjutkan,
+// antrean langsung diproses lagi supaya alert yang tertahan tidak menunggu.
+window.SetAlertsPaused = function (on) {
+	try {
+		const raw = localStorage.getItem('geseki:controls:prefs');
+		const prefs = raw ? JSON.parse(raw) : {};
+		prefs.alertsPaused = on ? '1' : '0';
+		localStorage.setItem('geseki:controls:prefs', JSON.stringify(prefs));
+	} catch (e) { /* abaikan */ }
+	if (!on && typeof ProcessAlertQueue === 'function') ProcessAlertQueue();
+};
+
 function ProcessAlertQueue() {
+	// Jeda: alert baru ditahan, tetapi yang sedang tayang dibiarkan selesai.
+	if (AlertsPaused()) return;
 	if (alertLocked || alertQueue.length === 0)
 		return;
 
@@ -2755,6 +2914,9 @@ window.testWidgetSelect = function(testType) {
 		window.testGift();
 	} else if (testType === "firstChatter" || testType === "first_chatter") {
 		window.testFirstChatter();
+	} else if (testType === "nowPlaying" || testType === "now_playing") {
+		// Simulasi Now Playing memakai DATA UJI (jalur terpisah dari alert musik asli).
+		if (typeof window.testNowPlaying === "function") window.testNowPlaying();
 	} else if (testType === "all") {
 		window.testFollow();
 		window.testSubscribe();
@@ -2768,6 +2930,190 @@ window.testWidget = function() {
 	const testType = urlParams.get("testAlertType") || "all";
 	window.testWidgetSelect(testType);
 };
+// ══ Simulasi Now Playing (tombol "Simulate" di kartu Now Playing) ══
+// JALUR TERPISAH dari alert musik asli: TIDAK memakai TriggerAlert/ProcessAlertQueue
+// dan TIDAK menyentuh `nowPlayingData` sama sekali, sehingga simulasi tidak pernah
+// mencampuri atau tertimpa data lagu asli. Fungsi ini hanya MENGGAMBAR kartu musik
+// memakai DATA UJI PERSIS di bawah (payload SMTC Bridge apa adanya), lalu memulihkan
+// tampilan ambient saat selesai.
+var NOW_PLAYING_TEST_PAYLOAD = {
+	app_version: '1.0.0',
+	color: '#fcd46c',
+	current_session_id: 'com.github.th-ch.youtube-music',
+	os: 'Windows 11',
+	palette: ['#ecb320', '#847c74', '#952a10', '#473c36', '#fcd46c', '#c6ae9c'],
+	sessions: [{
+		media_properties: {
+			AlbumArtist: '', AlbumTitle: '', AlbumTrackCount: 0,
+			Artist: 'BIGBANG', Genres: [], Subtitle: '',
+			Thumbnail: 'http://127.0.0.1:5000/artwork/comgithubth-chyoutube-music?v=1790583045145',
+			Title: 'BiiiG', TrackNumber: 0
+		},
+		playback_info: { AutoRepeatMode: 0, IsShuffleActive: null, PlaybackRate: 1, PlaybackStatus: 4, PlaybackType: 1 },
+		source_app_id: 'com.github.th-ch.youtube-music',
+		timeline_properties: {
+			EndTime: 164000, LastUpdatedTime: '2026-09-28 08:10:43.569408+00:00',
+			MaxSeekTime: 164000, MinSeekTime: 0, Position: 11, StartTime: 0
+		}
+	}]
+};
+
+// Artwork uji: gambar BiiiG ASLI, diunduh dari bridge saat lagu itu diputar.
+// Disimpan sebagai data URL karena /artwork/<app> hanya menyajikan art lagu yang
+// SEDANG diputar (satu file per app, selalu ditimpa) - jadi URL di payload bisa
+// menampilkan art lagu lain. Data URL membuat simulasi selalu tampil benar.
+var NOW_PLAYING_TEST_ART = 'data:image/jpeg;base64,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';
+
+// State simulasi. Terpisah total dari alertQueue/alertLocked musik asli.
+var simNowPlaying = { active: false, raf: 0, timer: 0 };
+
+// Wave icon (3 bar beranimasi) memakai warna aksen. Dibuat lokal supaya simulasi
+// tidak membaca nowPlayingData (punya alert asli).
+function SimWaveIcon(hex) {
+	var hexStr = encodeURIComponent(hex || '#8A2BE2');
+	return `data:image/svg+xml;utf8,%3Csvg%20fill%3D%22${hexStr}%22%20viewBox%3D%220%200%2024%2024%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20x%3D%222%22%20y%3D%229%22%20width%3D%225%22%20height%3D%226%22%20rx%3D%222%22%3E%3Canimate%20attributeName%3D%22height%22%20values%3D%226%3B16%3B6%22%20begin%3D%220s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3Canimate%20attributeName%3D%22y%22%20values%3D%229%3B4%3B9%22%20begin%3D%220s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3C%2Frect%3E%3Crect%20x%3D%229%22%20y%3D%223%22%20width%3D%225%22%20height%3D%2218%22%20rx%3D%222%22%3E%3Canimate%20attributeName%3D%22height%22%20values%3D%2218%3B8%3B18%22%20begin%3D%220.2s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3Canimate%20attributeName%3D%22y%22%20values%3D%223%3B8%3B3%22%20begin%3D%220.2s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3C%2Frect%3E%3Crect%20x%3D%2216%22%20y%3D%227%22%20width%3D%225%22%20height%3D%2210%22%20rx%3D%222%22%3E%3Canimate%20attributeName%3D%22height%22%20values%3D%2210%3B18%3B10%22%20begin%3D%220.4s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3Canimate%20attributeName%3D%22y%22%20values%3D%227%3B3%3B7%22%20begin%3D%220.4s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3C%2Frect%3E%3C%2Fsvg%3E`;
+}
+
+// Scrubber simulasi: berjalan dari Position data uji, TANPA drift LastUpdatedTime
+// (payload statis, timestamp-nya bisa jauh di masa lalu). Hanya menulis DOM.
+function StartSimScrubber(posMs, endMs) {
+	var elCurr = document.getElementById('scrubberCurrent');
+	var elTot = document.getElementById('scrubberTotal');
+	var elFill = document.querySelector('.scrub-fill');
+	var elThumb = document.querySelector('.scrub-thumb');
+	if (elTot) elTot.textContent = formatTimeMs(endMs);
+	var basePos = Math.max(0, posMs);
+	var startedAt = performance.now();
+	function tick() {
+		if (!simNowPlaying.active) return;
+		var cur = basePos + (performance.now() - startedAt);
+		var pos = endMs > 0 ? Math.min(cur, endMs) : cur;
+		if (elCurr) elCurr.textContent = formatTimeMs(pos);
+		if (elFill && endMs > 0) {
+			var pct = (pos / endMs) * 100;
+			var visualPct = isMusicMedium ? pct : (25 + (pct * 0.75));
+			var rounded = Math.round(visualPct * 100) / 100;
+			elFill.style.width = rounded + '%';
+			if (elThumb) elThumb.style.left = rounded + '%';
+		}
+		simNowPlaying.raf = requestAnimationFrame(tick);
+	}
+	tick();
+}
+
+// Akhiri simulasi: bersihkan kelas/kartu lalu pulihkan tampilan ambient.
+function StopSimNowPlaying() {
+	if (!simNowPlaying.active) return;
+	simNowPlaying.active = false;
+	if (simNowPlaying.raf) { cancelAnimationFrame(simNowPlaying.raf); simNowPlaying.raf = 0; }
+	if (simNowPlaying.timer) { clearTimeout(simNowPlaying.timer); simNowPlaying.timer = 0; }
+
+	dynamicIsland.classList.remove('alert-active', 'alert-pop', MUSIC_CARD_CLASS);
+	var extra = document.getElementById('musicBigExtra');
+	if (extra) extra.classList.add('hidden');
+	if (islandSubtext) { islandSubtext.classList.add('hidden'); islandSubtext.textContent = ''; }
+	if (islandIcon) islandIcon.classList.remove('rounded-icon');
+	if (islandEventIcon) { islandEventIcon.classList.add('hidden'); islandEventIcon.src = ''; islandEventIcon.__gesekiRightSrc = ''; }
+
+	// Lepas kunci tampilan; alert asli yang sempat mengantre dibiarkan tayang.
+	isAlertActive = false;
+	alertLocked = false;
+	window.currentActiveAlertData = null;
+	UpdateInfoText(true, true);
+	RefreshMusicWaveIcon(true);
+	StartCycleTimer();
+	ProcessAlertQueue();
+}
+
+// Palet warna data uji (dari user). Aksen TIDAK statik: diambil lewat
+// ResolveAccentColor() memakai opsi `accentPaletteRole` di settings, supaya
+// simulasi mengikuti pilihan user (LightVibrant / Vibrant / DarkVibrant).
+var NOW_PLAYING_TEST_PALETTE = {
+	Vibrant: '#f7bc23',
+	LightVibrant: '#edac81',
+	DarkVibrant: '#c4340c',
+	Muted: '#938e89',
+	LightMuted: '#dacbaa',
+	DarkMuted: '#4d4539'
+};
+
+// Tombol Simulate. Mengembalikan false bila ada alert asli yang sedang tayang
+// (tidak menimpa) - pemanggil bisa menampilkan status.
+window.testNowPlaying = function () {
+	// Hanya saat pill bebas: jangan menabrak alert asli yang sedang/akan tayang.
+	if (isAlertActive || alertLocked || alertQueue.length > 0) return false;
+
+	var data = NOW_PLAYING_TEST_PAYLOAD;
+	var s = (data.sessions && data.sessions[0]) || null;
+	if (!s) return false;
+	var mp = s.media_properties || {};
+	var tp = s.timeline_properties || {};
+
+	var art = NOW_PLAYING_TEST_ART;
+	var title = mp.Title || '';
+	var artist = mp.Artist || '';
+	var posMs = Number(tp.Position) || 0;
+	var endMs = Number(tp.EndTime) || 0;
+	if (endMs > 864000000) { posMs = Math.floor(posMs / 10000); endMs = Math.floor(endMs / 10000); }
+
+	// Aksen mengikuti opsi `accentPaletteRole` (settings) memakai palet data uji.
+	var accent = ResolveAccentColor(NOW_PLAYING_TEST_PALETTE);
+
+	// Ambil alih pill untuk tes tampilan.
+	simNowPlaying.active = true;
+	isAlertActive = true;
+	alertLocked = true;
+	window.currentActiveAlertData = { type: 'music' };
+
+	// Kiri: album art data uji (bulat, sama seperti kartu musik asli).
+	if (islandAvatar) { islandAvatar.classList.add('hidden'); islandAvatar.src = ''; }
+	if (islandIcon) {
+		islandIcon.src = art;
+		islandIcon.classList.remove('hidden');
+		islandIcon.classList.add('rounded-icon');
+	}
+	SyncIconWrapHidden();
+
+	// Kanan: wave icon warna aksen.
+	if (islandEventIcon) {
+		var wave = SimWaveIcon(accent);
+		islandEventIcon.src = wave;
+		islandEventIcon.__gesekiRightSrc = wave;
+		islandEventIcon.classList.remove('hidden');
+	}
+
+	// Pop pill.
+	dynamicIsland.classList.remove('alert-pop');
+	void dynamicIsland.offsetWidth;
+
+	if (enableDynamicStyleBig) {
+		// Gaya Big/Medium: kartu - judul + artis 2 baris + scrubber.
+		dynamicIsland.classList.add('alert-active', MUSIC_CARD_CLASS, 'alert-pop');
+		var extraEl = document.getElementById('musicBigExtra');
+		if (extraEl) extraEl.classList.remove('hidden');
+		islandText.innerHTML = RenderIslandText(title, true);
+		if (islandSubtext) { islandSubtext.textContent = artist; islandSubtext.classList.remove('hidden'); }
+		dynamicIsland.style.setProperty('--accent-color', accent);
+		var scrubFill = document.querySelector('.scrub-fill');
+		if (scrubFill) { scrubFill.style.setProperty('--accent-color', accent); scrubFill.style.backgroundImage = 'none'; }
+		var scrubThumb = document.querySelector('.scrub-thumb');
+		if (scrubThumb) scrubThumb.style.backgroundColor = accent;
+		StartSimScrubber(posMs, endMs);
+	} else {
+		// Gaya Small: pill SATU baris "judul • artis" - tanpa kartu, tanpa
+		// scrubber, tanpa subtext. Sama seperti alert musik small di jalur asli.
+		dynamicIsland.classList.add('alert-pop');
+		var extraSm = document.getElementById('musicBigExtra');
+		if (extraSm) extraSm.classList.add('hidden');
+		if (islandSubtext) { islandSubtext.textContent = ''; islandSubtext.classList.add('hidden'); }
+		var sep = (title && artist) ? ' • ' : '';
+		islandText.innerHTML = RenderIslandText(title + sep + artist, true);
+	}
+	simNowPlaying.timer = setTimeout(StopSimNowPlaying, ComputeMusicAlertDuration({}));
+	return true;
+};
+
+
 window.testAlert = TriggerAlert;
 window.ALERT_ICONS = ALERT_ICONS;
 

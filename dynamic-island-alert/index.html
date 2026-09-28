@@ -13,6 +13,7 @@
 	     bukan di sini. Script widget perlu elemen pill sudah ada di DOM.
 	     ============================================================ -->
 	<link rel="stylesheet" href="./style.css?v=99" />
+	<link rel="stylesheet" href="./controls/panel.css?v=23" />
 </head>
 
 <body>
@@ -97,9 +98,11 @@
 		location.replace('./obs/index.html' + location.search);
 		return;
 	}
-	var v = '167';
+	var v = '181';
 	document.write(
-		'<' + 'script src="./script.js?v=' + v + '"><\/script>'
+		'<' + 'script src="./controls/schema.js?v=3"><\/script>' +
+		'<' + 'script src="./script.js?v=' + v + '"><\/script>' +
+		'<' + 'script src="./controls/panel.js?v=30"><\/script>'
 	);
 	window.__gesekiEngine = 'chrome';
 })();

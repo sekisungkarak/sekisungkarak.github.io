@@ -3,3 +3,9 @@
 # adding a widget stays: copy a shim, change the id, commit.
 node shared/tools/stamp-meta.mjs || exit 1
 git add -u -- '*/docs/index.html'
+
+# Panel kontrol di dalam overlay membaca skema yang disalin dari settings.json.
+# Tanpa langkah ini, menambah/mengubah setting di settings.json tidak akan
+# muncul di panel sampai seseorang ingat menjalankan skripnya manual.
+node shared/tools/build-controls-schema.mjs || exit 1
+git add -u -- '*/controls/schema.js'

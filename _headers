@@ -1,0 +1,14 @@
+# Header HTTP untuk Cloudflare Pages (sekisungkarak.web.id).
+#
+# File ini HANYA dibaca Cloudflare Pages. GitHub Pages mengabaikannya
+# sepenuhnya, jadi file ini tidak mengubah apa pun di situs produksi
+# sekisungkarak.github.io.
+#
+# Sengaja minimal. Cloudflare Pages sudah mengirim Cache-Control yang benar
+# (HTML: max-age=0, must-revalidate sehingga perubahan langsung terlihat;
+# aset statis: di-cache dengan aman). Menambah aturan cache sendiri berisiko
+# menyajikan CSS/JS basi. CSP tidak dipasang di sini karena halaman memuat
+# font Google, Web Awesome, dan cdnjs dari origin lain.
+
+/*
+  X-Content-Type-Options: nosniff
