@@ -44,10 +44,8 @@
 	// Kontrol yang disembunyikan KHUSUS di Controls Panel; dashboard tetap
 	// memilikinya. Nilainya tetap dipertahankan saat Save.
 	//  - testAlertType : hanya memicu simulasi, tidak mengubah widget.
-	//  - OBS Connection: obsAddress/obsPort/obsPassword hanya dipakai dashboard
-	//    (yang berjalan di dalam OBS dan membuka obs-websocket). Widget dan
-	//    Controls Panel tidak pernah membaca ketiganya, jadi tidak ada gunanya
-	//    di panel.
+	//  - obsAddress/obsPort/obsPassword : diatur dari modal "Connect OBS" di
+	//    navbar (tersimpan sebagai preferensi), bukan dari tab Connections.
 	var PANEL_HIDDEN = ['testAlertType', 'obsAddress', 'obsPort', 'obsPassword'];
 	var allSettings = SCHEMA.settings || [];
 	var settings = allSettings.filter(function (s) { return PANEL_HIDDEN.indexOf(s.id) === -1; });
@@ -56,13 +54,13 @@
 	/* =========================================================== susunan menu */
 
 	// Grup yang tidak mengatur tampilan, hanya koneksi.
-	var CONNECTION_GROUPS = ['Streamer.bot Connection', 'OBS Connection', 'TikTok Connection', 'Live Detection'];
+	var CONNECTION_GROUPS = ['Streamer.bot Connection', 'TikTok Connection', 'Live Detection'];
 
 // Now Playing dipindah dari tab Connections ke tab Alerts sebagai satu kartu.
 var NOW_PLAYING_GROUP = 'Now Playing';
 
 	// Grup koneksi yang terbuka sejak awal. Sisanya tertutup.
-	var CONNECTION_DEFAULT_OPEN = 'OBS Connection';
+	var CONNECTION_DEFAULT_OPEN = 'Streamer.bot Connection';
 
 	// Satu kartu "Alerts" = satu jenis alert. Urutan mengikuti alur siaran.
 	var ALERT_TABS = [
@@ -85,8 +83,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 	var TABS = [
 		{ id: 'alerts',      label: 'Alerts' },
 		{ id: 'general',     label: 'General' },
-		{ id: 'connections', label: 'Connections' },
-		{ id: 'options',     label: 'Options' }
+		{ id: 'connections', label: 'Connections' }
 	];
 
 	var activeTab = CFG.read('panelTab') || 'alerts';
@@ -241,6 +238,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			close:    '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
 			plus:     '<path d="M12 5.5v13M5.5 12h13"/>',
 			trash:    '<path d="M4.5 7h15M9.5 7V5.5h5V7M7 7l1 12h8l1-12"/>'
+			,gear:    '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'
 		};
 		s.innerHTML = paths[name] || '';
 		return s;
@@ -524,6 +522,359 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		return { close: CloseD };
 	}
 
+	/* ======================================= obs-websocket (sync profil) */
+
+	// Klien obs-websocket v5 ringkas, khusus untuk panel. Dipakai tombol
+	// "Connect & Sync Profile" di tab Connections.
+	//
+	// Kenapa perlu: halaman TIDAK bisa tahu nama browser source-nya sendiri
+	// (obs-browser tidak menyediakan API itu), dan localStorage dibagi semua
+	// source satu origin. Akibatnya source yang ditambah MANUAL ikut membaca
+	// "profil aktif" terakhir sehingga saling menimpa.
+	//
+	// Cara kerja: cari source OBS yang URL-nya menunjuk widget ini (halaman
+	// tak bisa menyebut namanya, tapi URL-nya bisa dicocokkan), baca scene
+	// tempat source itu berada, buat profil bernama scene itu, lalu tulis
+	// ?profile=<scene> ke URL source lewat SetInputSettings.
+	//
+	// Catatan: source yang dibuat lewat dashboard sudah dipin otomatis oleh
+	// shared/settings/obs_source.js, jadi tombol ini untuk source manual.
+
+	var ObsWS = (function () {
+		var socket = null;
+		var endpoint = null;
+		var seq = 0;
+		var pending = {};
+
+		// Alamat OBS dibaca dari input yang sedang tampil di panel; kalau kontrol
+		// itu tidak dirender (tab lain), jatuh ke nilai tersimpan.
+		function Cfg() {
+			function val(id, fb) {
+				var i = el[id];
+				var v = (i && typeof i.value === 'string') ? i.value : CFG.read(id);
+				if (v === undefined || v === null || v === '') return fb;
+				return v;
+			}
+			return {
+				address: String(val('obsAddress', '127.0.0.1')) || '127.0.0.1',
+				port: Number(val('obsPort', 4455)) || 4455,
+				password: String(val('obsPassword', ''))
+			};
+		}
+
+		function Sha256Base64(text) {
+			var bytes = new TextEncoder().encode(text);
+			return crypto.subtle.digest('SHA-256', bytes).then(function (d) {
+				var v = new Uint8Array(d);
+				var out = '';
+				for (var i = 0; i < v.length; i++) out += String.fromCharCode(v[i]);
+				return btoa(out);
+			});
+		}
+
+		function Connect() {
+			var c = Cfg();
+			var ep = 'ws://' + c.address + ':' + c.port;
+			if (socket && endpoint === ep && socket.readyState === WebSocket.OPEN) {
+				return Promise.resolve(socket);
+			}
+			if (socket) { try { socket.close(); } catch (e) { /* abaikan */ } socket = null; endpoint = null; }
+
+			return new Promise(function (resolve, reject) {
+				var ws;
+				try { ws = new WebSocket(ep); }
+				catch (e) { reject(new Error('WebSocket is not available here')); return; }
+
+				var timer = setTimeout(function () {
+					try { ws.close(); } catch (e) { /* abaikan */ }
+					reject(new Error('Timed out. Check Tools > WebSocket Server Settings and the IP/port/password.'));
+				}, 6000);
+
+				ws.addEventListener('message', function (ev) {
+					var msg;
+					try { msg = JSON.parse(ev.data); } catch (e) { return; }
+
+					if (msg.op === 0) {
+						var auth = msg.d && msg.d.authentication;
+						if (auth) {
+							Sha256Base64(c.password + auth.salt)
+								.then(function (secret) { return Sha256Base64(secret + auth.challenge); })
+								.then(function (resp) {
+									ws.send(JSON.stringify({ op: 1, d: { rpcVersion: 1, authentication: resp, eventSubscriptions: 0 } }));
+								})
+								.catch(function () { /* biarkan timeout yang melaporkan */ });
+						} else {
+							ws.send(JSON.stringify({ op: 1, d: { rpcVersion: 1, eventSubscriptions: 0 } }));
+						}
+						return;
+					}
+
+					if (msg.op === 2) {
+						clearTimeout(timer);
+						socket = ws; endpoint = ep;
+						resolve(ws);
+						return;
+					}
+
+					if (msg.op === 7) {
+						var id = msg.d && msg.d.requestId;
+						var entry = pending[id];
+						if (!entry) return;
+						delete pending[id];
+						if (msg.d.requestStatus && msg.d.requestStatus.result) entry.resolve(msg.d.responseData);
+						else entry.reject(new Error((msg.d.requestStatus && msg.d.requestStatus.comment) || 'OBS refused the request'));
+					}
+				});
+
+				ws.addEventListener('error', function () {
+					clearTimeout(timer);
+					reject(new Error('Could not reach OBS WebSocket at ' + c.address + ':' + c.port));
+				});
+			});
+		}
+
+		function Request(type, data) {
+			return Connect().then(function (ws) {
+				return new Promise(function (resolve, reject) {
+					var id = 'cp-' + (++seq);
+					pending[id] = { resolve: resolve, reject: reject };
+					ws.send(JSON.stringify({ op: 6, d: { requestType: type, requestId: id, requestData: data || {} } }));
+					setTimeout(function () {
+						if (pending[id]) { delete pending[id]; reject(new Error('OBS did not answer: ' + type)); }
+					}, 8000);
+				});
+			});
+		}
+
+		return { connect: Connect, request: Request, cfg: Cfg };
+	})();
+
+	/* ------------------------------------------- status OBS (badge navbar) */
+
+	var obsBadge = null;
+	var OBS_STATE = 'off';
+
+	function RenderObsBadge() {
+		if (!obsBadge) return;
+		obsBadge.classList.toggle('is-on', OBS_STATE === 'on');
+		obsBadge.classList.toggle('is-connecting', OBS_STATE === 'connecting');
+		obsBadge.classList.toggle('is-off', OBS_STATE === 'off');
+		var label = obsBadge.querySelector('.cp-obs-badge-label');
+		if (label) label.textContent =
+			OBS_STATE === 'on' ? 'Connected' :
+			OBS_STATE === 'connecting' ? 'Connecting' : 'OBS Offline';
+	}
+
+	function SetObsState(state) { OBS_STATE = state; RenderObsBadge(); }
+
+	function ConnectObs(opts) {
+		opts = opts || {};
+		SetObsState('connecting');
+		return ObsWS.connect().then(function () {
+			SetObsState('on');
+			if (!opts.silent) SetStatus('OBS connected.');
+			return true;
+		}).catch(function (e) {
+			SetObsState('off');
+			if (!opts.silent) SetStatus('OBS: ' + e.message);
+			throw e;
+		});
+	}
+
+	// Modal "Connect OBS" (Port + Password). Nilai koneksi disimpan sebagai
+	// preferensi karena alamat OBS itu milik mesin, bukan milik satu scene.
+	function ObsConnectDialog() {
+		var back = h('div', 'cp-dialog-back');
+		var box = h('div', 'cp-dialog');
+
+		var hd = h('div', 'cp-dialog-head');
+		var ic = h('span', 'cp-dialog-icon');
+		ic.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>';
+		hd.appendChild(ic);
+		hd.appendChild(h('div', 'cp-dialog-title', 'Connect OBS'));
+		var x = h('button', 'cp-dialog-x', '\u00d7');
+		x.type = 'button';
+		hd.appendChild(x);
+		box.appendChild(hd);
+
+		box.appendChild(h('label', 'cp-dialog-label', 'Port'));
+		var port = h('input', 'cp-input');
+		port.type = 'text';
+		port.value = String(CFG.read('obsPort') || 4455);
+		box.appendChild(port);
+
+		box.appendChild(h('label', 'cp-dialog-label', 'Password'));
+		var pwWrap = h('div', 'cp-pw');
+		var pw = h('input', 'cp-input');
+		pw.type = 'password';
+		pw.value = String(CFG.read('obsPassword') || '');
+		var eye = h('button', 'cp-pw-eye');
+		eye.type = 'button';
+		eye.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+		eye.addEventListener('click', function () { pw.type = pw.type === 'password' ? 'text' : 'password'; });
+		pwWrap.appendChild(pw);
+		pwWrap.appendChild(eye);
+		box.appendChild(pwWrap);
+
+		var msg = h('div', 'cp-dialog-msg');
+		box.appendChild(msg);
+
+		var go = h('button', 'cp-btn cp-btn-primary cp-dialog-connect', 'Connect');
+		go.type = 'button';
+		box.appendChild(go);
+
+		back.appendChild(box);
+		root.appendChild(back);
+
+		function CloseD() { if (back.parentNode) back.parentNode.removeChild(back); }
+		x.addEventListener('click', CloseD);
+		back.addEventListener('click', function (e) { if (e.target === back) CloseD(); });
+
+		go.addEventListener('click', function () {
+			CFG.setPref('obsPort', port.value.trim());
+			CFG.setPref('obsPassword', pw.value);
+			if (el['obsPort']) el['obsPort'].value = port.value.trim();
+			if (el['obsPassword']) el['obsPassword'].value = pw.value;
+			go.disabled = true;
+			go.textContent = 'Connecting...';
+			msg.textContent = '';
+			ConnectObs({ silent: true }).then(function () {
+				CFG.setPref('obsAutoConnect', '1');
+				msg.textContent = 'Connected.';
+				go.textContent = 'Connected';
+				setTimeout(function () { CloseD(); SyncProfileToScene(); }, 500);
+			}).catch(function (e) {
+				go.disabled = false;
+				go.textContent = 'Connect';
+				msg.textContent = e.message;
+			});
+		});
+
+		port.focus();
+		return { close: CloseD };
+	}
+
+	// Konek otomatis saat panel dimuat, hanya setelah form OBS Connection
+	// pernah diisi (obsAutoConnect). Bila URL belum dipin ke profil, sekalian
+	// buat profil dari nama scene dan pin URL-nya.
+	setTimeout(function () {
+		if (CFG.read('obsAutoConnect') !== '1') return;
+		ConnectObs({ silent: true }).then(function () {
+			if (!new URLSearchParams(location.search).get('profile')) SyncProfileToScene();
+		}).catch(function () { /* badge sudah menunjukkan Offline */ });
+	}, 900);
+
+	// Akar URL widget. Halaman OBS memuat ./obs/index.html sementara URL source
+	// biasanya berhenti di folder widget, jadi keduanya disamakan dulu supaya
+	// bisa dicocokkan.
+	function WidgetRoot(u) {
+		try {
+			var p = new URL(u, location.href).pathname;
+			p = p.replace(/index\.html$/i, '').replace(/obs\/$/i, '').replace(/\/+$/, '');
+			return p.toLowerCase();
+		} catch (e) { return ''; }
+	}
+
+	// Cari browser source OBS yang URL-nya menunjuk widget ini, beserta scene
+	// tempat source itu berada. Grup di dalam scene tidak ditelusuri.
+	function FindOurSource() {
+		var mine = WidgetRoot(location.href);
+		var perScene = {};
+		var current = '';
+
+		return ObsWS.request('GetSceneList', {}).then(function (sl) {
+			var scenesList = (sl && sl.scenes) || [];
+			current = (sl && sl.currentProgramSceneName) || '';
+			var chain = Promise.resolve();
+			scenesList.forEach(function (sc) {
+				chain = chain.then(function () {
+					return ObsWS.request('GetSceneItemList', { sceneName: sc.sceneName }).then(function (r) {
+						perScene[sc.sceneName] = ((r && r.sceneItems) || []).map(function (it) { return it.sourceName; });
+					}).catch(function () { perScene[sc.sceneName] = []; });
+				});
+			});
+			return chain;
+		}).then(function () {
+			return ObsWS.request('GetInputList', { inputKind: 'browser_source' });
+		}).then(function (il) {
+			var names = ((il && il.inputs) || []).map(function (i) { return i.inputName; });
+			var matches = [];
+			var chain = Promise.resolve();
+			names.forEach(function (n) {
+				chain = chain.then(function () {
+					return ObsWS.request('GetInputSettings', { inputName: n }).then(function (st) {
+						var url = ((st && st.inputSettings) || {}).url || '';
+						if (WidgetRoot(url) === mine) matches.push({ sourceName: n, url: url });
+					}).catch(function () { /* input hilang / tidak terbaca */ });
+				});
+			});
+			return chain.then(function () {
+				var out = [];
+				matches.forEach(function (m) {
+					Object.keys(perScene).forEach(function (sc) {
+						if (perScene[sc].indexOf(m.sourceName) !== -1) {
+							out.push({ sceneName: sc, sourceName: m.sourceName, url: m.url });
+						}
+					});
+				});
+				return { found: out, current: current };
+			});
+		});
+	}
+
+	function PinProfileUrl(url, name) {
+		try {
+			var u = new URL(url, location.href);
+			u.searchParams.set('profile', name);
+			return u.href;
+		} catch (e) {
+			return url + (url.indexOf('?') === -1 ? '?' : '&') + 'profile=' + encodeURIComponent(name);
+		}
+	}
+
+	function ObsSyncStatus(msg) {
+		var box = document.getElementById('cp-obs-sync-status');
+		if (box) box.textContent = msg || '';
+		SetStatus(msg || '');
+	}
+
+	function SyncProfileToScene() {
+		ObsSyncStatus('Connecting to OBS...');
+		ConnectObs({ silent: true }).then(function () {
+			ObsSyncStatus('Connected. Looking for this widget in OBS...');
+			return FindOurSource();
+		}).then(function (res) {
+			if (!res.found.length) {
+				throw new Error('No browser source in OBS points at this widget. Add the source first, then connect.');
+			}
+			var pick = null;
+			for (var i = 0; i < res.found.length; i++) {
+				if (res.found[i].sceneName === res.current) { pick = res.found[i]; break; }
+			}
+			if (!pick) pick = res.found[0];
+
+			var name = pick.sceneName;
+			CFG.saveProfile(name, ReadForm());
+			CFG.setActive(name);
+
+			var newUrl = PinProfileUrl(pick.url, name);
+			return ObsWS.request('SetInputSettings', {
+				inputName: pick.sourceName,
+				inputSettings: { url: newUrl },
+				overlay: true
+			}).then(function () {
+				CFG.setPref('panelOpen', '1');
+				var note = res.found.length > 1
+					? ' (' + res.found.length + ' sources matched; used the one in the current scene)'
+					: '';
+				ObsSyncStatus('Profile "' + name + '" saved and "' + pick.sourceName + '" pinned to it' + note + '. Reloading...');
+				setTimeout(function () { location.reload(); }, 1200);
+			});
+		}).catch(function (e) {
+			ObsSyncStatus('OBS sync failed: ' + e.message);
+		});
+	}
+
 	/* ============================================================== kontrol */
 
 	function BuildControl(s) {
@@ -774,86 +1125,35 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 	head.appendChild(titleBox);
 
 	var headActions = h('div', 'cp-head-actions');
+	var btnGear = null;
 
-	// Dropdown profil (juga buatan sendiri, bukan <select>).
-	function ProfileOptions() {
-		var names = [];
-		try {
-			CFG.profiles.forEach(function (v, k) { if (names.indexOf(k) === -1) names.push(k); });
-		} catch (e) { /* abaikan */ }
-		if (names.indexOf('Default') === -1) names.unshift('Default');
-		return names.map(function (n) { return { value: n, label: n }; });
-	}
+	obsBadge = h('button', 'cp-obs-badge is-off');
+	obsBadge.type = 'button';
+	Tip(obsBadge, 'OBS connection status. Click to connect.');
+	obsBadge.appendChild(h('span', 'cp-obs-badge-dot'));
+	obsBadge.appendChild(h('span', 'cp-obs-badge-label', 'OBS Offline'));
+	obsBadge.addEventListener('click', ObsConnectDialog);
+	headActions.appendChild(obsBadge);
+	RenderObsBadge();
 
-	var activeProfileName = CFG.active || 'Default';
-	var profSelect = MakeSelect(ProfileOptions(), activeProfileName, function (name) {
-		if (name === (CFG.active || 'Default')) return;
-		if (dirty) {
-			ShowDialog({
-				title: 'Switch profile',
-				message: 'You have unsaved changes. Save them to profile "' + (CFG.active || 'Default') + '"?',
-				confirmLabel: 'Save & switch',
-				cancelLabel: 'Switch without saving',
-				onConfirm: function () {
-					CFG.saveProfile(CFG.active || 'Default', ReadForm());
-					CFG.setActive(name);
-					ReloadWithPanel();
-				},
-				onCancel: function () {
-					CFG.setActive(name);
-					ReloadWithPanel();
-				}
-			});
-		} else {
-			CFG.setActive(name);
-			ReloadWithPanel();
-		}
+	// Profil aktif, ditampilkan sebagai pill (bukan dropdown). Profil dibuat
+	// otomatis dari nama scene lewat koneksi OBS, jadi tidak ada tombol
+	// tambah/hapus di sini.
+	var profilePill = h('span', 'cp-obs-badge cp-profile-pill is-static');
+	profilePill.appendChild(h('span', 'cp-obs-badge-dot'));
+	profilePill.appendChild(h('span', 'cp-obs-badge-label', CFG.active || 'Default'));
+	Tip(profilePill, 'Active profile');
+	headActions.appendChild(profilePill);
+
+	// Options dipindah ke gear icon di navbar (seperti Better Alerts), bukan tab.
+	btnGear = h('button', 'cp-btn cp-btn-icon');
+	btnGear.type = 'button';
+	Tip(btnGear, 'Options');
+	btnGear.appendChild(Icon('gear'));
+	btnGear.addEventListener('click', function () {
+		SwitchTab(activeTab === 'options' ? 'alerts' : 'options');
 	});
-	profSelect.classList.add('cp-profile');
-	headActions.appendChild(profSelect);
-
-	var btnNew = h('button', 'cp-btn cp-btn-icon');
-	btnNew.type = 'button';
-	Tip(btnNew, 'New profile');
-	btnNew.appendChild(Icon('plus'));
-	btnNew.addEventListener('click', function () {
-		ShowDialog({
-			title: 'New profile',
-			message: 'Name this profile. Its contents are copied from the form currently shown.',
-			input: true,
-			value: 'New Profile',
-			confirmLabel: 'Create',
-			onConfirm: function (name) {
-				name = String(name || '').trim();
-				if (!name) { SetStatus('Profile name cannot be empty.'); return; }
-				CFG.saveProfile(name, ReadForm());
-				CFG.setActive(name);
-				ReloadWithPanel();
-			}
-		});
-	});
-	headActions.appendChild(btnNew);
-
-	var btnDel = h('button', 'cp-btn cp-btn-icon');
-	btnDel.type = 'button';
-	Tip(btnDel, 'Delete active profile');
-	btnDel.appendChild(Icon('trash'));
-	btnDel.addEventListener('click', function () {
-		var name = CFG.active;
-		if (!name) { SetStatus('There is no active profile to delete.'); return; }
-		ShowDialog({
-			title: 'Delete profile',
-			message: 'Delete profile "' + name + '"? This cannot be undone.',
-			confirmLabel: 'Delete',
-			danger: true,
-			onConfirm: function () {
-				CFG.deleteProfile(name);
-				CFG.setActive('');
-				ReloadWithPanel();
-			}
-		});
-	});
-	headActions.appendChild(btnDel);
+	headActions.appendChild(btnGear);
 
 	// Collapse: panel mengecil jadi bar judul supaya canvas terlihat penuh.
 	var btnCollapse = h('button', 'cp-btn cp-btn-icon');
@@ -980,16 +1280,6 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 	});
 	foot.appendChild(btnReset);
 
-	var btnExport = h('button', 'cp-btn cp-btn-ghost', 'Export');
-	btnExport.type = 'button';
-	btnExport.addEventListener('click', ExportJSON);
-	foot.appendChild(btnExport);
-
-	var btnImport = h('button', 'cp-btn cp-btn-ghost', 'Import');
-	btnImport.type = 'button';
-	btnImport.addEventListener('click', ImportJSON);
-	foot.appendChild(btnImport);
-
 	var status = h('div', 'cp-status');
 	foot.appendChild(status);
 	panel.appendChild(foot);
@@ -1075,6 +1365,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		Array.prototype.forEach.call(tabBar.children, function (b) {
 			b.classList.toggle('is-active', b.dataset.tab === id);
 		});
+		if (btnGear) btnGear.classList.toggle('is-on', id === 'options');
 		CloseActiveSelect();
 		RenderBody();
 	}
@@ -1558,6 +1849,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 	CFG.saveDefaults(defaults);
 
 	RenderTabs();
+	if (btnGear) btnGear.classList.toggle('is-on', activeTab === 'options');
 	RenderBody();
 
 	if (CFG.read('controls') === '1' || CFG.read('panelOpen') === '1') Open();

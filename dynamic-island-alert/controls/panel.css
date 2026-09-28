@@ -244,21 +244,22 @@ div.cp-group-head:hover { color: #eae7ee; }
 .cp-desc a { color: #d4a843; text-decoration: underline; text-underline-offset: 2px; }
 .cp-desc a:hover { color: #e6bd5f; }
 
+/* Selaras Better Alerts: isian gelap #242424, garis tipis 0.14, radius 4. */
 .cp-input {
 	width: 100%;
 	appearance: none;
-	background: #17151c;
-	border: 1px solid rgba(255, 255, 255, 0.36);
-	color: #f2eff5;
+	background: #242424;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	color: #f5f5f5;
 	font: inherit;
 	font-size: 14px;
 	padding: 5px 7px;
 	border-radius: 4px;
-	min-height: 30px;
+	outline: none;
 	transition: border-color 0.14s ease;
 }
 
-.cp-input:hover { border-color: rgba(255, 255, 255, 0.48); }
+.cp-input:hover { border-color: rgba(255, 255, 255, 0.22); }
 .cp-input:focus { outline: none; border-color: #d4a843; }
 
 /* ---------------------------------------------- dropdown buatan sendiri
@@ -304,8 +305,8 @@ div.cp-group-head:hover { color: #eae7ee; }
 	min-width: 120px;
 	overflow-y: auto;
 	overscroll-behavior: contain;
-	background: #26232e;
-	border: 1px solid rgba(255, 255, 255, 0.16);
+	background: #242424;
+	border: 1px solid rgba(255, 255, 255, 0.14);
 	border-radius: 4px;
 	box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
 	padding: 4px;
@@ -357,11 +358,11 @@ div.cp-group-head:hover { color: #eae7ee; }
 	text-overflow: ellipsis;
 }
 
-.cp-select-opt:hover { background: rgba(255, 255, 255, 0.09); }
+.cp-select-opt:hover { background: #2e2e2e; }
 
 .cp-select-opt.is-on {
-	background: #d4a843;
-	color: #1a1712;
+	background: rgba(212, 168, 67, 0.18);
+	color: #d4a843;
 	font-weight: 650;
 }
 
@@ -427,42 +428,12 @@ div.cp-group-head:hover { color: #eae7ee; }
 	font-weight: 650;
 }
 
+/* Selaras Better Alerts: range bawaan + accent-color (tanpa thumb buatan). */
 .cp-range {
 	width: 100%;
-	appearance: none;
-	background: transparent;
 	height: 22px;
 	cursor: pointer;
-}
-
-.cp-range::-webkit-slider-runnable-track {
-	height: 4px;
-	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.16);
-}
-
-.cp-range::-webkit-slider-thumb {
-	appearance: none;
-	width: 16px;
-	height: 16px;
-	margin-top: -6px;
-	border-radius: 50%;
-	background: #d4a843;
-	border: 0;
-}
-
-.cp-range::-moz-range-track {
-	height: 4px;
-	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.16);
-}
-
-.cp-range::-moz-range-thumb {
-	width: 16px;
-	height: 16px;
-	border: 0;
-	border-radius: 50%;
-	background: #d4a843;
+	accent-color: #d4a843;
 }
 
 /* tags */
@@ -474,25 +445,27 @@ div.cp-group-head:hover { color: #eae7ee; }
 	padding: 2px 0;
 }
 
+/* Selaras .seg Better Alerts: kartu #242424, garis tipis 0.14. */
 .cp-tag {
 	appearance: none;
 	font: inherit;
-	font-size: 13.5px;
+	font-size: 13px;
+	font-weight: 600;
 	padding: 5px 10px;
 	border-radius: 4px;
-	border: 1px solid rgba(255, 255, 255, 0.36);
-	background: rgba(255, 255, 255, 0.04);
-	color: #cfc9d6;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	background: #242424;
+	color: #a6a6a6;
 	cursor: pointer;
 	transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
 }
 
-.cp-tag:hover { background: rgba(255, 255, 255, 0.09); }
+.cp-tag:hover { color: #f5f5f5; background: #2e2e2e; }
 
 .cp-tag.is-on {
-	background: #d4a843;
-	border-color: #d4a843;
-	color: #1a1712;
+	background: rgba(212, 168, 67, 0.18);
+	border-color: rgba(212, 168, 67, 0.5);
+	color: #d4a843;
 	font-weight: 650;
 }
 
@@ -576,8 +549,8 @@ div.cp-group-head:hover { color: #eae7ee; }
 
 .cp-tabs {
 	display: flex;
-	gap: 2px;
-	padding: 0 12px;
+	gap: 0;
+	padding: 0;
 	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 	background: rgba(255, 255, 255, 0.015);
 	flex: 0 0 auto;
@@ -603,6 +576,8 @@ div.cp-group-head:hover { color: #eae7ee; }
 	white-space: nowrap;
 	transition: color 0.14s ease, border-color 0.14s ease;
 	min-height: 0;
+	flex: 1 1 0%;
+	text-align: center;
 }
 
 .cp-tab:hover { color: #eae7ee; }
@@ -813,3 +788,71 @@ div.cp-group-head:hover { color: #eae7ee; }
 }
 
 .cp-tipbox.is-on { opacity: 1; visibility: visible; }
+
+/* --------------------------------------------------------- status OBS navbar */
+
+.cp-obs-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	appearance: none;
+	font: inherit;
+	font-size: 12.5px;
+	font-weight: 600;
+	color: #cfc9d6;
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 999px;
+	padding: 5px 10px;
+	cursor: pointer;
+	white-space: nowrap;
+	transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+.cp-obs-badge:hover { background: rgba(255, 255, 255, 0.09); border-color: rgba(255, 255, 255, 0.2); }
+.cp-obs-badge:focus-visible { outline: 2px solid #d4a843; outline-offset: 2px; }
+.cp-obs-badge-dot { width: 8px; height: 8px; border-radius: 50%; background: #8a8394; flex: 0 0 auto; }
+.cp-obs-badge.is-on { color: #eae7ee; }
+.cp-obs-badge.is-on .cp-obs-badge-dot { background: #35d07f; box-shadow: 0 0 0 3px rgba(53, 208, 127, 0.18); }
+.cp-obs-badge.is-connecting .cp-obs-badge-dot { background: #d4a843; animation: cp-obs-blink 1s ease-in-out infinite; }
+@keyframes cp-obs-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.cp-dialog-head { display: flex; align-items: center; gap: 8px; }
+.cp-dialog-icon { display: inline-flex; color: #d4a843; }
+.cp-dialog-x {
+	margin-left: auto;
+	appearance: none;
+	background: transparent;
+	border: 0;
+	color: #a49dae;
+	font-size: 20px;
+	line-height: 1;
+	cursor: pointer;
+	padding: 0 2px;
+}
+.cp-dialog-x:hover { color: #fff; }
+.cp-dialog-label { display: block; font-size: 12px; color: #a49dae; margin: 10px 0 4px; }
+.cp-dialog-connect { width: 100%; margin-top: 14px; }
+.cp-pw { position: relative; display: flex; }
+.cp-pw .cp-input { width: 100%; padding-right: 34px; }
+.cp-pw-eye {
+	position: absolute;
+	right: 6px;
+	top: 50%;
+	transform: translateY(-50%);
+	appearance: none;
+	background: transparent;
+	border: 0;
+	color: #a49dae;
+	cursor: pointer;
+	display: inline-flex;
+	padding: 4px;
+}
+.cp-pw-eye:hover { color: #fff; }
+
+/* Pill profil aktif di navbar (tampilan saja, tidak bisa diklik). */
+.cp-profile-pill.is-static {
+	cursor: default;
+	color: #eae7ee;
+}
+.cp-profile-pill.is-static:hover { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.12); }
+.cp-profile-pill .cp-obs-badge-dot { background: #d4a843; }

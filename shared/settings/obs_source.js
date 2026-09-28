@@ -289,6 +289,26 @@ async function ObsCenterSourceHorizontally(sceneName, sourceName) {
     }
 }
 
+// ── Pin profil per scene ke URL source ───────────────────────────
+// Widget menyimpan setting di profil localStorage yang DIBAGI semua browser
+// source (satu origin = satu localStorage). Tanpa pin, semua source di scene
+// berbeda ikut membaca "profil aktif" terakhir sehingga refresh satu source
+// menimpa tampilan source lain. Query `?profile=<scene>` mengikat tiap source
+// ke profil scene-nya sendiri (widget menaruh `profile` DI ATAS profil aktif).
+// Aman bila profil belum ada: widget jatuh ke query string yang tetap membawa
+// seluruh setting dari dashboard.
+function ObsPinProfileToUrl(url, sceneName) {
+    if (!sceneName) return url;
+    try {
+        const u = new URL(url);
+        u.searchParams.set('profile', sceneName);
+        return u.href;
+    } catch (e) {
+        const sep = url.indexOf('?') === -1 ? '?' : '&';
+        return url + sep + 'profile=' + encodeURIComponent(sceneName);
+    }
+}
+
 // Mengembalikan { created: bool, name: string }
 async function ObsSyncBrowserSource(widgetUrl) {
     await ObsConnect();
@@ -296,6 +316,9 @@ async function ObsSyncBrowserSource(widgetUrl) {
     const scene = await ObsRequest('GetCurrentProgramScene');
     const sceneName = scene?.currentProgramSceneName;
     if (!sceneName) throw new Error('Tidak ada scene aktif di OBS');
+
+    // Ikat source ini ke profil scene-nya sendiri.
+    const pinnedUrl = ObsPinProfileToUrl(widgetUrl, sceneName);
 
     const sceneItems = await ObsRequest('GetSceneItemList', { sceneName });
     const names = (sceneItems?.sceneItems || []).map(it => it.sourceName);
@@ -321,7 +344,7 @@ async function ObsSyncBrowserSource(widgetUrl) {
         await ObsRequest('SetInputSettings', {
             inputName: target,
             inputSettings: {
-                url: widgetUrl,
+                url: pinnedUrl,
                 width: OBS_SOURCE_WIDTH,
                 height: OBS_SOURCE_HEIGHT,
                 reroute_audio: false
@@ -338,7 +361,7 @@ async function ObsSyncBrowserSource(widgetUrl) {
         inputName: newName,
         inputKind: 'browser_source',
         inputSettings: {
-            url: widgetUrl,
+            url: pinnedUrl,
             width: OBS_SOURCE_WIDTH,
             height: OBS_SOURCE_HEIGHT,
             reroute_audio: false,
