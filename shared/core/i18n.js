@@ -57,7 +57,9 @@ window.I18N = (function () {
       'Tautannya mungkin sudah usang, atau alamatnya sedikit salah. Semua yang saya buat ada di bawah.',
 
     /* search */
-    'Search widgets and docs': 'Cari widget dan dokumentasi',
+    'Search widgets, sections, or keywords…': 'Cari widget, bagian, atau kata kunci…',
+    'opens documentation': 'membuka dokumentasi',
+    'Section': 'Bagian',
     'Nothing matches that.': 'Tidak ada yang cocok.',
     'Loading…': 'Memuat…',
     'docs': 'dokumentasi',

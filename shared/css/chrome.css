@@ -202,7 +202,7 @@
   transition: background var(--t) var(--ease), border-color var(--t) var(--ease), box-shadow var(--t) var(--ease);
 }
 .theme-toggle:hover { background: var(--accent-wash); border-color: var(--accent-line); box-shadow: var(--shadow-sm); }
-.theme-toggle svg { transition: transform var(--t-slow) var(--spring); }
+.theme-toggle svg { transition: transform var(--t-slow) var(--glide); }
 .theme-toggle:hover svg { transform: rotate(18deg); }
 /* Only one glyph is ever shown — the pair swap on the root attribute. */
 .theme-toggle .icon-moon { display: block; }
@@ -265,7 +265,7 @@ html:not([data-theme]) .theme-toggle svg { visibility: hidden; }
   opacity: 0;
   transform: translateY(-6px);
   pointer-events: none;
-  transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--spring);
+  transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--glide);
 }
 /* Hover is the whole interaction: opens on enter, closes on leave, animating
    both ways. is-open is only for touch, where there is no hover to read. */
@@ -352,7 +352,7 @@ html[data-theme="light"] .nav-pop-icon img { filter: brightness(0); opacity: 0.7
   color: #fff;
   transition: filter var(--t) var(--ease), box-shadow var(--t) var(--ease);
 }
-.contact-cta:hover { filter: brightness(1.12); box-shadow: var(--shadow); color: #fff; text-decoration: none; }
+.contact-cta:hover { filter: brightness(0.94); box-shadow: var(--shadow); color: #fff; text-decoration: none; }
 
 /* ── footer ─────────────────────────────────────────── */
 /* A band closed by a hairline: brand marks on the left, copyright on the right. */
@@ -398,6 +398,9 @@ html[data-theme="light"] .nav-pop-icon img { filter: brightness(0); opacity: 0.7
   z-index: 100;
   display: flex;
   justify-content: center;
+  /* flex-start, not the default stretch: the panel has to sit at its own
+     height. Stretched, an empty palette becomes a 66vh void with one row in it. */
+  align-items: flex-start;
   padding: 12vh 20px 20px;
   background: rgba(8, 7, 10, 0.66);
   -webkit-backdrop-filter: blur(6px);
@@ -455,30 +458,33 @@ html[data-theme="light"] .nav-pop-icon img { filter: brightness(0); opacity: 0.7
   color: var(--muted);
 }
 
-.search-results { overflow-y: auto; padding: 8px; }
-.sr-group {
-  padding: 10px 11px 5px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--faint);
-}
+.search-results { overflow-y: auto; padding: 8px 8px 20px; min-height: 96px; }
+/* The group heading names the widget and, on the far side, where its rows go. */
+.sr-group { display: flex; align-items: baseline; gap: 10px; padding: 12px 11px 6px; }
+.sr-group-name { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--soft); }
+.sr-group-hint { margin-left: auto; font-size: 0.68rem; color: var(--faint); }
 .sr-item {
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 10px 11px;
+  padding: 9px 11px;
   border-radius: var(--r-sm);
   color: inherit;
+  transition: background var(--t-fast) var(--ease);
 }
-.sr-item.is-on { background: var(--accent-wash); }
-.sr-item:hover { text-decoration: none; background: var(--accent-wash); }
+.sr-item.is-on, .sr-item:hover { background: var(--accent-wash); text-decoration: none; }
+/* The leading glyph: the widget's own icon, or a kind glyph tinted by accent. */
 .sr-icon { flex: none; }
-.sr-dot { flex: none; width: 10px; height: 10px; border-radius: var(--r-pill); }
+.sr-kind { flex: none; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: var(--bw) solid var(--line); border-radius: var(--r-sm); background: var(--tab); }
+.sr-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .sr-label { font-size: 0.9rem; color: var(--strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sr-sub { margin-left: auto; font-size: 0.76rem; color: var(--faint); }
+.sr-label mark { background: none; color: var(--accent-soft); font-weight: 700; }
+.sr-sub { font-size: 0.74rem; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The trailing action: what Enter does to this row. */
+.sr-act { margin-left: auto; flex: none; display: flex; color: var(--faint); transition: color var(--t-fast) var(--ease); }
+.sr-item.is-on .sr-act, .sr-item:hover .sr-act { color: var(--accent-soft); }
 .sr-empty { padding: 24px; text-align: center; font-size: 0.88rem; color: var(--faint); }
+
 
 
 /* ── narrow ─────────────────────────────────────────── */

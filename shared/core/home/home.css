@@ -20,7 +20,6 @@
   flex-direction: column;
   justify-content: center;
   min-height: 0;
-  transition: min-height var(--t-slow) var(--ease);
 }
 
 /* ── hero ───────────────────────────────────────────── */
@@ -36,7 +35,6 @@
   -webkit-backdrop-filter: var(--blur);
   backdrop-filter: var(--blur);
   box-shadow: var(--shadow-lg);
-  transition: margin var(--t-slow) var(--ease), padding var(--t-slow) var(--ease);
 }
 .hero > * { animation: rise 0.42s var(--ease) both; }
 .hero > *:nth-child(2) { animation-delay: 0.06s; }
@@ -111,7 +109,7 @@
   background: var(--accent);
   border-color: transparent;
   color: var(--accent-on);
-  box-shadow: 0 6px 20px var(--accent-wash);
+  box-shadow: var(--shadow-sm);
 }
 .btn-primary:hover { background: var(--accent); filter: brightness(1.12); color: #fff; }
 .btn-ghost { background: transparent; }
@@ -173,6 +171,45 @@
   background: var(--raised-2);
 }
 
+/* ── gradient blob (Features-6 accent) ──────────────── */
+/* A soft colour wash rising from the lower corner, tinted by the card's own
+   --brand so a card with a different accent reads differently. It is purely
+   decorative: transform and opacity only, never layout. */
+.tile-blob {
+  position: absolute;
+  right: -18%;
+  bottom: -34%;
+  width: 78%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, var(--wash-a), var(--wash-b) 46%, transparent 72%);
+  filter: blur(30px);
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 0;
+  transform: translateZ(0) scale(1);
+  transition: opacity var(--t-slow) var(--ease), transform var(--t-slow) var(--glide);
+}
+.tile:hover .tile-blob,
+.tile:focus-within .tile-blob { opacity: 0.9; transform: translateZ(0) scale(1.14); }
+
+/* The body sits above the blob and the cover link sits above both. */
+.tile-body { z-index: 1; }
+
+/* Hover arrow accent: the arrow leans toward the destination. */
+.tile-go svg { transition: transform var(--t) var(--glide); }
+.tile:hover .tile-go svg,
+.tile:focus-within .tile-go svg { transform: translateX(3px); }
+
+/* Motion is decoration here — drop it when the reader asks for less. */
+@media (prefers-reduced-motion: reduce) {
+  .tile-blob, .tile-go svg, .tile, .ghost, .plat { transition: none; }
+  .tile:hover, .tile:focus-within { transform: none; }
+  .tile:hover .tile-blob, .tile:focus-within .tile-blob { transform: translateZ(0); }
+  .tile:hover .ghost { transform: none; }
+  .tile:hover .plat { transform: none; }
+}
+
 /* The card is one big link. It has to be a real element rather than a stretched
    ::after, because a pseudo-element resolves against .tile-body and so never
    reached the thumbnail. */
@@ -197,7 +234,7 @@
   height: 122px;
   opacity: 0.9;
   z-index: 0;
-  transition: transform var(--t-slow) var(--spring);
+  transition: transform var(--t-slow) var(--glide);
 }
 .tile:hover .ghost { transform: scale(1.08) rotate(-6deg); }
 
@@ -219,13 +256,41 @@
 }
 
 .tile-body { position: relative; display: flex; flex-direction: column; gap: 11px; padding: 16px 18px 18px; }
-.tile-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tile-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; min-height: 22px; }
 .tile-name {
   font-family: var(--display);
-  font-size: 1.1rem;
+  font-size: 1.02rem;
   font-weight: 400;
   letter-spacing: -0.01em;
+  line-height: 1.25;
   color: var(--ink);
+}
+
+/* ── blurb reveal ───────────────────────────────────── */
+/* Words fade up into place, staggered by their own index, the first time the
+   card is seen. Opacity, transform and filter only — never a layout property —
+   so nothing below the paragraph can be pushed around mid-animation. */
+.tile-desc .w {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.4em);
+  filter: blur(5px);
+  transition: opacity 0.52s var(--ease), transform 0.52s var(--ease), filter 0.52s var(--ease);
+  transition-delay: calc(var(--i) * 20ms);
+}
+.tile.is-in .tile-desc .w { opacity: 1; transform: none; filter: blur(0); }
+
+/* The clamp and the reveal disagree about who owns the box: a clamped box hides
+   words the stagger is still animating in. This rule needs two classes to beat
+   `.tile-body p` (0,1,1) — one class loses on specificity and the clamp stays. */
+.tile-body .tile-desc {
+  display: block;
+  -webkit-line-clamp: none;
+  overflow: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile-desc .w { opacity: 1; transform: none; filter: none; transition: none; }
 }
 
 .tile-body p {
@@ -256,7 +321,7 @@
 
 .tile-foot {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 14px;
   margin-top: 3px;
   padding-top: 14px;
@@ -271,7 +336,7 @@
 .tile-links { margin-left: auto; display: flex; align-items: center; gap: 14px; position: relative; z-index: 5; }
 .tile-links a { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
 .tile-links a:hover { color: var(--accent-soft); text-decoration: none; }
-.tile-go { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; color: var(--muted); transition: color var(--t) var(--ease); }
+.tile-go { display: flex; align-items: center; gap: 6px; min-height: 24px; font-size: 0.8rem; font-weight: 600; color: var(--muted); transition: color var(--t) var(--ease); }
 .tile-go:hover { color: var(--accent-soft); text-decoration: none; }
 .tile:hover .tile-go { color: var(--accent-soft); }
 
@@ -315,7 +380,7 @@
    there is something above it worth dividing. */
 .site-footer {
   animation: rise 0.42s var(--ease) 0.3s both;
-  transition: margin-top var(--t-slow) var(--ease), border-color var(--t-slow) var(--ease);
+  transition: border-color var(--t-slow) var(--ease);
 }
 .is-landing .site-footer { margin-top: 0; border-top-color: transparent; }
 

@@ -25,14 +25,16 @@
   --line-mid: rgba(255, 255, 255, 0.14);
   --line-hard: rgba(255, 255, 255, 0.20);
 
-  /* text */
+  /* text — the ladder is stepped so every step clears 4.5:1 on the lightest
+     surface it can land on (--tab), not just on the page. Ratios on --tab:
+     ink 14.0, strong 11.8, body 8.4, lede 6.4, soft 5.7, muted 5.1, faint 4.5. */
   --ink: #f5f3f7;
   --strong: #e4e0ea;
   --body: #c2bdcb;
-  --lede: #a9a3b4;
-  --soft: #948e9f;
-  --muted: #837d8e;
-  --faint: #6a6474;
+  --lede: #aaa4b4;
+  --soft: #a09aa9;
+  --muted: #96919f;
+  --faint: #8e8899;
 
   /* accent — the one warm colour on the page. --accent is the fill; --accent-on
      is what sits on top of it, and it is dark because the fill is light. */
@@ -46,7 +48,6 @@
   --accent-hover: rgba(212, 168, 67, 0.35);
   --accent-tint: rgba(212, 168, 67, 0.12);
   --accent-line: rgba(212, 168, 67, 0.40);
-  --accent-glow: rgba(212, 168, 67, 0.35);
 
   /* semantic */
   --ok: #4ade80;
@@ -60,12 +61,12 @@
   /* platform brand marks */
   --twitch: #a970ff;
   --kick: #6ee32c;
-  --tiktok: #4de8e0;
+  --tiktok: #d6339b;
   --youtube: #ff4d6a;
   --x: #e7e9ea;
   --patreon: #ff9a55;
   --kofi: #ff7a77;
-  --discord: #7b88ff;
+  --discord: #495bff;
   --github: #e6edf3;
 
   /* type */
@@ -93,7 +94,7 @@
 
   /* motion — eased, never snappy */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --glide: cubic-bezier(0.22, 1, 0.36, 1);
   --t-fast: 0.15s;
   --t: 0.22s;
   --t-slow: 0.34s;
@@ -118,15 +119,15 @@ html[data-theme="light"] {
   --ink: #16150f;
   --strong: #2a2820;
   --body: #3f3c33;
-  --lede: #55514a;
-  --soft: #6a6559;
-  --muted: #7a7466;
-  --faint: #8b8474;
+  --lede: #545049;
+  --soft: #5c584d;
+  --muted: #645f54;
+  --faint: #6c665a;
 
   --accent: #d4a843;
   --accent-on: #1a1408;
   --accent-deep: #b98d2e;
-  --accent-soft: #8a6d23;
+  --accent-soft: #7e6420;
   --accent-pale: #6f5616;
   --accent-ink: #5c4712;
   --accent-wash: rgba(212, 168, 67, 0.26);
@@ -134,7 +135,7 @@ html[data-theme="light"] {
   --accent-tint: rgba(212, 168, 67, 0.16);
   --accent-line: rgba(180, 140, 40, 0.46);
 
-  --ok: #1c8a45;
+  --ok: #1a8241;
   --warn: #a16207;
   --err: #c0392b;
 

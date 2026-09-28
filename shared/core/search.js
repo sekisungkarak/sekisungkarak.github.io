@@ -2,7 +2,11 @@
 
    The index is derived, never hand-written: every catalog entry, plus every
    ## and ### in every widget's README. Add a widget to catalog.js and it
-   becomes searchable with no other change. */
+   becomes searchable with no other change.
+
+   Presentation is a command palette: a leading kind glyph, the matched run
+   highlighted in the label, a trailing action glyph, rows grouped under a
+   heading that names where the group leads. */
 (function () {
   'use strict';
 
@@ -12,10 +16,22 @@
 
   // Keyed on the catalog's own contents, so editing catalog.js drops the
   // stale index instead of serving it for the rest of the session.
-  var CACHE_KEY = 'geseki:search:v2:' + stamp();
+  var CACHE_KEY = 'geseki:search:v3:' + stamp();
   var index = null;
   var loading = null;
   var box, input, list, results = [], cursor = 0;
+
+  // A leading glyph per row kind, so the two groups are told apart at a glance
+  // even when a widget has no icon of its own.
+  var KIND = {
+    widget: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z',
+    heading: 'M9 3L7 21M17 3l-2 18M3 9h18M3 15h18'
+  };
+  // The trailing glyph: a plain arrow for a page, a return key for a jump.
+  var ACT = {
+    widget: 'M5 12h13M13 6l6 6-6 6',
+    heading: 'M9 10L4 15l5 5M4 15h11a5 5 0 0 0 5-5V6'
+  };
 
   /* ── index ──────────────────────────────────────────── */
 
@@ -51,7 +67,7 @@
     loading = Promise.all(C.catalog.map(function (c) {
       var rows = [{
         kind: 'widget', widget: c.name, accent: c.accent, icon: c.icon,
-        label: c.name, sub: c.eyebrow || 'widget', href: C.root(c.docsUrl)
+        label: c.name, sub: c.eyebrow || T('widget'), href: C.root(c.docsUrl)
       }];
       return fetch(C.root(c.widgetUrl + 'README.md'))
         .then(function (r) { return r.ok ? r.text() : ''; })
@@ -99,26 +115,51 @@
       .map(function (x) { return x.row; });
   }
 
-  /* ── ui ─────────────────────────────────────────────── */
+  /* ── render ─────────────────────────────────────────── */
+
+  // Escapes, then wraps the matched run so the query stays visible in the row.
+  // Escaping first and slicing after keeps the <mark> tags out of the escape.
+  function mark(label, q) {
+    if (!q) return C.esc(label);
+    var at = label.toLowerCase().indexOf(q);
+    if (at < 0) return C.esc(label);
+    return C.esc(label.slice(0, at)) +
+      '<mark>' + C.esc(label.slice(at, at + q.length)) + '</mark>' +
+      C.esc(label.slice(at + q.length));
+  }
+
+  // The glyph a row leads with: the widget's own icon when it has one, and a
+  // kind glyph otherwise.
+  function glyph(r) {
+    var url = r.kind === 'widget' ? C.iconUrl(r.icon, r.accent) : null;
+    if (url) return '<img class="sr-icon" src="' + C.esc(url) + '" alt="" width="15" height="15">';
+    return '<span class="sr-kind" style="color:' + C.esc(r.accent) + '">' +
+      C.svg(KIND[r.kind] || KIND.widget, { size: 15, stroke: 'currentColor', width: 1.8 }) + '</span>';
+  }
 
   function render() {
     if (!results.length) {
       list.innerHTML = '<div class="sr-empty">' + C.esc(T('Nothing matches that.')) + '</div>';
       return;
     }
+    var q = input.value.trim().toLowerCase();
     var last = null, html = '';
     results.forEach(function (r, i) {
+      // A heading row names the group and says where it leads.
       if (r.widget !== last) {
-        html += '<div class="sr-group">' + C.esc(r.widget) + '</div>';
+        html += '<div class="sr-group">' +
+          '<span class="sr-group-name">' + C.esc(r.widget) + '</span>' +
+          '<span class="sr-group-hint">' + C.esc(T('opens documentation')) + '</span></div>';
         last = r.widget;
       }
-      var url = C.iconUrl(r.icon, r.accent);
-      var glyph = r.kind === 'widget' && url
-        ? '<img class="sr-icon" src="' + C.esc(url) + '" alt="" width="15" height="15">'
-        : '<span class="sr-dot" style="background:' + r.accent + '"></span>';
       html += '<a class="sr-item' + (i === cursor ? ' is-on' : '') + '" data-i="' + i + '" href="' + C.esc(r.href) + '">' +
-        glyph + '<span class="sr-label">' + C.esc(r.label) + '</span>' +
-        '<span class="sr-sub">' + C.esc(r.kind === 'widget' ? T(r.sub) : T('docs')) + '</span></a>';
+        glyph(r) +
+        '<span class="sr-text">' +
+          '<span class="sr-label">' + mark(r.label, q) + '</span>' +
+          '<span class="sr-sub">' + C.esc(r.kind === 'widget' ? T(r.sub) : T('Section')) + '</span>' +
+        '</span>' +
+        '<span class="sr-act">' + C.svg(ACT[r.kind] || ACT.widget, { size: 14, stroke: 'currentColor', width: 1.9 }) + '</span>' +
+      '</a>';
     });
     list.innerHTML = html;
     var on = list.querySelector('.is-on');
@@ -157,7 +198,7 @@
           '<div class="search-field">' +
             C.svg('M21 21l-4.3-4.3', { size: 16, stroke: 'currentColor', width: 2 })
               .replace('<path', '<circle cx="11" cy="11" r="7"></circle><path') +
-            '<input type="text" placeholder="' + C.esc(T('Search widgets and docs')) + '" autocomplete="off" spellcheck="false">' +
+            '<input type="text" placeholder="' + C.esc(T('Search widgets, sections, or keywords…')) + '" autocomplete="off" spellcheck="false">' +
             '<kbd>esc</kbd>' +
           '</div>' +
           '<div class="search-results"></div>' +

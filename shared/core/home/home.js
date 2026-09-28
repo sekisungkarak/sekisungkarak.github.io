@@ -29,6 +29,14 @@
     return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
   }
 
+  // Splits a blurb into words, each carrying its own index so the stagger is
+  // pure CSS. The card gets .is-in when it first scrolls into view.
+  function reveal(text) {
+    return String(text || '').split(/\s+/).filter(Boolean).map(function (w, i) {
+      return '<span class="w" style="--i:' + i + '">' + C.esc(w) + '</span>';
+    }).join(' ');
+  }
+
   function platforms(list) {
     var marks = (list || []).map(function (p) {
       var spec = PLAT_LOGO[p];
@@ -67,19 +75,23 @@
         ';--wash-a:' + hex(accent, 0.34) + ';--wash-b:' + hex(accent, 0.12) + '">' +
       // Covers the card — thumbnail, title and body all lead to the docs.
       '<a class="tile-cover" href="' + C.esc(href) + '" aria-label="' + C.esc(c.name + ' ' + T('documentation')) + '"></a>' +
+      // Features-6 accent: a soft gradient blob tinted by the card's own
+      // --brand, sitting behind the body copy.
+      '<span class="tile-blob" aria-hidden="true"></span>' +
       '<div class="thumb">' + art +
         '<svg class="ghost" viewBox="0 0 24 24" fill="' + accent + '"><path d="' + (GLYPH[c.id] || GLYPH._) + '"></path></svg>' +
         (c.eyebrow
           ? '<span class="eyebrow-chip">' + C.esc(c.eyebrow) + '</span>'
           : '') +
       '</div>' +
+      // Platform mark leads the card; the name sits in the footer beside Docs.
       '<div class="tile-body">' +
-        '<div class="tile-head">' +
-          '<span class="tile-name">' + C.esc(c.name) + '</span>' +
+        '<div class="tile-head">' + platforms(c.platforms) +
           badge(c.tier) +
         '</div>' +
-        '<p>' + C.esc(c.description || '') + '</p>' +
-        '<div class="tile-foot">' + platforms(c.platforms) +
+        '<p class="tile-desc">' + reveal(T(c.description)) + '</p>' +
+        '<div class="tile-foot">' +
+          '<span class="tile-name">' + C.esc(c.name) + '</span>' +
           '<span class="tile-links">' + extra +
             '<a class="tile-go" href="' + C.esc(href) + '">' + C.esc(T('Docs')) + C.svg(C.ICON.arrow, { size: 14, stroke: 'currentColor', width: 2.4 }) + '</a>' +
           '</span>' +
@@ -154,6 +166,22 @@
       shelf('exclusive', T('Patreon-exclusive'), pro) +
     '</div></div>';
   document.body.appendChild(main);
+
+  // The blurb reveals the first time its card is seen. On the landing the
+  // shelves are 0fr tall, so this fires when they open rather than on load.
+  var tiles = main.querySelectorAll('.tile');
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        en.target.classList.add('is-in');
+        io.unobserve(en.target);
+      });
+    }, { threshold: 0.25 });
+    tiles.forEach(function (t) { io.observe(t); });
+  } else {
+    tiles.forEach(function (t) { t.classList.add('is-in'); });
+  }
 
   main.appendChild(C.buildSiteFooter());
 

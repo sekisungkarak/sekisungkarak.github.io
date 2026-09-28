@@ -44,7 +44,7 @@
   var PLATFORM = {
     twitch: ['Twitch', '#9146ff'],
     youtube: ['YouTube', '#ff0033'],
-    tiktok: ['TikTok', '#25f4ee'],
+    tiktok: ['TikTok', '#d6339b'],
     kick: ['Kick', '#53fc18']
   };
 
