@@ -623,6 +623,79 @@ function EscapeBadgeText(s) {
 	}[c]));
 }
 
+// Badge yang cukup ditampilkan IKONNYA saja. "New gifter" (badgeSceneType 2)
+// membawa `name` berisi tulisan "New gifter" yang tidak perlu ikut tercetak di
+// dalam pill - teks itu deskripsi badge, bukan angka/peringkat seperti grade
+// atau Top Gifter. Ikonnya sudah berbicara sendiri.
+function IsIconOnlyBadge(badge) {
+	if (!badge || typeof badge !== 'object') return false;
+	// badgeSceneType 2 = New gifter. Nama dicek juga sebagai jaring pengaman
+	// bila suatu sumber tidak mengirim scene type-nya.
+	if (Number(badge.badgeSceneType) === 2) return true;
+	const name = String(badge.name || badge.topBadgeName?.name || '').trim();
+	return /^new\s*gifter$/i.test(name);
+}
+
+// Batas karakter pesan chat, dihitung dari yang TERLIHAT pemirsa.
+// Shortcode emote ("[thumb]") panjang di teks mentah tapi hanya tampil sebagai
+// SATU emote, jadi menghitung `length` mentah membuat kuota habis oleh sintaks:
+// empat "[thumb]" (28 karakter) menyisakan 2 slot untuk isi pesan. Di sini satu
+// emote = satu slot, sama seperti yang terlihat di layar.
+const CHAT_MESSAGE_MAX = 30;
+
+// Cocokkan shortcode emote yang DIKENAL pada posisi awal `text`.
+// Mengembalikan panjang token, atau 0 bila bukan shortcode yang dikenal.
+function ChatShortcodeAt(text, index) {
+	const m = /^\[[a-z0-9_]+\]/i.exec(text.slice(index));
+	if (!m) return 0;
+	// Hanya token yang ada di tabel yang dihitung sebagai satu emote; kurung
+	// biasa seperti "[INFO]" tetap dihitung per karakter.
+	return Object.prototype.hasOwnProperty.call(EMOTES, m[0].toLowerCase()) ? m[0].length : 0;
+}
+
+// Indeks mentah tempat karakter TERLIHAT ke-`max` berakhir.
+// Mengembalikan -1 bila seluruh teks masih di dalam kuota.
+function ChatVisibleCutIndex(text, emotes, max) {
+	const emoteAt = new Set();
+	if (Array.isArray(emotes)) {
+		for (const e of emotes) {
+			const at = Number(e && e.placeInComment);
+			if (isFinite(at) && at >= 0) emoteAt.add(at);
+		}
+	}
+
+	let visible = 0;
+	let i = 0;
+	while (i < text.length) {
+		// Emote payload menempati satu karakter placeholder di dalam teks.
+		if (emoteAt.has(i)) {
+			i += 1;
+			visible += 1;
+			if (visible > max) return i - 1;
+			continue;
+		}
+		const tokenLen = ChatShortcodeAt(text, i);
+		if (tokenLen > 0) {
+			i += tokenLen;
+			visible += 1;
+			if (visible > max) return i - tokenLen;
+			continue;
+		}
+		i += 1;
+		visible += 1;
+		if (visible > max) return i - 1;
+	}
+	return -1;
+}
+
+// Potong pesan chat pada kuota karakter TERLIHAT; tambahkan elipsis bila ada
+// yang dibuang. Dipakai jalur live maupun tombol Test.
+function TruncateChatMessage(rawMessage, emotes) {
+	const text = String(rawMessage == null ? '' : rawMessage);
+	const cut = ChatVisibleCutIndex(text, emotes, CHAT_MESSAGE_MAX);
+	return cut < 0 ? text : text.slice(0, cut) + '\u2026';
+}
+
 // Ambil maksimal 2 badge dari payload TikTok, lengkap dengan label + warnanya.
 // Urutan payload dipertahankan (biasanya grade dulu, lalu Top Gifter).
 function GetUserBadges(tiktokData) {
@@ -636,12 +709,145 @@ function GetUserBadges(tiktokData) {
 		if (!url) continue;
 		out.push({
 			url,
-			label: CleanBadgeLabel(b.name || b.topBadgeName?.name || ''),
+			label: IsIconOnlyBadge(b) ? '' : CleanBadgeLabel(b.name || b.topBadgeName?.name || ''),
 			color: ParseBadgeColor(b.color)
 		});
 		if (out.length >= 2) break;
 	}
 	return out;
+}
+
+// ══ Emote TikTok ══
+// Dua sumber emote di komentar:
+//   1. Shortcode yang DIKETIK viewer, mis. "[laugh]" -> PNG di resources/emotes/
+//      (atau emoji, bila nilainya bukan nama berkas .png).
+//   2. Emote bawaan TikTok yang dikirim PAYLOAD. Ini yang dipakai emote khusus
+//      subscriber: tidak punya shortcode, jadi hanya bisa dirender dari payload.
+const EMOTE_BASE = '../resources/emotes/';
+const EMOTES = {
+	// -- artwork TikTok sendiri -----------------------------------------------
+	'[wow]': 'wow.png',
+	'[laugh]': 'laugh.png',
+	'[laughcry]': 'laughcry.png',
+	'[thanks]': 'thanks.png',
+	'[thumb]': 'thumb.png',
+	'[hi]': 'hi.png',
+	'[heart]': 'heart.png',
+	'[congrat]': 'congrat.png',
+	'[rockyserious]': 'rockyserious.png',
+	'[rockyloveit]': 'rockyloveit.png',
+	'[rockyproud]': 'rockyproud.png',
+	'[rockycool]': 'rockycool.png',
+	'[rosiedislike]': 'rosiedislike.png',
+	'[rosieawkward]': 'rosieawkward.png',
+	'[rosiekisskiss]': 'rosiekisskiss.png',
+	'[rosiecute]': 'rosiecute.png',
+	'[jolliekissingface]': 'jolliekissingface.png',
+	'[jolliewow]': 'jolliewow.png',
+	'[jolliespeechless]': 'jolliespeechless.png',
+	'[jolliesatisfied]': 'jolliesatisfied.png',
+	'[sagethink]': 'sagethink.png',
+	'[sagefulfilled]': 'sagefulfilled.png',
+	'[sageclever]': 'sageclever.png',
+	'[sagemoney]': 'sagemoney.png',
+
+	// -- unicode passthrough (shortcode -> emoji) ------------------------------
+	'[grinning]': '😀', '[smiley]': '😃', '[smile]': '😄',
+	'[grin]': '😁', '[laughing]': '😆', '[sweat_smile]': '😅',
+	'[rofl]': '🤣', '[joy]': '😂', '[slightly_smiling_face]': '🙂',
+	'[upside_down_face]': '🙃', '[wink]': '😉', '[blush]': '😊',
+	'[innocent]': '😇', '[heart_eyes]': '😍', '[kissing_heart]': '😘',
+	'[kissing]': '😗', '[kissing_closed_eyes]': '😚', '[kissing_smiling_eyes]': '😙',
+	'[yum]': '😋', '[stuck_out_tongue]': '😛', '[stuck_out_tongue_winking_eye]': '😜',
+	'[stuck_out_tongue_closed_eyes]': '😝', '[money_mouth_face]': '🤑', '[hugs]': '🤗',
+	'[thinking]': '🤔', '[zipper_mouth_face]': '🤐', '[neutral_face]': '😐',
+	'[expressionless]': '😑', '[no_mouth]': '😶', '[smirk]': '😏',
+	'[unamused]': '😒', '[roll_eyes]': '🙄', '[grimacing]': '😬',
+	'[lying_face]': '🤥', '[relieved]': '😌', '[pensive]': '😔',
+	'[sleepy]': '😪', '[drooling_face]': '🤤', '[sleeping]': '😴',
+	'[mask]': '😷', '[face_with_thermometer]': '🤒', '[face_with_head_bandage]': '🤕',
+	'[nauseated_face]': '🤢', '[sneezing_face]': '🤧', '[dizzy_face]': '😵',
+	'[cowboy_hat_face]': '🤠', '[sunglasses]': '😎', '[nerd_face]': '🤓',
+	'[confused]': '😕', '[worried]': '😟', '[slightly_frowning_face]': '🙁',
+	'[open_mouth]': '😮', '[hushed]': '😯', '[astonished]': '😲',
+	'[flushed]': '😳', '[frowning]': '😦', '[anguished]': '😧',
+	'[fearful]': '😨', '[cold_sweat]': '😰', '[disappointed_relieved]': '😥',
+	'[cry]': '😢', '[sob]': '😭', '[scream]': '😱',
+	'[confounded]': '😖', '[persevere]': '😣', '[disappointed]': '😞',
+	'[sweat]': '😓', '[weary]': '😩', '[tired_face]': '😫',
+	'[triumph]': '😤', '[rage]': '😡', '[angry]': '😠',
+	'[smiling_imp]': '😈', '[imp]': '👿', '[skull]': '💀',
+	'[hankey]': '💩', '[clown_face]': '🤡', '[japanese_ogre]': '👹',
+	'[japanese_goblin]': '👺', '[ghost]': '👻', '[alien]': '👽',
+	'[space_invader]': '👾', '[robot]': '🤖', '[smiley_cat]': '😺',
+	'[smile_cat]': '😸', '[joy_cat]': '😹', '[heart_eyes_cat]': '😻',
+	'[smirk_cat]': '😼', '[kissing_cat]': '😽', '[scream_cat]': '🙀',
+	'[crying_cat_face]': '😿', '[pouting_cat]': '😾',
+};
+
+// Emote dari payload membawa `emoteImageUrl` + `placeInComment`: SATU emote
+// menggantikan SATU karakter placeholder di dalam komentar, bukan rentang
+// start/end seperti Twitch. Karena itu penyisipan harus memakai indeks itu.
+function RenderChatMessageHtml(rawMessage, emotes) {
+	const text = String(rawMessage == null ? '' : rawMessage);
+	const list = Array.isArray(emotes) ? emotes.filter(Boolean).slice() : [];
+	if (list.length === 0) return RenderChatTextHtml(text);
+
+	list.sort((a, b) => (Number(a.placeInComment) || 0) - (Number(b.placeInComment) || 0));
+
+	let html = '';
+	let cursor = 0;
+	for (const emote of list) {
+		const at = Number(emote.placeInComment);
+		// Indeks tidak sah, sudah dilewati emote sebelumnya, atau placeholder-nya
+		// berada di luar teks (mis. kena potong kuota) -> lewati. Tanpa cek terakhir,
+		// emote yang seharusnya terbuang tetap tersisip di ujung pesan.
+		if (!isFinite(at) || at < cursor || at >= text.length) continue;
+		if (at > cursor) html += RenderChatTextHtml(text.slice(cursor, at));
+		const url = EmoteImageUrl(emote);
+		if (url) {
+			const label = EscapeBadgeText(String(emote.emoteId || ''));
+			html += `<img class="emote" src="${url}" alt="${label}" title="${label}">`;
+		}
+		cursor = at + 1;
+	}
+	html += RenderChatTextHtml(text.slice(cursor));
+	return html;
+}
+
+function EmoteImageUrl(emote) {
+	const raw = emote.emoteImageUrl || emote.emoteUrl || emote.imageUrl || emote.url || '';
+	// CleanBadgeUrl membuang bungkus `@url:`...`` dan menolak URL tak aman.
+	return CleanBadgeUrl(raw);
+}
+
+// Segmen teks biasa tetap bisa memuat shortcode yang DIKETIK, mis. "[laugh]".
+// Setiap potongan di-escape; hanya shortcode yang dikenal yang jadi <img>.
+function RenderChatTextHtml(segment) {
+	let html = '';
+	let cursor = 0;
+	const pattern = /\[[a-z0-9_]+\]/gi;
+	let match;
+
+	while ((match = pattern.exec(segment)) !== null) {
+		const token = match[0];
+		const value = EMOTES[token.toLowerCase()];
+		if (value === undefined) continue; // bukan shortcode dikenal -> teks biasa
+
+		html += EscapeBadgeText(segment.slice(cursor, match.index));
+
+		if (value.endsWith('.png')) {
+			const label = EscapeBadgeText(token);
+			html += `<img class="emote" src="${EMOTE_BASE + value}" alt="${label}" title="${label}">`;
+		} else {
+			html += EscapeBadgeText(value);
+		}
+
+		cursor = match.index + token.length;
+	}
+
+	html += EscapeBadgeText(segment.slice(cursor));
+	return html;
 }
 
 // Badge TikTok PNG punya margin transparan yang TIDAK simetris (mis. Top Gifter:
@@ -2613,10 +2819,14 @@ function ProcessAlertQueue() {
 	// Text and subtext (2-line layout during alert)
 	if (title && subtext && islandSubtext) {
 		islandText.textContent = title;
-		islandSubtext.textContent = subtext;
+		// subtextHtml membawa emote (shortcode + emote payload); tanpa itu
+		// textContent biasa supaya teks tetap tidak bisa menyuntik HTML.
+		if (alertData.subtextHtml) islandSubtext.innerHTML = alertData.subtextHtml;
+		else islandSubtext.textContent = subtext;
 		islandSubtext.classList.remove('hidden');
 	} else {
-		islandText.textContent = text || title || '';
+		if (alertData.textHtml) islandText.innerHTML = alertData.textHtml;
+		else islandText.textContent = text || title || '';
 		if (islandSubtext) {
 			islandSubtext.textContent = '';
 			islandSubtext.classList.add('hidden');
@@ -2926,7 +3136,9 @@ window.testGift = function () {
 // seperti jalur live (case 'chat').
 window.testFirstChatter = function () {
 	const msg = urlParams.get("firstChatterMessage") || "Lorem ipsum dolor sit amet, laboris dolor do sunt.";
-	const message = msg.length > 30 ? msg.slice(0, 30) + '…' : msg;
+	// Jalur Test memakai pemotong yang sama dengan jalur live supaya keduanya
+	// memperlakukan shortcode emote dengan aturan yang identik.
+	const message = TruncateChatMessage(msg, []);
 	TriggerAlert({
 		type: 'firstChatter',
 		icon: 'https://img.icons8.com/fluency-systems-filled/96/FFFFFF/chat.png',
@@ -3577,10 +3789,11 @@ function handleTikTokEvent(event, tiktokData, source) {
 			if (!firstChatters.has(userId)) {
 				firstChatters.add(userId);
 				SaveFirstChatters();
-				let message = tiktokData.comment || tiktokData.msg || tiktokData.text || '';
-				if (message.length > 30) {
-					message = message.slice(0, 30) + '…';
-				}
+				const rawMessage = tiktokData.comment || tiktokData.msg || tiktokData.text || '';
+				// Potong pada kuota karakter TERLIHAT (emote = 1 slot), lalu render
+				// emote dari hasil potongan itu supaya emote di dalam kuota utuh.
+				const message = TruncateChatMessage(rawMessage, tiktokData.emotes);
+				const messageHtml = RenderChatMessageHtml(message, tiktokData.emotes);
 				// Username dibatasi 20 karakter supaya marquee tidak berjalan terlalu jauh.
 				const displayName = displayUser;
 
@@ -3588,7 +3801,9 @@ function handleTikTokEvent(event, tiktokData, source) {
 					icon: 'https://img.icons8.com/fluency-systems-filled/96/FFFFFF/chat.png',
 					title: displayName,
 					subtext: message,
+					subtextHtml: messageHtml,
 					text: `${displayName}: ${message}`,
+					textHtml: `${EscapeBadgeText(displayName)}: ${messageHtml}`,
 					avatar: avatar,
 					badges: badges,
 					showIcon: enableFirstChatterIcon,
