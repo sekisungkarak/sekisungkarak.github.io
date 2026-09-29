@@ -156,7 +156,9 @@
 	flex: 1 1 auto;
 	overflow-y: auto;
 	overscroll-behavior: contain;
-	padding: 10px 12px 12px;
+	/* Jarak bawah disamakan dengan Better Alerts: 23px padding + 6px margin
+	   kartu = 29px dari baris terakhir ke tepi panel. */
+	padding: 10px 12px 23px;
 }
 
 .cp-group { margin-bottom: 8px; }
@@ -257,7 +259,14 @@ div.cp-group-head:hover { color: #eae7ee; }
 	gap: 2px;
 }
 
-.cp-label-text { font-size: 14.5px; font-weight: 550; color: #f2eff5; }
+.cp-label-text {
+	font-size: 14.5px;
+	font-weight: 550;
+	color: #f2eff5;
+	/* align-self: jangan ikut melebar (jarak ke kontrol kanan tetap rapi).
+	   Teks ini bukan kontrol, jadi kursor bawaan saja. */
+	align-self: flex-start;
+}
 
 .cp-desc { font-size: 12.5px; color: #b3acbd; font-weight: 400; line-height: 1.45; }
 .cp-desc-block { margin-top: -2px; }
@@ -478,6 +487,11 @@ div.cp-group-head:hover { color: #eae7ee; }
 	cursor: pointer;
 }
 
+/* Di dalam kolom .cp-field-check, label switch cenderung melebar
+   selebar baris sehingga klik di ruang kosong ikut men-toggle. Batasi
+   lebarnya ke isi (switch + teks). */
+.cp-field-check > .cp-check-line { align-self: flex-start; }
+
 .cp-check-line input {
 	position: absolute;
 	opacity: 0;
@@ -572,18 +586,7 @@ div.cp-group-head:hover { color: #eae7ee; }
 	font-weight: 650;
 }
 
-/* ------------------------------------------------------------------ footer */
-
-.cp-foot {
-	display: flex;
-	align-items: center;
-	flex-wrap: wrap;
-	gap: 6px;
-	padding: 12px;
-	border-top: 1px solid rgba(255, 255, 255, 0.08);
-	background: rgba(255, 255, 255, 0.02);
-	flex: 0 0 auto;
-}
+/* Footer dihapus: Save & Reset kini ikon di navbar. */
 
 /* Pesan status: toast di pojok kanan atas panel, seperti Better Alerts. */
 .cp-toasts {
@@ -718,7 +721,7 @@ div.cp-group-head:hover { color: #eae7ee; }
 	background: rgba(255, 255, 255, 0.025);
 	border: 1px solid rgba(255, 255, 255, 0.09);
 	border-radius: 4px;
-	margin-bottom: 8px;
+	margin-bottom: 6px;
 	overflow: hidden;
 }
 
@@ -727,7 +730,7 @@ div.cp-group-head:hover { color: #eae7ee; }
 	align-items: center;
 	justify-content: space-between;
 	gap: 9px;
-	padding: 9px 10px;
+	padding: 6px 10px;
 	background: rgba(255, 255, 255, 0.02);
 	border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
@@ -747,6 +750,16 @@ div.cp-group-head:hover { color: #eae7ee; }
 /* Kartu alert bawaannya TERTUTUP; hanya judulnya yang tampak. */
 .cp-alert-body { display: none; padding: 8px 10px 10px; }
 .cp-alert-body.is-open { display: block; }
+
+/* Baris kartu alert dibuat ringkas ala Better Alerts (~38-40px): padding head
+   dan tombol Simulate dikecilkan, sehingga 6 alert muat penuh di panel 450px
+   tanpa baris terakhir terlihat terpotong. Di-scope agar tombol lain tetap. */
+.cp-alert-actions .cp-btn-sm {
+	padding: 4px 9px;
+	min-height: 24px;
+	font-size: 12.5px;
+	line-height: 1.1;
+}
 
 .cp-alert-card .cp-alert-head { border-bottom-color: transparent; }
 .cp-alert-card.is-open .cp-alert-head { border-bottom-color: rgba(255, 255, 255, 0.07); }
@@ -812,8 +825,7 @@ div.cp-group-head:hover { color: #eae7ee; }
 }
 
 .cp-root.is-collapsed .cp-tabs,
-.cp-root.is-collapsed .cp-body,
-.cp-root.is-collapsed .cp-foot { display: none; }
+.cp-root.is-collapsed .cp-body { display: none; }
 
 .cp-root.is-collapsed .cp-panel {
 	/* Lebar tetap 640px seperti Better Alerts; hanya tinggi yang menyusut. */
@@ -976,3 +988,83 @@ div.cp-group-head:hover { color: #eae7ee; }
 }
 .cp-profile-pill.is-static:hover { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.12); }
 .cp-profile-pill .cp-obs-badge-dot { background: #d4a843; }
+
+/* ------------------------------------------ mode Layout (drag & resize widget) */
+
+/* Saat panel dikecilkan, root overlay tidak boleh menelan klik: biarkan tembus
+   ke bingkai/handle Layout. Bar panel yang mengecil tetap bisa diklik. */
+.cp-root.is-collapsed { pointer-events: none; }
+.cp-root.is-collapsed .cp-panel { pointer-events: auto; }
+
+/* Dialog (mis. konfirmasi Reset) ditempel ke root, jadi saat panel collapsed
+   ia ikut kena pointer-events:none dan tombolnya tidak bisa diklik. Kembalikan
+   agar dialog selalu menerima klik, terlepas dari status panel. */
+.cp-dialog-back { pointer-events: auto; }
+
+.gi-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 2147482950;
+	pointer-events: none;
+	display: none;
+}
+.gi-overlay.is-on { display: block; }
+
+.gi-frame {
+	position: absolute;
+	pointer-events: auto;
+	cursor: grab;
+	border: 1.5px dashed #d4a843;
+	border-radius: 8px;
+	background: rgba(212, 168, 67, 0.07);
+	box-sizing: border-box;
+}
+.gi-frame.is-dragging { cursor: grabbing; }
+
+.gi-handle {
+	position: absolute;
+	width: 12px;
+	height: 12px;
+	margin: -6px 0 0 -6px;
+	background: #d4a843;
+	border: 1.5px solid #1b1920;
+	border-radius: 3px;
+	box-sizing: border-box;
+	pointer-events: auto;
+}
+.gi-handle[data-h="nw"] { left: 0;    top: 0;    cursor: nwse-resize; }
+.gi-handle[data-h="n"]  { left: 50%;  top: 0;    cursor: ns-resize; }
+.gi-handle[data-h="ne"] { left: 100%; top: 0;    cursor: nesw-resize; }
+.gi-handle[data-h="e"]  { left: 100%; top: 50%;  cursor: ew-resize; }
+.gi-handle[data-h="se"] { left: 100%; top: 100%; cursor: nwse-resize; }
+.gi-handle[data-h="s"]  { left: 50%;  top: 100%; cursor: ns-resize; }
+.gi-handle[data-h="sw"] { left: 0;    top: 100%; cursor: nesw-resize; }
+.gi-handle[data-h="w"]  { left: 0;    top: 50%;  cursor: ew-resize; }
+
+.gi-guide {
+	position: absolute;
+	background: #d4a843;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 0.1s ease;
+}
+.gi-guide.is-on { opacity: 0.9; }
+.gi-guide-v { top: 0; bottom: 0; width: 1px; }
+.gi-guide-h { left: 0; right: 0; height: 1px; }
+
+.gi-hint {
+	position: absolute;
+	left: 18px;
+	top: 18px;
+	padding: 6px 12px;
+	border-radius: 4px;
+	border: 1px solid rgba(255, 255, 255, 0.10);
+	border-left: 2px solid #d4a843;
+	background: #201e28;
+	color: #eae7ee;
+	font-size: 12.5px;
+	font-weight: 500;
+	box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+	pointer-events: none;
+	white-space: nowrap;
+}

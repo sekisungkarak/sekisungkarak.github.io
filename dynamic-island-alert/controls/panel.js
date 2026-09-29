@@ -47,8 +47,15 @@
 	//  - obsAddress/obsPort/obsPassword : diatur dari modal "Connect OBS" di
 	//    navbar (tersimpan sebagai preferensi), bukan dari tab Connections.
 	var PANEL_HIDDEN = ['testAlertType', 'obsAddress', 'obsPort', 'obsPassword'];
+	// Kontrol yang TIDAK dirender di panel karena nilainya dikelola mode Layout
+	// (handle resize), bukan oleh form. Slider-nya tetap ada di dashboard.
+	// Sengaja dipisah dari PANEL_HIDDEN: PANEL_HIDDEN menyalin nilai LAMA saat
+	// Save, jadi kalau widgetScale ada di sana hasil resize tidak akan tersimpan.
+	var PANEL_LAYOUT_OWNED = ['widgetScale'];
 	var allSettings = SCHEMA.settings || [];
-	var settings = allSettings.filter(function (s) { return PANEL_HIDDEN.indexOf(s.id) === -1; });
+	var settings = allSettings.filter(function (s) {
+		return PANEL_HIDDEN.indexOf(s.id) === -1 && PANEL_LAYOUT_OWNED.indexOf(s.id) === -1;
+	});
 	var defaults = SCHEMA.defaults || {};
 
 	/* =========================================================== susunan menu */
@@ -115,6 +122,15 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 	}
 
 	var values = CurrentMap();
+
+	// Posisi widget dari mode Layout (offset margin, px). Bukan setting skema,
+	// tapi ikut disimpan ke profil lewat ReadForm() dan dibaca widget saat load.
+	var layoutState = {
+		x: Number(CFG.read('widgetOffsetX')) || 0,
+		y: Number(CFG.read('widgetOffsetY')) || 0,
+		// Skala juga milik mode Layout: slider Widget Scale tidak ada di panel.
+		scale: Number(CFG.read('widgetScale')) || 1
+	};
 
 	/* ------------------------------------------------- keadaan buka / tutup */
 
@@ -239,6 +255,8 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			plus:     '<path d="M12 5.5v13M5.5 12h13"/>',
 			trash:    '<path d="M4.5 7h15M9.5 7V5.5h5V7M7 7l1 12h8l1-12"/>'
 			,gear:    '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'
+			,save:    '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/>'
+			,reset:   '<path d="M4 9a8 8 0 1 1 2.3 5.7"/><path d="M4 4v5h5"/>'
 		};
 		s.innerHTML = paths[name] || '';
 		return s;
@@ -250,9 +268,14 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 	}
 
 	function labelFor(s) {
-		var row = h('label', 'cp-label');
-		row.setAttribute('for', 'cp-' + s.id);
-		row.appendChild(h('span', 'cp-label-text', s.label || s.id));
+		// Teks label TIDAK boleh mengaktifkan kontrol. Baik <label for> maupun
+		// <label> yang membungkus input memicu kontrol saat diklik; di overlay
+		// OBS klik nyasar sering terjadi. Jadi pembungkusnya <div> dan teksnya
+		// <span> biasa - hanya kontrolnya sendiri yang aktif.
+		var row = h('div', 'cp-label');
+		var lab = h('span', 'cp-label-text');
+		lab.textContent = s.label || s.id;
+		row.appendChild(lab);
 		if (s.description) {
 			var d = h('span', 'cp-desc');
 			// Deskripsi memakai <br> dan <a> sederhana dari skema bawaan kita
@@ -814,6 +837,10 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 
 	var obsBadge = null;
 	var OBS_STATE = 'off';
+	// Modal Connect OBS yang sedang terbuka. Saat 'required', modal wajib
+	// diisi dulu: X/backdrop/Escape tidak menutupnya sampai Connect berhasil.
+	var obsDialogBack = null;
+	var obsDialogRequired = false;
 
 	function RenderObsBadge() {
 		if (!obsBadge) return;
@@ -844,7 +871,9 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 
 	// Modal "Connect OBS" (Port + Password). Nilai koneksi disimpan sebagai
 	// preferensi karena alamat OBS itu milik mesin, bukan milik satu scene.
-	function ObsConnectDialog() {
+	function ObsConnectDialog(opts) {
+		opts = opts || {};
+		var required = !!opts.required;
 		var back = h('div', 'cp-dialog-back');
 		var box = h('div', 'cp-dialog');
 
@@ -855,6 +884,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		hd.appendChild(h('div', 'cp-dialog-title', 'Connect OBS'));
 		var x = h('button', 'cp-dialog-x', '\u00d7');
 		x.type = 'button';
+		if (required) x.style.display = 'none';
 		hd.appendChild(x);
 		box.appendChild(hd);
 
@@ -887,7 +917,14 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		back.appendChild(box);
 		root.appendChild(back);
 
-		function CloseD() { if (back.parentNode) back.parentNode.removeChild(back); }
+		obsDialogBack = back;
+		obsDialogRequired = required;
+		function CloseD() {
+			// Mode wajib: tolak semua upaya menutup sebelum Connect berhasil.
+			if (obsDialogRequired) return;
+			if (back.parentNode) back.parentNode.removeChild(back);
+			obsDialogBack = null;
+		}
 		x.addEventListener('click', CloseD);
 		back.addEventListener('click', function (e) { if (e.target === back) CloseD(); });
 
@@ -901,6 +938,8 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			msg.textContent = '';
 			ConnectObs({ silent: true }).then(function () {
 				CFG.setPref('obsAutoConnect', '1');
+				// Sudah terhubung: modal boleh ditutup (juga kalau tadinya wajib).
+				obsDialogRequired = false;
 				msg.textContent = 'Connected.';
 				go.textContent = 'Connected';
 				setTimeout(function () { CloseD(); SyncProfileToScene(); }, 500);
@@ -1243,6 +1282,11 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			var v = ReadControl(s, i);
 			if (v !== undefined) map[s.id] = v;
 		});
+		// Offset & skala dari mode Layout bukan setting skema; offset disuntikkan
+		// di sini supaya setiap jalur simpan (Save, OBS sync) ikut membawanya.
+		map.widgetOffsetX = layoutState.x;
+		map.widgetOffsetY = layoutState.y;
+		map.widgetScale = layoutState.scale;
 		return map;
 	}
 
@@ -1319,6 +1363,40 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 	Tip(profilePill, 'Active profile');
 	headActions.appendChild(profilePill);
 
+	// Save & Reset dipindah dari footer ke navbar sebagai ikon, mengikuti
+	// gaya Better Alerts. Save berdenyut (is-dirty) saat ada perubahan belum
+	// disimpan; lihat MarkDirty().
+	var btnSave = h('button', 'cp-btn cp-btn-icon cp-btn-primary');
+	btnSave.type = 'button';
+	Tip(btnSave, 'Save and apply');
+	btnSave.appendChild(Icon('save'));
+	btnSave.addEventListener('click', SaveNow);
+	headActions.appendChild(btnSave);
+
+	var btnReset = h('button', 'cp-btn cp-btn-icon');
+	btnReset.type = 'button';
+	Tip(btnReset, 'Reset to defaults');
+	btnReset.appendChild(Icon('reset'));
+	btnReset.addEventListener('click', function () {
+		ShowDialog({
+			title: 'Reset to defaults',
+			message: 'Restore every setting to its default value?',
+			confirmLabel: 'Reset',
+			danger: true,
+			onConfirm: function () {
+				FillForm(defaults);
+				// Skala & posisi widget bukan bagian form (dikelola mode Layout),
+				// jadi FillForm(defaults) tidak menyentuhnya. Reset eksplisit di sini
+				// supaya "Reset to Defaults" benar-benar mengembalikan widget juga.
+				LayoutApplyOffset(0, 0);
+				LayoutApplyScale(1);
+				MarkDirty();
+				SetStatus('Defaults loaded. Press Save to apply.');
+			}
+		});
+	});
+	headActions.appendChild(btnReset);
+
 	// Options dipindah ke gear icon di navbar (seperti Better Alerts), bukan tab.
 	btnGear = h('button', 'cp-btn cp-btn-icon');
 	btnGear.type = 'button';
@@ -1339,6 +1417,8 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		btnCollapse.textContent = '';
 		btnCollapse.appendChild(Icon(on ? 'restore' : 'collapse'));
 		Tip(btnCollapse, on ? 'Restore panel size' : 'Collapse panel');
+		// Saat panel dikecilkan, widget masuk mode Layout (drag/resize).
+		SetLayoutMode(on);
 	});
 	headActions.appendChild(btnCollapse);
 
@@ -1427,34 +1507,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 	var body = h('div', 'cp-body');
 	panel.appendChild(body);
 
-	/* -- footer ------------------------------------------------------------- */
-
-	var foot = h('div', 'cp-foot');
-
-	var btnSave = h('button', 'cp-btn cp-btn-primary', 'Save');
-	btnSave.type = 'button';
-	Tip(btnSave, 'Save and apply');
-	btnSave.addEventListener('click', SaveNow);
-	foot.appendChild(btnSave);
-
-	var btnReset = h('button', 'cp-btn cp-btn-ghost', 'Reset to Defaults');
-	btnReset.type = 'button';
-	btnReset.addEventListener('click', function () {
-		ShowDialog({
-			title: 'Reset to defaults',
-			message: 'Restore every setting to its default value?',
-			confirmLabel: 'Reset',
-			danger: true,
-			onConfirm: function () {
-				FillForm(defaults);
-				MarkDirty();
-				SetStatus('Defaults loaded. Press Save to apply.');
-			}
-		});
-	});
-	foot.appendChild(btnReset);
-
-	panel.appendChild(foot);
+	/* -- footer dihapus: Save & Reset sekarang ikon di navbar ----------------- */
 
 	// Pesan status tampil sebagai toast di pojok kanan atas LAYAR, seperti
 	// Better Alerts (bukan baris di bawah tombol Save). Ditempel ke root
@@ -1500,6 +1553,241 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		// Batasi tumpukan supaya tidak memenuhi layar saat pesan beruntun.
 		while (toasts.children.length > 4) toasts.removeChild(toasts.firstChild);
 		setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 3400);
+	}
+
+	/* =========================================== mode Layout (drag & resize) */
+	/* Pola Better Alerts: saat panel di-collapse, widget diberi bingkai + 8
+	   handle. Badan widget digeser, handle mengubah skala (widgetScale).
+	   Posisi disimpan sebagai OFFSET MARGIN, bukan left/top: mengubah posisi
+	   absolut merusak left:50% + translateX(-50%) bawaan CSS dan membuat
+	   animasi pill melebar/menyusut kacau. Snap + garis bantu saat menggeser. */
+
+	var LAYOUT_SNAP = 8;            // px: toleransi snap ke tengah layar / grid
+	var LAYOUT_GRID = 40;           // px: ukuran grid snap
+	var LAYOUT_MIN_SCALE = 0.5;
+	var LAYOUT_MAX_SCALE = 2.0;
+
+	var layoutOn = false;
+	var layoutRaf = 0;
+	var giOverlay = null, giFrame = null, giGuideV = null, giGuideH = null;
+	var layoutFrameDrag = null, layoutHandleDrag = null;
+
+	function LayoutWidget() { return document.getElementById('dynamicIsland'); }
+	function LayoutClamp(v, lo, hi) { return Math.min(Math.max(v, lo), hi); }
+	function LayoutDist(a, b) {
+		var dx = a.x - b.x, dy = a.y - b.y;
+		return Math.sqrt(dx * dx + dy * dy);
+	}
+
+	function LayoutApplyOffset(x, y) {
+		layoutState.x = Math.round(x);
+		layoutState.y = Math.round(y);
+		var w = LayoutWidget();
+		if (w) {
+			w.style.marginLeft = layoutState.x + 'px';
+			w.style.marginTop = layoutState.y + 'px';
+		}
+		MarkDirty();
+	}
+
+	function LayoutApplyScale(sc) {
+		var sc2 = LayoutClamp(Math.round(sc / 0.05) * 0.05, LAYOUT_MIN_SCALE, LAYOUT_MAX_SCALE);
+		sc2 = Math.round(sc2 * 100) / 100;
+		if (typeof window.setWidgetScale === 'function') window.setWidgetScale(sc2);
+		layoutState.scale = sc2;
+		MarkDirty();
+		return sc2;
+	}
+
+	function LayoutShowGuides(gx, gy) {
+		if (!giGuideV || !giGuideH) return;
+		if (gx === null) giGuideV.classList.remove('is-on');
+		else { giGuideV.style.left = gx + 'px'; giGuideV.classList.add('is-on'); }
+		if (gy === null) giGuideH.classList.remove('is-on');
+		else { giGuideH.style.top = gy + 'px'; giGuideH.classList.add('is-on'); }
+	}
+
+	function LayoutTick() {
+		layoutRaf = 0;
+		if (!layoutOn) return;
+		var w = LayoutWidget();
+		if (w && giFrame) {
+			var r = w.getBoundingClientRect();
+			giFrame.style.left = r.left + 'px';
+			giFrame.style.top = r.top + 'px';
+			giFrame.style.width = r.width + 'px';
+			giFrame.style.height = r.height + 'px';
+		}
+		layoutRaf = requestAnimationFrame(LayoutTick);
+	}
+
+	function LayoutLighten(on) {
+		var w = LayoutWidget();
+		if (!w) return;
+		if (on) {
+			w.style.transition = 'none';
+			w.style.backdropFilter = 'blur(8px)';
+			w.style.webkitBackdropFilter = 'blur(8px)';
+		} else {
+			w.style.removeProperty('transition');
+			w.style.removeProperty('backdrop-filter');
+			w.style.removeProperty('-webkit-backdrop-filter');
+		}
+	}
+
+	function LayoutResizeMove(e) {
+		var d = layoutHandleDrag;
+		if (!d) return;
+		var cur = { x: e.clientX, y: e.clientY };
+		var ratio;
+		if (d.handle === 'n' || d.handle === 's') {
+			ratio = Math.abs(cur.y - d.anchor.y) / d.startDistY;
+		} else if (d.handle === 'e' || d.handle === 'w') {
+			ratio = Math.abs(cur.x - d.anchor.x) / d.startDistX;
+		} else {
+			ratio = LayoutDist(cur, d.anchor) / d.startDist;
+		}
+		if (!isFinite(ratio) || ratio <= 0) return;
+		LayoutApplyScale(d.startScale * ratio);
+	}
+
+	function LayoutEndDrag() {
+		if (!layoutFrameDrag && !layoutHandleDrag) return;
+		layoutFrameDrag = null;
+		layoutHandleDrag = null;
+		if (giFrame) giFrame.classList.remove('is-dragging');
+		LayoutShowGuides(null, null);
+		LayoutLighten(false);
+	}
+
+	function LayoutDocMove(e) {
+		if (layoutHandleDrag) { LayoutResizeMove(e); return; }
+		if (!layoutFrameDrag) return;
+		var d = layoutFrameDrag;
+		var dx = e.clientX - d.px;
+		var dy = e.clientY - d.py;
+		var vw = window.innerWidth, vh = window.innerHeight;
+		var cx = d.rect.left + dx + d.rect.width / 2;
+		var cy = d.rect.top + dy + d.rect.height / 2;
+		var nx = d.ox + dx, ny = d.oy + dy;
+		var gx = null, gy = null;
+		// Snap X: tengah layar dulu, lalu grid.
+		if (Math.abs(cx - vw / 2) <= LAYOUT_SNAP) { nx += (vw / 2 - cx); gx = vw / 2; }
+		else {
+			var sx = Math.round(cx / LAYOUT_GRID) * LAYOUT_GRID;
+			if (Math.abs(cx - sx) <= LAYOUT_SNAP) { nx += (sx - cx); gx = sx; }
+		}
+		// Snap Y: tengah layar dulu, lalu grid.
+		if (Math.abs(cy - vh / 2) <= LAYOUT_SNAP) { ny += (vh / 2 - cy); gy = vh / 2; }
+		else {
+			var sy = Math.round(cy / LAYOUT_GRID) * LAYOUT_GRID;
+			if (Math.abs(cy - sy) <= LAYOUT_SNAP) { ny += (sy - cy); gy = sy; }
+		}
+		LayoutApplyOffset(LayoutClamp(nx, -vw / 2, vw / 2), LayoutClamp(ny, -vh / 2, vh / 2));
+		LayoutShowGuides(gx, gy);
+	}
+
+	function LayoutBind() {
+		giFrame.addEventListener('pointerdown', function (e) {
+			if (e.button !== 0) return;
+			if (e.target !== giFrame) return; // handle punya listener sendiri
+			var w = LayoutWidget();
+			if (!w) return;
+			layoutFrameDrag = {
+				px: e.clientX, py: e.clientY,
+				ox: layoutState.x, oy: layoutState.y,
+				rect: w.getBoundingClientRect()
+			};
+			giFrame.classList.add('is-dragging');
+			LayoutLighten(true);
+			e.preventDefault();
+		});
+
+		// Double-click badan widget: reset posisi & skala ke semula.
+		giFrame.addEventListener('dblclick', function (e) {
+			if (e.target !== giFrame) return; // handle diabaikan
+			LayoutApplyOffset(0, 0);
+			LayoutApplyScale(1);
+			SetStatus('Widget layout reset. Press Save to apply.');
+		});
+
+		Array.prototype.forEach.call(giFrame.querySelectorAll('.gi-handle'), function (hn) {
+			hn.addEventListener('pointerdown', function (e) {
+				if (e.button !== 0) return;
+				var w = LayoutWidget();
+				if (!w) return;
+				var r = w.getBoundingClientRect();
+				// transform-origin widget = "top center": titik (centerX, top)
+				// tetap diam saat skala berubah, jadi rasio diukur dari titik itu.
+				var anchor = { x: r.left + r.width / 2, y: r.top };
+				var p = { x: e.clientX, y: e.clientY };
+				layoutHandleDrag = {
+					handle: hn.dataset.h,
+					anchor: anchor,
+					startScale: layoutState.scale,
+					startDist: Math.max(1, LayoutDist(p, anchor)),
+					startDistX: Math.max(1, Math.abs(p.x - anchor.x)),
+					startDistY: Math.max(1, Math.abs(p.y - anchor.y))
+				};
+				LayoutLighten(true);
+				e.preventDefault();
+				e.stopPropagation();
+			});
+		});
+
+		// pointermove/up di document: pointer capture pada handle akan
+		// mengarahkan event ke handle, bukan ke giFrame, jadi satu listener
+		// global yang merutekan berdasarkan state lebih andal.
+		document.addEventListener('pointermove', LayoutDocMove);
+		document.addEventListener('pointerup', LayoutEndDrag);
+		document.addEventListener('pointercancel', LayoutEndDrag);
+	}
+
+	function LayoutBuild() {
+		if (giOverlay) return;
+		giOverlay = h('div', 'gi-overlay');
+		giGuideV = h('div', 'gi-guide gi-guide-v');
+		giGuideH = h('div', 'gi-guide gi-guide-h');
+		giFrame = h('div', 'gi-frame');
+		['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].forEach(function (pos) {
+			var hd = h('div', 'gi-handle');
+			hd.dataset.h = pos;
+			giFrame.appendChild(hd);
+		});
+		giOverlay.appendChild(giGuideV);
+		giOverlay.appendChild(giGuideH);
+		giOverlay.appendChild(giFrame);
+		giOverlay.appendChild(h('div', 'gi-hint', 'Layout mode \u2014 drag to move \u00b7 corners to resize'));
+		document.body.appendChild(giOverlay);
+		LayoutBind();
+	}
+
+	function LayoutEnter() {
+		if (layoutOn) return;
+		layoutOn = true;
+		LayoutBuild();
+		giOverlay.classList.add('is-on');
+		if (!layoutRaf) layoutRaf = requestAnimationFrame(LayoutTick);
+	}
+
+	function LayoutExit() {
+		if (!layoutOn) return;
+		layoutOn = false;
+		if (giOverlay) giOverlay.classList.remove('is-on');
+		LayoutShowGuides(null, null);
+		LayoutLighten(false);
+		if (layoutRaf) { cancelAnimationFrame(layoutRaf); layoutRaf = 0; }
+	}
+
+	function SetLayoutMode(on) {
+		if (on) {
+			LayoutEnter();
+			SetStatus('Layout mode on \u2014 drag the widget to move, drag a handle to resize.');
+		} else {
+			var was = layoutOn;
+			LayoutExit();
+			if (was && dirty) SetStatus('Layout changed \u2014 press Save to apply.');
+		}
 	}
 
 	function SaveNow() {
@@ -1802,7 +2090,9 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		btnResetLayout.type = 'button';
 		btnResetLayout.addEventListener('click', function () {
 			ResetPos();
-			SetStatus('Panel layout reset to default.');
+			LayoutApplyOffset(0, 0);
+			LayoutApplyScale(1);
+			SetStatus('Panel & widget layout reset to default. Press Save to apply.');
 		});
 		row4.appendChild(btnResetLayout);
 		b4.appendChild(row4);
@@ -1979,12 +2269,28 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		ApplyPos();
 		requestAnimationFrame(function () { root.classList.add('is-open'); });
 		CFG.setPref('panelOpen', '1');
+		// Panel dibuka dalam keadaan collapsed (mis. ditutup X saat collapsed):
+		// Layout harus ikut hidup lagi supaya "collapsed <=> Layout aktif".
+		if (root.classList.contains('is-collapsed')) SetLayoutMode(true);
+		// Connect OBS wajib: begitu panel pertama kali muncul dan OBS belum
+		// pernah dikonfigurasi, modal Connect langsung dipop-upkan.
+		if (CFG.read('obsAutoConnect') !== '1' && !obsDialogBack) {
+			setTimeout(function () {
+				if (isOpen && !obsDialogBack) ObsConnectDialog({ required: true });
+			}, 260);
+		}
 	}
 	function Close() {
 		if (!isOpen) return;
+		// Modal wajib menahan panel tetap terbuka; menutup panel akan ikut
+		// membuang modalnya (modal berada di dalam root).
+		if (obsDialogRequired) { SetStatus('Connect to OBS first.'); return; }
 		isOpen = false;
 		CloseActiveSelect();
 		HideTip();
+		// Panel ditutup: jangan tinggalkan bingkai/handle Layout nyangkut di
+		// layar (ikut terekam OBS kalau dibiarkan).
+		LayoutExit();
 		root.classList.remove('is-open');
 		CFG.setPref('panelOpen', '0');
 		setTimeout(function () {
@@ -2000,6 +2306,8 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 
 	document.addEventListener('keydown', function (e) {
 		if (e.key === 'Escape' && isOpen) {
+			// Modal wajib (Connect OBS) tidak bisa dibatalkan dengan Esc.
+			if (obsDialogRequired) { e.stopPropagation(); return; }
 			// Esc menutup dropdown dulu, baru panel.
 			if (activeSelectClose) { CloseActiveSelect(); e.stopPropagation(); return; }
 			Close();
@@ -2030,6 +2338,13 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 
 	root.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
 	root.addEventListener('click', function (e) { e.stopPropagation(); });
+
+	window.GesekiLayout = {
+		enter: LayoutEnter,
+		exit: LayoutExit,
+		toggle: function () { if (layoutOn) SetLayoutMode(false); else SetLayoutMode(true); },
+		get isOn() { return layoutOn; }
+	};
 
 	window.GesekiPanel = {
 		open: Open,

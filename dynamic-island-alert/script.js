@@ -527,6 +527,16 @@ if (verticalAlign === "center") {
 document.documentElement.style.setProperty('--base-transform', baseTransform);
 dynamicIsland.style.transform = baseTransform;
 
+// Offset posisi dari mode Layout (Controls Panel). Diterapkan sebagai MARGIN,
+// bukan left/top, supaya left:50% + translateX(-50%) bawaan CSS tidak diubah
+// (kalau diubah, animasi pill melebar/menyusut jadi kacau).
+const widgetOffsetX = GetFloatParam("widgetOffsetX", 0);
+const widgetOffsetY = GetFloatParam("widgetOffsetY", 0);
+if (widgetOffsetX || widgetOffsetY) {
+	dynamicIsland.style.marginLeft = widgetOffsetX + "px";
+	dynamicIsland.style.marginTop = widgetOffsetY + "px";
+}
+
 // Default kini "glass" (Liquid Glass) - harus sama dengan defaultValue widgetStyle di
 // settings.json, kalau tidak widget tanpa param akan tampil Solid Black.
 if ((urlParams.get("widgetStyle") || "glass") === "solid") {
@@ -875,6 +885,9 @@ const ALERT_ICONS = {
 let weatherData = null;
 let viewerCount = null;
 let currentPanelIndex = 0;
+// Render pertama sudah jalan? Pill ditahan tersembunyi sampai ini true,
+// supaya "Loading..." + ikon kosong tidak pernah terlihat saat reload.
+let islandPaintedOnce = false;
 // [AMBIENT ROTASI] Waktu (ms) panel saat ini mulai tayang. Rotasi dihitung dari
 // anchor ini, bukan dari tick timer, supaya rotasi tetap berjalan selama alert
 // menghentikan timer dan bisa dikejar (CatchUpRotation) saat ambient dipulihkan.
@@ -1344,6 +1357,14 @@ let lastAmbientBounceAt = 0;
 // menampilkan teks fallback.
 function SyncIslandVisibility() {
 	if (!dynamicIsland) return;
+	// Jangan buka pill sebelum render pertama. ApplyNowPlayingData memanggil
+	// fungsi ini begitu fetch data selesai (~1 dtk), JAUH sebelum UpdateInfoText()
+	// menggambar teks & ikon - tanpa guard ini pill muncul dengan "Loading..."
+	// dan ikon kosong (gambar rusak) saat reload.
+	if (!islandPaintedOnce) {
+		dynamicIsland.classList.add('island-no-panel');
+		return;
+	}
 	const anyVisible = infoPanels.some(p => !(p.skip && p.skip()));
 	dynamicIsland.classList.toggle('island-no-panel', !anyVisible);
 }
@@ -2342,6 +2363,9 @@ async function InitInfoLoop() {
 
 	// Baru gambar: data sudah tersedia untuk semua panel.
 	UpdateInfoText();
+	// Render pertama selesai: baru izinkan pill ditampilkan. Sebelum ini
+	// SyncIslandVisibility menahan pill tetap tersembunyi.
+	islandPaintedOnce = true;
 	StartCycleTimer();
 	// Pill disembunyikan sejak frame pertama (class island-no-panel) supaya teks
 	// "Loading..." tanpa icon tidak pernah terlihat. Sekarang data siap -> tampilkan

@@ -525,6 +525,16 @@ if (verticalAlign === "center") {
 document.documentElement.style.setProperty('--base-transform', baseTransform);
 dynamicIsland.style.transform = baseTransform;
 
+// Offset posisi dari mode Layout (Controls Panel). Diterapkan sebagai MARGIN,
+// bukan left/top, supaya left:50% + translateX(-50%) bawaan CSS tidak diubah
+// (kalau diubah, animasi pill melebar/menyusut jadi kacau).
+const widgetOffsetX = GetFloatParam("widgetOffsetX", 0);
+const widgetOffsetY = GetFloatParam("widgetOffsetY", 0);
+if (widgetOffsetX || widgetOffsetY) {
+	dynamicIsland.style.marginLeft = widgetOffsetX + "px";
+	dynamicIsland.style.marginTop = widgetOffsetY + "px";
+}
+
 // Default "glass" harus sama dengan defaultValue widgetStyle di settings.json,
 // kalau tidak widget tanpa param tampil Solid Black.
 if ((urlParams.get("widgetStyle") || "glass") === "solid") {
@@ -860,6 +870,9 @@ const ALERT_ICONS = {
 let weatherData = null;
 let viewerCount = null;
 let currentPanelIndex = 0;
+// Render pertama sudah jalan? Pill ditahan tersembunyi sampai ini true,
+// supaya "Loading..." + ikon kosong tidak pernah terlihat saat reload.
+let islandPaintedOnce = false;
 // [AMBIENT ROTASI] Waktu (ms) panel saat ini mulai tayang; dasar pengejaran rotasi.
 let cycleAnchorAt = Date.now();
 let cycleTimer = null;
@@ -1274,6 +1287,14 @@ function StartScrubberAnimation() {
 // Sembunyikan pill bila tidak ada panel yang bisa tayang.
 function SyncIslandVisibility() {
 	if (!dynamicIsland) return;
+	// Jangan buka pill sebelum render pertama. ApplyNowPlayingData memanggil
+	// fungsi ini begitu fetch data selesai (~1 dtk), JAUH sebelum UpdateInfoText()
+	// menggambar teks & ikon - tanpa guard ini pill muncul dengan "Loading..."
+	// dan ikon kosong (gambar rusak) saat reload.
+	if (!islandPaintedOnce) {
+		dynamicIsland.classList.add('island-no-panel');
+		return;
+	}
 	const anyVisible = infoPanels.some(p => !(p.skip && p.skip()));
 	dynamicIsland.classList.toggle('island-no-panel', !anyVisible);
 }
@@ -2190,6 +2211,9 @@ async function InitInfoLoop() {
 	ScheduleWeatherFetch(weatherData ? WEATHER_REFRESH_INTERVAL : WEATHER_RETRY_INTERVAL);
 
 	UpdateInfoText();
+	// Render pertama selesai: baru izinkan pill ditampilkan. Sebelum ini
+	// SyncIslandVisibility menahan pill tetap tersembunyi.
+	islandPaintedOnce = true;
 	StartCycleTimer();
 	// Pill disembunyikan sejak frame pertama agar "Loading..." tidak terlihat.
 	// Data siap -> tampilkan (atau biarkan tersembunyi bila tidak ada panel).

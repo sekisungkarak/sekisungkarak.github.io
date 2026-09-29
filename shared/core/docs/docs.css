@@ -112,6 +112,9 @@ a:hover { color: var(--accent-pale); text-decoration: underline; text-decoration
 /* ── install card ───────────────────────────────────── */
 .install-card {
   margin-top: 34px;
+  /* Jarak ke paragraf berikutnya: tanpa ini kartu menempel ke teks bawah
+     (margin-bottom 0 bertabrakan dengan margin-top 0 pada <p>). */
+  margin-bottom: 30px;
   padding: 20px 22px;
   border: var(--bw) solid var(--line);
   border-radius: var(--r-lg);
