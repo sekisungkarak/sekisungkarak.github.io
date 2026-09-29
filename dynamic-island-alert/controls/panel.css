@@ -202,16 +202,6 @@ div.cp-group-head:hover { color: #eae7ee; }
 
 .cp-group-name { flex: 1 1 auto; }
 
-.cp-group-count {
-	font-size: 12px;
-	font-weight: 500;
-	letter-spacing: 0;
-	color: #a49dae;
-	background: rgba(255, 255, 255, 0.06);
-	border-radius: 999px;
-	padding: 1px 8px;
-}
-
 .cp-group-body {
 	display: none;
 	padding: 6px 0 4px;
@@ -230,6 +220,37 @@ div.cp-group-head:hover { color: #eae7ee; }
 
 .cp-field.cp-full { grid-column: 1 / -1; }
 
+/* Baris mendatar seperti .row Better Alerts: label mengisi sisa, kontrol di kanan. */
+.cp-field.cp-row {
+	flex-direction: row;
+	align-items: center;
+	gap: 10px;
+}
+
+.cp-field.cp-row > .cp-label { flex: 1 1 auto; min-width: 0; }
+/* Input dan dropdown sama ukuran: 180px, di kanan label. */
+.cp-field.cp-row > .cp-select,
+.cp-field.cp-row > input.cp-input { flex: 0 0 auto; width: 180px; }
+
+/* Dropdown multi-pilih (Info Rotation Display) lebih lebar supaya label
+   gabungan panjang tidak terpotong ellipsis. */
+.cp-field.cp-row > .cp-select.cp-multi { width: 280px; }
+
+.cp-multi .cp-select-btn { height: auto; min-height: 30px; padding: 5px 9px; }
+
+.cp-multi .cp-select-label {
+	white-space: normal;
+	line-height: 1.35;
+}
+
+/* Slider: range 180px + angka, di sisi kanan label. */
+.cp-slider-ctl {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
 .cp-label {
 	display: flex;
 	flex-direction: column;
@@ -244,13 +265,13 @@ div.cp-group-head:hover { color: #eae7ee; }
 .cp-desc a { color: #d4a843; text-decoration: underline; text-underline-offset: 2px; }
 .cp-desc a:hover { color: #e6bd5f; }
 
-/* Selaras Better Alerts: isian gelap #242424, garis tipis 0.14, radius 4. */
+/* Warna kembali seperti semula; ukuran/posisi menyesuaikan Better Alerts. */
 .cp-input {
 	width: 100%;
 	appearance: none;
-	background: #242424;
-	border: 1px solid rgba(255, 255, 255, 0.14);
-	color: #f5f5f5;
+	background: #17151c;
+	border: 1px solid rgba(255, 255, 255, 0.36);
+	color: #f2eff5;
 	font: inherit;
 	font-size: 14px;
 	padding: 5px 7px;
@@ -259,7 +280,7 @@ div.cp-group-head:hover { color: #eae7ee; }
 	transition: border-color 0.14s ease;
 }
 
-.cp-input:hover { border-color: rgba(255, 255, 255, 0.22); }
+.cp-input:hover { border-color: rgba(255, 255, 255, 0.48); }
 .cp-input:focus { outline: none; border-color: #d4a843; }
 
 /* ---------------------------------------------- dropdown buatan sendiri
@@ -305,8 +326,8 @@ div.cp-group-head:hover { color: #eae7ee; }
 	min-width: 120px;
 	overflow-y: auto;
 	overscroll-behavior: contain;
-	background: #242424;
-	border: 1px solid rgba(255, 255, 255, 0.14);
+	background: #26232e;
+	border: 1px solid rgba(255, 255, 255, 0.16);
 	border-radius: 4px;
 	box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
 	padding: 4px;
@@ -358,13 +379,93 @@ div.cp-group-head:hover { color: #eae7ee; }
 	text-overflow: ellipsis;
 }
 
-.cp-select-opt:hover { background: #2e2e2e; }
+.cp-select-opt:hover { background: rgba(255, 255, 255, 0.09); }
 
 .cp-select-opt.is-on {
-	background: rgba(212, 168, 67, 0.18);
-	color: #d4a843;
+	background: #d4a843;
+	color: #1a1712;
 	font-weight: 650;
 }
+
+/* Dropdown multi-pilih (setting tipe 'tags', mis. Info Rotation Display).
+   Daftarnya ditempel ke root, jadi kelas pembeda dipasang di list-nya. */
+
+.cp-select-opt-text { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; }
+
+.cp-check {
+	flex: 0 0 auto;
+	width: 14px;
+	height: 14px;
+	border: 1.5px solid rgba(255, 255, 255, 0.40);
+	border-radius: 3px;
+	position: relative;
+	transition: background 0.14s ease, border-color 0.14s ease;
+}
+
+.cp-check.is-on {
+	background: #d4a843;
+	border-color: #d4a843;
+}
+
+.cp-check.is-on::after {
+	content: '';
+	position: absolute;
+	left: 4px;
+	top: 1px;
+	width: 4px;
+	height: 8px;
+	border: solid #1a1712;
+	border-width: 0 2px 2px 0;
+	transform: rotate(45deg);
+}
+
+.cp-multi-list .cp-select-opt { display: flex; align-items: center; gap: 8px; }
+
+/* Footer daftar multi-pilih: tombol "Clear all". */
+
+.cp-multi-foot {
+	display: flex;
+	justify-content: flex-end;
+	padding: 5px 2px 1px;
+	margin-top: 4px;
+	border-top: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.cp-multi-clear {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	appearance: none;
+	font: inherit;
+	font-size: 12.5px;
+	font-weight: 550;
+	padding: 4px 9px;
+	border-radius: 4px;
+	border: 1px solid rgba(255, 255, 255, 0.22);
+	background: rgba(255, 255, 255, 0.05);
+	color: #cfc9d6;
+	cursor: pointer;
+	transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+
+.cp-multi-clear:hover {
+	background: rgba(255, 255, 255, 0.10);
+	border-color: rgba(255, 255, 255, 0.34);
+	color: #f2eff5;
+}
+
+.cp-multi-clear svg { display: block; }
+
+/* Di multi-pilih, baris terpilih cukup disorot - bukan emas penuh seperti
+   pilihan tunggal, supaya centangnya tetap jadi penanda utama. */
+.cp-multi-list .cp-select-opt.is-on {
+	background: rgba(212, 168, 67, 0.16);
+	color: #f2eff5;
+	font-weight: 500;
+}
+
+.cp-multi .cp-select-label { color: #f2eff5; }
+.cp-multi.is-empty .cp-select-label { color: #a49dae; }
 
 /* checkbox jadi switch */
 
@@ -421,16 +522,20 @@ div.cp-group-head:hover { color: #eae7ee; }
 	gap: 10px;
 }
 
+/* Nilai slider: monospace abu rata kanan, seperti .val Better Alerts. */
 .cp-slider-val {
-	font-size: 11.5px;
+	font-size: 13px;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 	font-variant-numeric: tabular-nums;
-	color: #d4a843;
-	font-weight: 650;
+	color: #a6a6a6;
+	text-align: right;
+	min-width: 58px;
 }
 
-/* Selaras Better Alerts: range bawaan + accent-color (tanpa thumb buatan). */
+/* Slider bawaan peramban + accent-color, persis input[type=range] Better Alerts. */
 .cp-range {
-	width: 100%;
+	width: 180px;
+	flex: 0 0 auto;
 	height: 22px;
 	cursor: pointer;
 	accent-color: #d4a843;
@@ -445,27 +550,25 @@ div.cp-group-head:hover { color: #eae7ee; }
 	padding: 2px 0;
 }
 
-/* Selaras .seg Better Alerts: kartu #242424, garis tipis 0.14. */
 .cp-tag {
 	appearance: none;
 	font: inherit;
-	font-size: 13px;
-	font-weight: 600;
+	font-size: 13.5px;
 	padding: 5px 10px;
 	border-radius: 4px;
-	border: 1px solid rgba(255, 255, 255, 0.14);
-	background: #242424;
-	color: #a6a6a6;
+	border: 1px solid rgba(255, 255, 255, 0.36);
+	background: rgba(255, 255, 255, 0.04);
+	color: #cfc9d6;
 	cursor: pointer;
 	transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
 }
 
-.cp-tag:hover { color: #f5f5f5; background: #2e2e2e; }
+.cp-tag:hover { background: rgba(255, 255, 255, 0.09); }
 
 .cp-tag.is-on {
-	background: rgba(212, 168, 67, 0.18);
-	border-color: rgba(212, 168, 67, 0.5);
-	color: #d4a843;
+	background: #d4a843;
+	border-color: #d4a843;
+	color: #1a1712;
 	font-weight: 650;
 }
 
@@ -482,14 +585,34 @@ div.cp-group-head:hover { color: #eae7ee; }
 	flex: 0 0 auto;
 }
 
-.cp-status {
-	flex: 1 1 100%;
-	font-size: 12.5px;
-	color: #a49dae;
-	min-height: 0;
+/* Pesan status: toast di pojok kanan atas panel, seperti Better Alerts. */
+.cp-toasts {
+	position: fixed;
+	top: 12px;
+	right: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	align-items: flex-end;
+	z-index: 60;
+	pointer-events: none;
 }
 
-.cp-status:empty { display: none; }
+.cp-toast {
+	padding: 7px 12px;
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-left: 2px solid #d4a843;
+	border-radius: 4px;
+	background: #201e28;
+	color: #eae7ee;
+	font-size: 13px;
+	font-weight: 500;
+	box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+	max-width: 360px;
+	word-break: break-word;
+}
+
+.cp-toast.is-error { border-left-color: #e0524c; }
 
 /* ------------------------------------------------------------ modal export */
 
@@ -693,10 +816,7 @@ div.cp-group-head:hover { color: #eae7ee; }
 .cp-root.is-collapsed .cp-foot { display: none; }
 
 .cp-root.is-collapsed .cp-panel {
-	width: auto !important;
-	max-width: none;
-	min-width: 0 !important;
-	/* saat mengecil, panel jadi setinggi bar judul saja */
+	/* Lebar tetap 640px seperti Better Alerts; hanya tinggi yang menyusut. */
 	height: auto !important;
 	min-height: 0 !important;
 }

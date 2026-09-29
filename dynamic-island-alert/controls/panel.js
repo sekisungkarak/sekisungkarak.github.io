@@ -425,6 +425,167 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		wrap.getValue = function () { return cur; };
 		return wrap;
 	}
+	/* Dropdown multi-pilih: dipakai setting bertipe 'tags' (mis. Info Rotation
+	   Display). Sama seperti dashboard (wa-select multiple) - daftar tidak
+	   menutup saat satu opsi diklik, jadi beberapa bisa dicentang sekaligus. */
+	function MakeMultiSelect(optList, selected, onChange) {
+		var opts = optList || [];
+		var sel = Array.isArray(selected) ? selected.map(String) : [];
+
+		var wrap = h('div', 'cp-select cp-multi');
+		var btn = h('button', 'cp-input cp-select-btn');
+		btn.type = 'button';
+		var lbl = h('span', 'cp-select-label');
+		var caret = h('span', 'cp-select-caret');
+		btn.appendChild(lbl);
+		btn.appendChild(caret);
+		wrap.appendChild(btn);
+
+		var list = null;
+
+		function labelOf(v) {
+			for (var i = 0; i < opts.length; i++) {
+				if (String(opts[i].value) === String(v)) return String(opts[i].label);
+			}
+			return String(v);
+		}
+
+		function Summary() {
+			if (!sel.length) return 'None selected';
+			return sel.map(labelOf).join(', ');
+		}
+
+		function Sync() {
+			lbl.textContent = Summary();
+			wrap.classList.toggle('is-empty', sel.length === 0);
+			if (list) {
+				var f = list.querySelector('.cp-multi-foot');
+				if (f) f.style.display = sel.length ? '' : 'none';
+			}
+			if (list) {
+				Array.prototype.forEach.call(list.querySelectorAll('.cp-select-opt'), function (b) {
+					var on = sel.indexOf(b.dataset.value) !== -1;
+					b.classList.toggle('is-on', on);
+					var cb = b.querySelector('.cp-check');
+					if (cb) cb.classList.toggle('is-on', on);
+				});
+			}
+		}
+
+		function BuildList() {
+			list = h('div', 'cp-select-list cp-multi-list');
+			list.setAttribute('role', 'listbox');
+			list.setAttribute('aria-multiselectable', 'true');
+
+			// Tombol Clear all - hanya berguna bila ada yang dipilih.
+			var foot = h('div', 'cp-multi-foot');
+			var clr = h('button', 'cp-multi-clear');
+			clr.type = 'button';
+			clr.appendChild(Icon('close'));
+			clr.appendChild(h('span', null, 'Clear all'));
+			clr.addEventListener('click', function (e) {
+				e.stopPropagation();
+				sel = [];
+				Sync();
+				if (onChange) onChange(sel.slice());
+			});
+			foot.appendChild(clr);
+
+			opts.forEach(function (o) {
+				var item = h('button', 'cp-select-opt');
+				item.type = 'button';
+				item.dataset.value = String(o.value);
+				item.setAttribute('role', 'option');
+				item.appendChild(h('span', 'cp-check'));
+				item.appendChild(h('span', 'cp-select-opt-text', String(o.label)));
+				// Multi-pilih: klik menambah/menghapus tanpa menutup daftar.
+				item.addEventListener('click', function (e) {
+					e.stopPropagation();
+					var v = String(o.value);
+					var at = sel.indexOf(v);
+					if (at === -1) sel.push(v); else sel.splice(at, 1);
+					Sync();
+					if (onChange) onChange(sel.slice());
+				});
+				list.appendChild(item);
+			});
+			list.appendChild(foot);
+			Sync();
+		}
+
+		function PlaceList(initial) {
+			var r = btn.getBoundingClientRect();
+			if (!r.width && !r.height) return false;
+			if (!initial && (r.bottom < 0 || r.top > window.innerHeight)) return false;
+
+			var winH = window.innerHeight;
+			var h = Math.min(list.scrollHeight, 260);
+			if (initial || !list.dataset.dir) {
+				var below = winH - r.bottom - 8;
+				var above = r.top - 8;
+				list.dataset.dir = (below >= Math.min(h, 120) || below >= above) ? 'down' : 'up';
+			}
+			var up = list.dataset.dir === 'up';
+			var avail = Math.max(80, up ? (r.top - 8) : (winH - r.bottom - 8));
+			var hh = Math.min(h, avail);
+			var top = up ? (r.top - hh - 4) : (r.bottom + 4);
+			top = Math.max(4, Math.min(top, winH - hh - 4));
+
+			// Daftar multi lebih lebar dari tombolnya supaya label panjang
+			// (mis. "Time & Now Playing") tidak terpotong ellipsis.
+			list.style.minWidth = Math.round(Math.max(r.width, 210)) + 'px';
+			list.style.left = Math.round(r.left) + 'px';
+			list.style.maxHeight = Math.round(hh) + 'px';
+			list.style.top = Math.round(top) + 'px';
+			return true;
+		}
+
+		function CloseList() {
+			if (list && list.parentNode) list.parentNode.removeChild(list);
+			if (list) delete list.dataset.dir;
+			wrap.classList.remove('is-open');
+			document.removeEventListener('scroll', OnScroll, true);
+			window.removeEventListener('resize', OnScroll);
+			if (activeSelectClose === CloseList) {
+				activeSelectClose = null;
+				activeSelectWrap = null;
+			}
+		}
+
+		function OnScroll() {
+			if (!list) return;
+			if (!PlaceList(false)) CloseList();
+		}
+
+		function OpenList() {
+			CloseActiveSelect();
+			if (!list) BuildList();
+			root.appendChild(list);
+			wrap.classList.add('is-open');
+			list.classList.add('is-open');
+			if (!PlaceList(true)) { CloseList(); return; }
+			document.addEventListener('scroll', OnScroll, true);
+			window.addEventListener('resize', OnScroll);
+			activeSelectClose = CloseList;
+			activeSelectWrap = wrap;
+		}
+
+		btn.addEventListener('click', function (e) {
+			e.stopPropagation();
+			if (list && list.parentNode) CloseList();
+			else OpenList();
+		});
+
+		Sync();
+		wrap.setValue = function (arr, fire) {
+			sel = Array.isArray(arr) ? arr.map(String) : [];
+			Sync();
+			if (fire && onChange) onChange(sel.slice());
+		};
+		wrap.getValue = function () { return sel.slice(); };
+		return wrap;
+	}
+
 
 	// Klik di luar dropdown menutupnya. Dipasang di fase capture karena root
 	// menghentikan propagasi pointerdown, sehingga listener bubble tidak akan
@@ -905,6 +1066,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			}
 
 			case 'select': {
+				box.classList.add('cp-row');
 				box.appendChild(labelFor(s));
 				// Nilai disimpan di input tersembunyi supaya ReadForm/FillForm
 				// dan showIf tetap bekerja seperti kontrol lain.
@@ -922,49 +1084,55 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			}
 
 			case 'slider': {
-				var head = h('div', 'cp-slider-head');
-				head.appendChild(h('span', 'cp-label-text', s.label || s.id));
-				var out = h('span', 'cp-slider-val');
-				head.appendChild(out);
-				box.appendChild(head);
+				// Baris mendatar seperti .row Better Alerts: label kiri, kontrol kanan.
+				box.classList.add('cp-row');
+				var lab = h('div', 'cp-label');
+				lab.appendChild(h('span', 'cp-label-text', s.label || s.id));
+				box.appendChild(lab);
 
+				var ctl = h('div', 'cp-slider-ctl');
 				input = h('input', 'cp-range');
 				input.type = 'range';
 				if (s.min !== undefined) input.min = s.min;
 				if (s.max !== undefined) input.max = s.max;
 				input.step = s.step !== undefined ? s.step : 1;
 				input.value = values[s.id] !== undefined ? values[s.id] : (s.min || 0);
+				var out = h('span', 'cp-slider-val');
 				var show = function () { out.textContent = input.value; };
 				input.addEventListener('input', show);
 				show();
-				box.appendChild(input);
+				ctl.appendChild(input);
+				ctl.appendChild(out);
+				box.appendChild(ctl);
 				break;
 			}
 
 			case 'tags': {
+				// Dropdown multi-pilih seperti dashboard (wa-select multiple):
+				// label kiri, dropdown 180px kanan, isi bisa dicentang banyak.
+				box.classList.add('cp-row');
+				box.classList.remove('cp-full');
 				box.appendChild(labelFor(s));
-				input = h('div', 'cp-tags');
-				var selected = Array.isArray(values[s.id]) ? values[s.id].slice()
+
+				// Nilai disimpan di input tersembunyi (JSON array) supaya
+				// ReadForm/FillForm dan pemeriksaan minTags tetap bekerja.
+				input = h('input');
+				input.type = 'hidden';
+				var selInit = Array.isArray(values[s.id]) ? values[s.id].slice()
 					: String(values[s.id] || '').split(',').filter(Boolean);
-				(s.options || []).forEach(function (o) {
-					var b = h('button', 'cp-tag');
-					b.type = 'button';
-					b.textContent = o.label;
-					b.dataset.value = o.value;
-					if (selected.indexOf(o.value) !== -1) b.classList.add('is-on');
-					b.addEventListener('click', function () {
-						b.classList.toggle('is-on');
-						values[s.id] = ReadControl(s, input);
-						MarkDirty();
-					});
-					input.appendChild(b);
+				input.value = JSON.stringify(selInit);
+				var msel = MakeMultiSelect(s.options || [], selInit, function (arr) {
+					input.value = JSON.stringify(arr);
+					input.dispatchEvent(new Event('change', { bubbles: true }));
 				});
-				input.dataset.multi = '1';
+				input.__select = msel;
+				box.appendChild(msel);
 				box.appendChild(input);
 				break;
 			}
 
 			case 'font': {
+				box.classList.add('cp-row');
 				box.appendChild(labelFor(s));
 				input = h('input', 'cp-input');
 				input.type = 'text';
@@ -975,6 +1143,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			}
 
 			case 'number': {
+				box.classList.add('cp-row');
 				box.appendChild(labelFor(s));
 				input = h('input', 'cp-input');
 				input.type = 'number';
@@ -987,6 +1156,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			}
 
 			case 'password': {
+				box.classList.add('cp-row');
 				box.appendChild(labelFor(s));
 				input = h('input', 'cp-input');
 				input.type = 'password';
@@ -997,6 +1167,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			}
 
 			default: { // text
+				box.classList.add('cp-row');
 				box.appendChild(labelFor(s));
 				input = h('input', 'cp-input');
 				input.type = 'text';
@@ -1016,6 +1187,9 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 				var v = ReadControl(s, input);
 				if (v !== undefined) values[s.id] = v;
 				MarkDirty();
+				// Setiap perubahan bisa mengubah showIf kontrol lain
+				// (mis. Widget Style -> Background Opacity).
+				ApplyShowIf();
 			};
 			input.addEventListener('input', sync);
 			input.addEventListener('change', sync);
@@ -1042,9 +1216,11 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		if (!i) return undefined;
 		if (s.type === 'checkbox') return i.checked;
 		if (s.type === 'tags') {
-			return Array.prototype.slice
-				.call(i.querySelectorAll('.cp-tag.is-on'))
-				.map(function (b) { return b.dataset.value; });
+			if (i.__select) return i.__select.getValue();
+			var arr = [];
+			try { arr = JSON.parse(i.value || '[]'); }
+			catch (e) { arr = String(i.value || '').split(',').filter(Boolean); }
+			return Array.isArray(arr) ? arr : [];
 		}
 		if (s.type === 'number' || s.type === 'slider') return i.value === '' ? '' : Number(i.value);
 		return i.value;
@@ -1078,9 +1254,8 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			if (s.type === 'checkbox') i.checked = !!v;
 			else if (s.type === 'tags') {
 				var list = Array.isArray(v) ? v : String(v || '').split(',').filter(Boolean);
-				Array.prototype.forEach.call(i.querySelectorAll('.cp-tag'), function (b) {
-					b.classList.toggle('is-on', list.indexOf(b.dataset.value) !== -1);
-				});
+				if (i.__select) i.__select.setValue(list, false);
+				i.value = JSON.stringify(list);
 			} else if (s.type === 'slider') {
 				i.value = v !== undefined && v !== '' ? v : i.min;
 				i.dispatchEvent(new Event('input'));
@@ -1121,7 +1296,6 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 
 	var titleBox = h('div', 'cp-head-title');
 	titleBox.appendChild(h('div', 'cp-title', 'Controls Panel'));
-	titleBox.appendChild(h('div', 'cp-sub', 'Press S to open · Esc to close'));
 	head.appendChild(titleBox);
 
 	var headActions = h('div', 'cp-head-actions');
@@ -1280,9 +1454,13 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 	});
 	foot.appendChild(btnReset);
 
-	var status = h('div', 'cp-status');
-	foot.appendChild(status);
 	panel.appendChild(foot);
+
+	// Pesan status tampil sebagai toast di pojok kanan atas LAYAR, seperti
+	// Better Alerts (bukan baris di bawah tombol Save). Ditempel ke root
+	// yang menutupi seluruh viewport, bukan ke dalam panel.
+	var toasts = h('div', 'cp-toasts');
+	root.appendChild(toasts);
 
 	root.appendChild(panel);
 
@@ -1314,14 +1492,23 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		launcherTimer = setTimeout(function () { SetLauncherVisible(false); }, 2500);
 	});
 
-	function SetStatus(msg) { status.textContent = msg || ''; }
+	function SetStatus(msg) {
+		if (!msg) return;
+		var isError = /fail|error|cannot|could not|not found|not available|refused|timed out|blocked/i.test(msg);
+		var t = h('div', 'cp-toast' + (isError ? ' is-error' : ''), msg);
+		toasts.appendChild(t);
+		// Batasi tumpukan supaya tidak memenuhi layar saat pesan beruntun.
+		while (toasts.children.length > 4) toasts.removeChild(toasts.firstChild);
+		setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 3400);
+	}
 
 	function SaveNow() {
 		var bad = settings.filter(function (s) {
 			if (!s.minTags || s.type !== 'tags') return false;
 			var i = el[s.id];
 			if (!i) return false;
-			return i.querySelectorAll('.cp-tag.is-on').length < s.minTags;
+			var picked = i.__select ? i.__select.getValue().length : 0;
+			return picked < s.minTags;
 		});
 		if (bad.length) {
 			SetStatus('Select at least ' + bad[0].minTags + ' options on "' + (bad[0].label || bad[0].id) + '".');
@@ -1367,7 +1554,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		});
 		if (btnGear) btnGear.classList.toggle('is-on', id === 'options');
 		CloseActiveSelect();
-		RenderBody();
+		RenderBodyAndShowIf();
 	}
 
 	/* ================================================================ render */
@@ -1385,7 +1572,6 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			var caret = h('span', 'cp-caret');
 			gh.appendChild(caret);
 			gh.appendChild(h('span', 'cp-group-name', gname));
-			gh.appendChild(h('span', 'cp-group-count', String(items.length)));
 			sec.appendChild(gh);
 
 			var gbody = h('div', 'cp-group-body');
@@ -1683,9 +1869,9 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		CloseActiveSelect();
 
 		if (activeTab === 'alerts') {
-			ALERT_TABS.forEach(function (c) { body.appendChild(AlertCard(c)); });
-			// Now Playing ikut di sini, bukan di Connections.
+			// Now Playing ditaruh paling atas, lalu kartu jenis alert.
 			body.appendChild(AlertCard(NOW_PLAYING_CARD));
+			ALERT_TABS.forEach(function (c) { body.appendChild(AlertCard(c)); });
 			return;
 		}
 
@@ -1707,6 +1893,13 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			body.appendChild(OptionsTab());
 			return;
 		}
+	}
+
+	// Dipanggil setelah RenderBody supaya showIf selalu benar saat tab
+	// dibuka (kontrol tab lain belum ada ketika boot).
+	function RenderBodyAndShowIf() {
+		RenderBody();
+		ApplyShowIf();
 	}
 
 	/* -------------------------------------------------------------- export/import */
@@ -1851,6 +2044,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 	RenderTabs();
 	if (btnGear) btnGear.classList.toggle('is-on', activeTab === 'options');
 	RenderBody();
+	ApplyShowIf();
 
 	if (CFG.read('controls') === '1' || CFG.read('panelOpen') === '1') Open();
 	console.log('[Geseki][Controls] panel ready - press S to open');
