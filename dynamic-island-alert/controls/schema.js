@@ -210,7 +210,7 @@ window.GESEKI_CONTROLS_SCHEMA = {
      "label": "Solid Black"
     }
    ],
-   "defaultValue": "glass",
+   "defaultValue": "solid",
    "group": "General"
   },
   {
@@ -589,7 +589,7 @@ window.GESEKI_CONTROLS_SCHEMA = {
   "excludedApplications": "",
   "musicStyle": "big",
   "testAlertType": "",
-  "widgetStyle": "glass",
+  "widgetStyle": "solid",
   "solidBgOpacity": 100,
   "font": "",
   "language": "id",

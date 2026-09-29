@@ -1018,6 +1018,8 @@ div.cp-group-head:hover { color: #eae7ee; }
 	border-radius: 8px;
 	background: rgba(212, 168, 67, 0.07);
 	box-sizing: border-box;
+	/* Frame berputar mengikuti widget; sumbu putar = tepi atas-tengah. */
+	transform-origin: 50% 0;
 }
 .gi-frame.is-dragging { cursor: grabbing; }
 
@@ -1051,6 +1053,34 @@ div.cp-group-head:hover { color: #eae7ee; }
 .gi-guide.is-on { opacity: 0.9; }
 .gi-guide-v { top: 0; bottom: 0; width: 1px; }
 .gi-guide-h { left: 0; right: 0; height: 1px; }
+
+.gi-rotate {
+	position: absolute;
+	left: 50%;
+	top: -30px;
+	width: 16px;
+	height: 16px;
+	margin: -8px 0 0 -8px;
+	border-radius: 50%;
+	background: #d4a843;
+	border: 1.5px solid #1b1920;
+	box-sizing: border-box;
+	pointer-events: auto;
+	cursor: grab;
+}
+/* Batang penghubung knob ke tepi atas frame (penanda sumbu putar). */
+.gi-rotate::before {
+	content: '';
+	position: absolute;
+	left: 50%;
+	top: 100%;
+	width: 1.5px;
+	height: 22px;
+	margin-left: -0.75px;
+	background: #d4a843;
+	opacity: 0.7;
+}
+.gi-frame.is-rotating .gi-rotate { cursor: grabbing; }
 
 .gi-hint {
 	position: absolute;

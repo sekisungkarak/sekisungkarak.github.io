@@ -200,7 +200,7 @@
           "label": "Solid Black"
         }
       ],
-      "defaultValue": "glass",
+      "defaultValue": "solid",
       "group": "General"
     },
     {

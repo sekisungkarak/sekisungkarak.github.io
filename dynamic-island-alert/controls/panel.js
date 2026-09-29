@@ -51,7 +51,7 @@
 	// (handle resize), bukan oleh form. Slider-nya tetap ada di dashboard.
 	// Sengaja dipisah dari PANEL_HIDDEN: PANEL_HIDDEN menyalin nilai LAMA saat
 	// Save, jadi kalau widgetScale ada di sana hasil resize tidak akan tersimpan.
-	var PANEL_LAYOUT_OWNED = ['widgetScale'];
+	var PANEL_LAYOUT_OWNED = ['widgetScale', 'widgetRotation'];
 	var allSettings = SCHEMA.settings || [];
 	var settings = allSettings.filter(function (s) {
 		return PANEL_HIDDEN.indexOf(s.id) === -1 && PANEL_LAYOUT_OWNED.indexOf(s.id) === -1;
@@ -129,7 +129,9 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		x: Number(CFG.read('widgetOffsetX')) || 0,
 		y: Number(CFG.read('widgetOffsetY')) || 0,
 		// Skala juga milik mode Layout: slider Widget Scale tidak ada di panel.
-		scale: Number(CFG.read('widgetScale')) || 1
+		scale: Number(CFG.read('widgetScale')) || 1,
+		// Rotasi (derajat) juga milik mode Layout.
+		rotation: Number(CFG.read('widgetRotation')) || 0
 	};
 
 	/* ------------------------------------------------- keadaan buka / tutup */
@@ -837,8 +839,9 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 
 	var obsBadge = null;
 	var OBS_STATE = 'off';
-	// Modal Connect OBS yang sedang terbuka. Saat 'required', modal wajib
-	// diisi dulu: X/backdrop/Escape tidak menutupnya sampai Connect berhasil.
+	// Modal Connect OBS yang sedang terbuka. 'required' masih didukung untuk
+	// pemanggil yang memang butuh (mis. alur OBS sync), tapi auto-pop-up panel
+	// TIDAK wajib — user boleh menutupnya.
 	var obsDialogBack = null;
 	var obsDialogRequired = false;
 
@@ -1287,6 +1290,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		map.widgetOffsetX = layoutState.x;
 		map.widgetOffsetY = layoutState.y;
 		map.widgetScale = layoutState.scale;
+		map.widgetRotation = layoutState.rotation;
 		return map;
 	}
 
@@ -1390,6 +1394,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 				// supaya "Reset to Defaults" benar-benar mengembalikan widget juga.
 				LayoutApplyOffset(0, 0);
 				LayoutApplyScale(1);
+				LayoutApplyRotation(0);
 				MarkDirty();
 				SetStatus('Defaults loaded. Press Save to apply.');
 			}
@@ -1562,15 +1567,14 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 	   absolut merusak left:50% + translateX(-50%) bawaan CSS dan membuat
 	   animasi pill melebar/menyusut kacau. Snap + garis bantu saat menggeser. */
 
-	var LAYOUT_SNAP = 8;            // px: toleransi snap ke tengah layar / grid
-	var LAYOUT_GRID = 40;           // px: ukuran grid snap
+	var LAYOUT_SNAP = 8;            // px: toleransi snap ke TENGAH canvas
 	var LAYOUT_MIN_SCALE = 0.5;
 	var LAYOUT_MAX_SCALE = 2.0;
 
 	var layoutOn = false;
 	var layoutRaf = 0;
-	var giOverlay = null, giFrame = null, giGuideV = null, giGuideH = null;
-	var layoutFrameDrag = null, layoutHandleDrag = null;
+	var giOverlay = null, giFrame = null, giGuideV = null, giGuideH = null, giRotate = null;
+	var layoutFrameDrag = null, layoutHandleDrag = null, layoutRotateDrag = null;
 
 	function LayoutWidget() { return document.getElementById('dynamicIsland'); }
 	function LayoutClamp(v, lo, hi) { return Math.min(Math.max(v, lo), hi); }
@@ -1599,6 +1603,21 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		return sc2;
 	}
 
+	function LayoutApplyRotation(deg) {
+		var d = Number(deg);
+		if (!isFinite(d)) d = 0;
+		// Normalisasi ke rentang (-180, 180].
+		d = d % 360;
+		if (d > 180) d -= 360;
+		if (d <= -180) d += 360;
+		d = Math.round(d);
+		if (d === -180) d = 180;
+		if (typeof window.setWidgetRotation === 'function') window.setWidgetRotation(d);
+		layoutState.rotation = d;
+		MarkDirty();
+		return d;
+	}
+
 	function LayoutShowGuides(gx, gy) {
 		if (!giGuideV || !giGuideH) return;
 		if (gx === null) giGuideV.classList.remove('is-on');
@@ -1607,16 +1626,35 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		else { giGuideH.style.top = gy + 'px'; giGuideH.classList.add('is-on'); }
 	}
 
+	// Titik putar widget = transform-origin "top center". Saat widget
+	// berotasi, AABB membesar dan titik tengahnya bukan lagi pivot, jadi
+	// pivot dihitung ulang dari pusat AABB dikurangi setengah tinggi yang
+	// sudah diputar. Dipakai untuk bingkai, handle resize, dan knob rotate.
+	function LayoutPivot() {
+		var w = LayoutWidget();
+		if (!w) return null;
+		var r = w.getBoundingClientRect();
+		var h = w.offsetHeight * (layoutState.scale || 1);
+		var th = (layoutState.rotation || 0) * Math.PI / 180;
+		return {
+			x: r.left + r.width / 2 + Math.sin(th) * h / 2,
+			y: r.top + r.height / 2 - Math.cos(th) * h / 2
+		};
+	}
+
 	function LayoutTick() {
 		layoutRaf = 0;
 		if (!layoutOn) return;
 		var w = LayoutWidget();
 		if (w && giFrame) {
-			var r = w.getBoundingClientRect();
-			giFrame.style.left = r.left + 'px';
-			giFrame.style.top = r.top + 'px';
-			giFrame.style.width = r.width + 'px';
-			giFrame.style.height = r.height + 'px';
+			var p = LayoutPivot();
+			var fw = w.offsetWidth * (layoutState.scale || 1);
+			var fh = w.offsetHeight * (layoutState.scale || 1);
+			giFrame.style.left = (p.x - fw / 2) + 'px';
+			giFrame.style.top = p.y + 'px';
+			giFrame.style.width = fw + 'px';
+			giFrame.style.height = fh + 'px';
+			giFrame.style.transform = 'rotate(' + (layoutState.rotation || 0) + 'deg)';
 		}
 		layoutRaf = requestAnimationFrame(LayoutTick);
 	}
@@ -1651,16 +1689,27 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		LayoutApplyScale(d.startScale * ratio);
 	}
 
+	function LayoutRotateMove(e) {
+		var d = layoutRotateDrag;
+		if (!d) return;
+		// Pivot = transform-origin widget (top center), sama seperti skala.
+		var ang = Math.atan2(e.clientY - d.pivot.y, e.clientX - d.pivot.x) * 180 / Math.PI;
+		LayoutApplyRotation(d.startRotation + (ang - d.startAngle));
+	}
+
 	function LayoutEndDrag() {
-		if (!layoutFrameDrag && !layoutHandleDrag) return;
+		if (!layoutFrameDrag && !layoutHandleDrag && !layoutRotateDrag) return;
 		layoutFrameDrag = null;
 		layoutHandleDrag = null;
+		layoutRotateDrag = null;
 		if (giFrame) giFrame.classList.remove('is-dragging');
+		if (giFrame) giFrame.classList.remove('is-rotating');
 		LayoutShowGuides(null, null);
 		LayoutLighten(false);
 	}
 
 	function LayoutDocMove(e) {
+		if (layoutRotateDrag) { LayoutRotateMove(e); return; }
 		if (layoutHandleDrag) { LayoutResizeMove(e); return; }
 		if (!layoutFrameDrag) return;
 		var d = layoutFrameDrag;
@@ -1671,18 +1720,10 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		var cy = d.rect.top + dy + d.rect.height / 2;
 		var nx = d.ox + dx, ny = d.oy + dy;
 		var gx = null, gy = null;
-		// Snap X: tengah layar dulu, lalu grid.
+		// Snap HANYA ke tengah canvas. Garis bantu pun muncul hanya saat
+		// benar-benar menempel ke tengah, bukan pada grid 40px.
 		if (Math.abs(cx - vw / 2) <= LAYOUT_SNAP) { nx += (vw / 2 - cx); gx = vw / 2; }
-		else {
-			var sx = Math.round(cx / LAYOUT_GRID) * LAYOUT_GRID;
-			if (Math.abs(cx - sx) <= LAYOUT_SNAP) { nx += (sx - cx); gx = sx; }
-		}
-		// Snap Y: tengah layar dulu, lalu grid.
 		if (Math.abs(cy - vh / 2) <= LAYOUT_SNAP) { ny += (vh / 2 - cy); gy = vh / 2; }
-		else {
-			var sy = Math.round(cy / LAYOUT_GRID) * LAYOUT_GRID;
-			if (Math.abs(cy - sy) <= LAYOUT_SNAP) { ny += (sy - cy); gy = sy; }
-		}
 		LayoutApplyOffset(LayoutClamp(nx, -vw / 2, vw / 2), LayoutClamp(ny, -vh / 2, vh / 2));
 		LayoutShowGuides(gx, gy);
 	}
@@ -1708,6 +1749,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			if (e.target !== giFrame) return; // handle diabaikan
 			LayoutApplyOffset(0, 0);
 			LayoutApplyScale(1);
+			LayoutApplyRotation(0);
 			SetStatus('Widget layout reset. Press Save to apply.');
 		});
 
@@ -1716,10 +1758,9 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 				if (e.button !== 0) return;
 				var w = LayoutWidget();
 				if (!w) return;
-				var r = w.getBoundingClientRect();
-				// transform-origin widget = "top center": titik (centerX, top)
-				// tetap diam saat skala berubah, jadi rasio diukur dari titik itu.
-				var anchor = { x: r.left + r.width / 2, y: r.top };
+				// transform-origin widget = "top center": titik itu tetap diam
+				// saat skala/rotasi berubah, jadi rasio diukur dari titik itu.
+				var anchor = LayoutPivot();
 				var p = { x: e.clientX, y: e.clientY };
 				layoutHandleDrag = {
 					handle: hn.dataset.h,
@@ -1738,6 +1779,23 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		// pointermove/up di document: pointer capture pada handle akan
 		// mengarahkan event ke handle, bukan ke giFrame, jadi satu listener
 		// global yang merutekan berdasarkan state lebih andal.
+		giRotate.addEventListener('pointerdown', function (e) {
+			if (e.button !== 0) return;
+			var w = LayoutWidget();
+			if (!w) return;
+			var pivot = LayoutPivot();
+			var p = { x: e.clientX, y: e.clientY };
+			layoutRotateDrag = {
+				pivot: pivot,
+				startAngle: Math.atan2(p.y - pivot.y, p.x - pivot.x) * 180 / Math.PI,
+				startRotation: layoutState.rotation || 0
+			};
+			if (giFrame) giFrame.classList.add('is-rotating');
+			LayoutLighten(true);
+			e.preventDefault();
+			e.stopPropagation();
+		});
+
 		document.addEventListener('pointermove', LayoutDocMove);
 		document.addEventListener('pointerup', LayoutEndDrag);
 		document.addEventListener('pointercancel', LayoutEndDrag);
@@ -1754,10 +1812,13 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			hd.dataset.h = pos;
 			giFrame.appendChild(hd);
 		});
+		giRotate = h('div', 'gi-rotate');
+		giRotate.title = 'Drag to rotate';
+		giFrame.appendChild(giRotate);
 		giOverlay.appendChild(giGuideV);
 		giOverlay.appendChild(giGuideH);
 		giOverlay.appendChild(giFrame);
-		giOverlay.appendChild(h('div', 'gi-hint', 'Layout mode \u2014 drag to move \u00b7 corners to resize'));
+		giOverlay.appendChild(h('div', 'gi-hint', 'Layout mode \u2014 drag to move \u00b7 corners to resize \u00b7 top dot to rotate'));
 		document.body.appendChild(giOverlay);
 		LayoutBind();
 	}
@@ -2092,6 +2153,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			ResetPos();
 			LayoutApplyOffset(0, 0);
 			LayoutApplyScale(1);
+			LayoutApplyRotation(0);
 			SetStatus('Panel & widget layout reset to default. Press Save to apply.');
 		});
 		row4.appendChild(btnResetLayout);
@@ -2272,11 +2334,12 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		// Panel dibuka dalam keadaan collapsed (mis. ditutup X saat collapsed):
 		// Layout harus ikut hidup lagi supaya "collapsed <=> Layout aktif".
 		if (root.classList.contains('is-collapsed')) SetLayoutMode(true);
-		// Connect OBS wajib: begitu panel pertama kali muncul dan OBS belum
-		// pernah dikonfigurasi, modal Connect langsung dipop-upkan.
+		// Begitu panel pertama kali muncul dan OBS belum pernah dikonfigurasi,
+		// modal Connect dipop-upkan sebagai SARAN — tidak wajib: X/backdrop/Esc
+		// boleh menutupnya tanpa menyambung.
 		if (CFG.read('obsAutoConnect') !== '1' && !obsDialogBack) {
 			setTimeout(function () {
-				if (isOpen && !obsDialogBack) ObsConnectDialog({ required: true });
+				if (isOpen && !obsDialogBack) ObsConnectDialog();
 			}, 260);
 		}
 	}

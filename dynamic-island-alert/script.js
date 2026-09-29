@@ -506,11 +506,25 @@ const MIN_WIDGET_SCALE = 0.5;
 const MAX_WIDGET_SCALE = 2.0;
 const widgetScale = Math.min(MAX_WIDGET_SCALE,
 	Math.max(MIN_WIDGET_SCALE, GetFloatParam("widgetScale", 1.0)));
+const widgetRotation = (() => {
+	let r = GetFloatParam("widgetRotation", 0);
+	if (!isFinite(r)) return 0;
+	// Normalisasi ke rentang (-180, 180] supaya sama dengan panel.
+	r = r % 360;
+	if (r > 180) r -= 360;
+	if (r <= -180) r += 360;
+	return Math.round(r);
+})();
 const verticalAlign = urlParams.get("verticalAlign") || "top";
 
 let baseTransform = "translateX(-50%)";
 if (widgetScale !== 1.0) {
 	baseTransform += ` scale(${widgetScale})`;
+}
+// Rotasi dari mode Layout. Ikut transform yang sama supaya pivot-nya
+// tetap transform-origin (top center) seperti skala.
+if (widgetRotation !== 0) {
+	baseTransform += ` rotate(${widgetRotation}deg)`;
 }
 if (verticalAlign === "center") {
 	dynamicIsland.style.top = "50%";
@@ -520,7 +534,7 @@ if (verticalAlign === "center") {
 	dynamicIsland.style.top = "auto";
 	dynamicIsland.style.bottom = "32px";
 } else {
-	dynamicIsland.style.top = "32px"; // slightly padded for stream elements
+	dynamicIsland.style.top = "40px"; // sedikit turun dari tepi atas
 	dynamicIsland.style.bottom = "auto";
 }
 
@@ -537,9 +551,9 @@ if (widgetOffsetX || widgetOffsetY) {
 	dynamicIsland.style.marginTop = widgetOffsetY + "px";
 }
 
-// Default kini "glass" (Liquid Glass) - harus sama dengan defaultValue widgetStyle di
-// settings.json, kalau tidak widget tanpa param akan tampil Solid Black.
-if ((urlParams.get("widgetStyle") || "glass") === "solid") {
+// Default kini "solid" (Solid Black) - harus sama dengan defaultValue widgetStyle
+// di settings.json, kalau tidak widget tanpa param akan tampil Liquid Glass.
+if ((urlParams.get("widgetStyle") || "solid") === "solid") {
 	dynamicIsland.classList.add("style-solid");
 	// Background Opacity untuk Solid Black (10-100%, default 100 = hitam pekat).
 	// Diterapkan sebagai CSS variable supaya CSS yang mengatur rgba-nya.
@@ -3142,22 +3156,45 @@ window.testAlert = TriggerAlert;
 window.ALERT_ICONS = ALERT_ICONS;
 
 // Broadcaster receiver: test murni & live update dari jendela Pengaturan / tab lain.
-window.setWidgetScale = function(scale) {
-	if (!dynamicIsland) return;
+// Skala & rotasi disimpan sebagai state modul supaya keduanya bisa
+// diubah terpisah tanpa saling menghapus di transform.
+let curWidgetScale = widgetScale;
+let curWidgetRotation = widgetRotation;
+function BuildBaseTransform() {
 	let t = "translateX(-50%)";
-	const parsed = parseFloat(scale);
-	const s = isNaN(parsed)
-		? 1.0
-		: Math.min(MAX_WIDGET_SCALE, Math.max(MIN_WIDGET_SCALE, parsed));
-	if (s !== 1.0) {
-		t += ` scale(${s})`;
+	if (curWidgetScale !== 1.0) {
+		t += ` scale(${curWidgetScale})`;
+	}
+	if (curWidgetRotation !== 0) {
+		t += ` rotate(${curWidgetRotation}deg)`;
 	}
 	const va = (typeof verticalAlign !== 'undefined') ? verticalAlign : "top";
 	if (va === "center") {
 		t += " translateY(-50%)";
 	}
+	return t;
+}
+function ApplyBaseTransform() {
+	const t = BuildBaseTransform();
 	document.documentElement.style.setProperty('--base-transform', t);
 	dynamicIsland.style.transform = t;
+}
+window.setWidgetScale = function(scale) {
+	if (!dynamicIsland) return;
+	const parsed = parseFloat(scale);
+	curWidgetScale = isNaN(parsed)
+		? 1.0
+		: Math.min(MAX_WIDGET_SCALE, Math.max(MIN_WIDGET_SCALE, parsed));
+	ApplyBaseTransform();
+};
+window.setWidgetRotation = function(deg) {
+	if (!dynamicIsland) return;
+	const parsed = parseFloat(deg);
+	let r = isNaN(parsed) ? 0 : parsed % 360;
+	if (r > 180) r -= 360;
+	if (r <= -180) r += 360;
+	curWidgetRotation = Math.round(r);
+	ApplyBaseTransform();
 };
 
 if (window.BroadcastChannel) {
@@ -3166,6 +3203,8 @@ if (window.BroadcastChannel) {
 		if (!event.data) return;
 		if (event.data.type === 'set_scale') {
 			window.setWidgetScale(event.data.scale);
+		} else if (event.data.type === 'set_rotation') {
+			window.setWidgetRotation(event.data.rotation);
 		} else if (event.data.type === 'callFunction') {
 			// Perintah dari settings page (mis. tombol Reset First Chatter), lewat BroadcastChannel
 			// supaya menjangkau instance OBS di luar settings page.
