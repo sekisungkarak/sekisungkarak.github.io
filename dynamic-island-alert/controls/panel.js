@@ -73,6 +73,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 	var ALERT_TABS = [
 		{ id: 'Follow Alert',        label: 'Follow',        event: 'follow',    enable: 'enableFollow',        icon: 'enableFollowIcon' },
 		{ id: 'Subscribe Alert',     label: 'Subscribe',     event: 'subscribe', enable: 'enableSubscribe',     icon: 'enableSubscribeIcon' },
+		{ id: 'Super Fan Alert',     label: 'Super Fan',     event: 'superFan',  enable: 'enableSuperFan',      icon: 'enableSuperFanIcon' },
 		{ id: 'Share Alert',         label: 'Share',         event: 'share',     enable: 'enableShare',         icon: 'enableShareIcon' },
 		{ id: 'Gift Alert',          label: 'Gift',          event: 'gift',      enable: 'enableGift',          icon: 'enableGiftIcon' },
 		{ id: 'First Chatter',       label: 'First Chatter', event: 'chat',      enable: 'enableFirstChatter',  icon: 'enableFirstChatterIcon' }
@@ -2132,6 +2133,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		[
 			{ label: 'Follow', fn: 'testFollow' },
 			{ label: 'Subscribe', fn: 'testSubscribe' },
+			{ label: 'Super Fan', fn: 'testSuperFan' },
 			{ label: 'Share', fn: 'testShare' },
 			{ label: 'Gift', fn: 'testGift' },
 			{ label: 'First Chatter', fn: 'testFirstChatter' },

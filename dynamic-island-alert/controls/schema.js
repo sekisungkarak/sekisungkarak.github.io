@@ -14,11 +14,6 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "icon": "../../resources/icons/platforms/obs-logo.svg",
    "badge": "obs"
   },
-  "TikTok Connection": {
-   "open": true,
-   "icon": "ri-tiktok-fill",
-   "badge": "tiktok"
-  },
   "General": {
    "open": false,
    "icon": "ri-settings-4-fill"
@@ -34,6 +29,10 @@ window.GESEKI_CONTROLS_SCHEMA = {
   "Subscribe Alert": {
    "open": false,
    "icon": "ri-star-fill"
+  },
+  "Super Fan Alert": {
+   "open": false,
+   "icon": "ri-vip-crown-fill"
   },
   "Share Alert": {
    "open": false,
@@ -112,19 +111,9 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "description": "Display the Now Playing panel when a track is detected."
   },
   {
-   "id": "smtcBridgePort",
-   "label": "SMTC Bridge Port",
-   "type": "number",
-   "defaultValue": 5000,
-   "min": 1024,
-   "max": 65535,
-   "group": "Now Playing",
-   "description": "Port used by the SMTC bridge that reads the current track."
-  },
-  {
    "id": "includedApplications",
    "label": "Included Apps",
-   "description": "Priority apps (comma separated). Leave empty for automatic detection.<br><a href=\"http://localhost:5000/sessions\" target=\"_blank\">View active sources</a>",
+   "description": "Priority apps (comma separated). Leave empty for automatic detection.<br><a href=\"http://127.0.0.1:47800/sessions\" target=\"_blank\">View active sources</a>",
    "type": "text",
    "defaultValue": "",
    "group": "Now Playing"
@@ -132,7 +121,7 @@ window.GESEKI_CONTROLS_SCHEMA = {
   {
    "id": "excludedApplications",
    "label": "Excluded Apps",
-   "description": "Ignore these apps (comma separated).<br><a href=\"http://localhost:5000/sessions\" target=\"_blank\">View active sources</a>",
+   "description": "Ignore these apps (comma separated).<br><a href=\"http://127.0.0.1:47800/sessions\" target=\"_blank\">View active sources</a>",
    "type": "text",
    "defaultValue": "",
    "group": "Now Playing"
@@ -376,48 +365,6 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "group": "Now Playing"
   },
   {
-   "id": "tiktokService",
-   "label": "TikTok Service Provider",
-   "type": "select",
-   "options": [
-    {
-     "value": "both",
-     "label": "Both (TikFinity & IndoFinity)"
-    },
-    {
-     "value": "tikfinity",
-     "label": "TikFinity"
-    },
-    {
-     "value": "indofinity",
-     "label": "IndoFinity"
-    }
-   ],
-   "defaultValue": "both",
-   "group": "TikTok Connection",
-   "category": "TikTok Alerts"
-  },
-  {
-   "id": "tikfinityPort",
-   "label": "TikFinity Port",
-   "type": "number",
-   "defaultValue": 21213,
-   "min": 1024,
-   "max": 65535,
-   "group": "TikTok Connection",
-   "category": "TikTok Alerts"
-  },
-  {
-   "id": "indofinityPort",
-   "label": "IndoFinity Port",
-   "type": "number",
-   "defaultValue": 62024,
-   "min": 1024,
-   "max": 65535,
-   "group": "TikTok Connection",
-   "category": "TikTok Alerts"
-  },
-  {
    "id": "enableLiveDetect",
    "label": "Enable Live Detection",
    "description": "Automatically detect TikTok Studio and switch the panel to Offline mode when the stream ends.",
@@ -505,6 +452,59 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "type": "text",
    "defaultValue": "subscribed!",
    "group": "Subscribe Alert",
+   "category": "TikTok Alerts"
+  },
+  {
+   "id": "enableSuperFan",
+   "label": "Super Fan Alerts",
+   "description": "Play the pop-up animation when someone becomes a Super Fan or a Super Fan joins.",
+   "type": "checkbox",
+   "defaultValue": true,
+   "group": "Super Fan Alert",
+   "category": "TikTok Alerts"
+  },
+  {
+   "id": "enableSuperFanIcon",
+   "label": "Show Event Icon",
+   "type": "checkbox",
+   "defaultValue": true,
+   "group": "Super Fan Alert",
+   "category": "TikTok Alerts"
+  },
+  {
+   "id": "superFanMessage",
+   "label": "Super Fan Message Text",
+   "description": "Message on the Super Fan alert. Write {name} to insert the viewer name.",
+   "type": "text",
+   "defaultValue": "is now a Super Fan!",
+   "group": "Super Fan Alert",
+   "category": "TikTok Alerts"
+  },
+  {
+   "id": "superFanJoinMessage",
+   "label": "Super Fan Join Message Text",
+   "description": "Message when an existing Super Fan enters. Write {name} to insert the viewer name.",
+   "type": "text",
+   "defaultValue": "Super Fan joined!",
+   "group": "Super Fan Alert",
+   "category": "TikTok Alerts"
+  },
+  {
+   "id": "enableSuperFanBox",
+   "label": "Super Fan Box Alerts",
+   "description": "Play the pop-up animation when someone sends a Super Fan Box.",
+   "type": "checkbox",
+   "defaultValue": true,
+   "group": "Super Fan Alert",
+   "category": "TikTok Alerts"
+  },
+  {
+   "id": "superFanBoxMessage",
+   "label": "Super Fan Box Message Text",
+   "description": "Message on the Super Fan Box alert. Write {name} for the viewer and {count} for the diamond amount.",
+   "type": "text",
+   "defaultValue": "sent a Super Fan Box x{count}!",
+   "group": "Super Fan Alert",
    "category": "TikTok Alerts"
   },
   {
@@ -615,7 +615,6 @@ window.GESEKI_CONTROLS_SCHEMA = {
   "obsPort": 4455,
   "obsPassword": "",
   "enableNowPlaying": true,
-  "smtcBridgePort": 5000,
   "includedApplications": "",
   "excludedApplications": "",
   "musicStyle": "big",
@@ -640,9 +639,6 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "viewers"
   ],
   "accentPaletteRole": "lightVibrant",
-  "tiktokService": "both",
-  "tikfinityPort": 21213,
-  "indofinityPort": 62024,
   "enableLiveDetect": true,
   "liveStudioPort": 0,
   "offlineText": "Stream Offline",
@@ -653,6 +649,12 @@ window.GESEKI_CONTROLS_SCHEMA = {
   "enableSubscribe": true,
   "enableSubscribeIcon": true,
   "subscribeMessage": "subscribed!",
+  "enableSuperFan": true,
+  "enableSuperFanIcon": true,
+  "superFanMessage": "is now a Super Fan!",
+  "superFanJoinMessage": "Super Fan joined!",
+  "enableSuperFanBox": true,
+  "superFanBoxMessage": "sent a Super Fan Box x{count}!",
   "enableShare": true,
   "enableShareIcon": true,
   "shareMessage": "shared the live!",

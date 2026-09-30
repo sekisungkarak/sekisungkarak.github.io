@@ -204,12 +204,11 @@ if (contentSize && contentSize > 0) {
 		document.documentElement.style.setProperty('--island-alert-padding-y', Math.round(12 + extraPadY) + 'px');
 }
 
-// TikTok parameters
-const tiktokService = (urlParams.get("tiktokService") || "both").toLowerCase(); // 'both', 'tikfinity', 'indofinity', 'none'
-const tikfinityPort = GetIntParam("tikfinityPort", 21213);
-const indofinityPort = GetIntParam("indofinityPort", 62024);
-const tikfinityHost = urlParams.get("tikfinityHost") || "localhost";
-const indofinityHost = urlParams.get("indofinityHost") || "localhost";
+// Geseki Bridge: ONE WebSocket carries both TikTok events and Now Playing,
+// replacing TikFinity, IndoFinity and the SMTC Bridge HTTP poll.
+const bridgePort = GetIntParam("bridgePort", 47800);
+const bridgeHost = urlParams.get("bridgeHost") || "127.0.0.1";
+const BRIDGE_WS_URL = `ws://${bridgeHost}:${bridgePort}/ws`;
 
 // Live detection (TikTok LIVE Studio -> Stream Deck Socket.IO channel)
 const enableLiveDetect = GetBoolParam("enableLiveDetect", true);
@@ -223,11 +222,19 @@ const subscribeMessage = urlParams.get("subscribeMessage") || "subscribed!";
 const shareMessage = urlParams.get("shareMessage") || "shared the live!";
 const giftMessage = urlParams.get("giftMessage") || "sent {gift} x{count}!";
 
+// Super Fan: a separate TikTok event family (became a Super Fan, a Super Fan
+// joined, sent a Super Fan Box). Kept apart from the plain subscribe alert.
+const superFanMessage = urlParams.get("superFanMessage") || "is now a Super Fan!";
+const superFanJoinMessage = urlParams.get("superFanJoinMessage") || "Super Fan joined!";
+const superFanBoxMessage = urlParams.get("superFanBoxMessage") || "sent a Super Fan Box x{count}!";
+
 const enableFollow = GetBoolParam("enableFollow", true);
 const enableSubscribe = GetBoolParam("enableSubscribe", true);
 const enableShare = GetBoolParam("enableShare", true);
 const enableGift = GetBoolParam("enableGift", true);
 const enableFirstChatter = GetBoolParam("enableFirstChatter", true);
+const enableSuperFan = GetBoolParam("enableSuperFan", true);
+const enableSuperFanBox = GetBoolParam("enableSuperFanBox", true);
 
 // Ikon event TikTok (foto/gift/chat/follow/subscribe/share) — KHUSUS event TikTok.
 // Tiap grup event punya toggle sendiri. Default true = perilaku lama tidak berubah.
@@ -238,6 +245,7 @@ const enableSubscribeIcon = GetBoolParam("enableSubscribeIcon", true);
 const enableShareIcon = GetBoolParam("enableShareIcon", true);
 const enableGiftIcon = GetBoolParam("enableGiftIcon", true);
 const enableFirstChatterIcon = GetBoolParam("enableFirstChatterIcon", true);
+const enableSuperFanIcon = GetBoolParam("enableSuperFanIcon", true);
 
 // Suara notifikasi per overlay (Settings > General). Default true = perilaku lama.
 // Overlay yang hanya perlu tampil visual (mis. pratinjau scene lain) bisa OFF.
@@ -270,8 +278,6 @@ const enableDynamicBig = enableDynamicStyleBig;
 // Kelas penanda kartu musik sedang mekar. Dipakai di semua add/remove/contains
 // supaya kode lama tetap satu jalur; CSS yang membedakan tampilan Big vs Medium.
 const MUSIC_CARD_CLASS = isMusicMedium ? "alert-music-medium" : "alert-music-big";
-const SMTC_BRIDGE_PORT = GetIntParam("smtcBridgePort", 5000);
-const SMTC_BRIDGE_URL = `http://127.0.0.1:${SMTC_BRIDGE_PORT}/now-playing`;
 
 // Peran warna palet artwork untuk accent (wave icon, pause overlay, scrubber).
 // 'lightVibrant' = perilaku lama, jadi widget tanpa param tampil persis seperti sebelumnya.
@@ -535,8 +541,8 @@ function BadgeColorIsGrey(raw) {
 }
 
 // Keaktifan fan club. Geseki Bridge mengirim `fanClubActive` dari proto TikTok
-// (userFansClubStatus / isSleeping); jalur TikFinity tidak punya field itu,
-// jadi warna badge yang menentukan. `false` eksplisit selalu menang.
+// (userFansClubStatus / isSleeping); sumber tanpa field itu mengandalkan warna
+// badge. `false` eksplisit selalu menang.
 function FanClubIsActive(tiktokData, color) {
 	const user = (tiktokData && tiktokData.user) || {};
 	const explicit = tiktokData && tiktokData.fanClubActive !== undefined
@@ -1268,6 +1274,7 @@ const ALERT_ICONS = {
 	gift: 'https://img.icons8.com/fluency-systems-filled/96/FF0050/gift.png',
 	follow: 'https://img.icons8.com/fluency-systems-filled/96/00F2FE/add-user-male.png',
 	subscribe: 'https://img.icons8.com/fluency-systems-filled/96/FFD700/star.png',
+	superFan: 'https://img.icons8.com/fluency-systems-filled/96/FFD700/crown.png',
 	share: 'https://img.icons8.com/fluency-systems-filled/96/00F2FE/share.png',
 	like: 'https://img.icons8.com/fluency-systems-filled/96/FF0050/like.png'
 };
@@ -1403,14 +1410,11 @@ function HasPlayableTrack() {
 	return true;
 }
 
-// Apakah provider TikTok (TikFinity / IndoFinity) sedang terhubung. Panel viewer
+// Apakah provider TikTok (Geseki Bridge) sedang terhubung. Panel viewer
 // count memakai ini sebagai sumber kebenaran: selama terhubung, angka penonton
 // dari event roomUser selalu valid - tidak perlu menunggu status live.
 function IsTikTokProviderConnected() {
-	return Boolean(
-		(typeof tikFinityStatus !== 'undefined' && tikFinityStatus.connected) ||
-		(typeof indoFinityStatus !== 'undefined' && indoFinityStatus.connected)
-	);
+	return Boolean(typeof tikTokStatus !== 'undefined' && tikTokStatus.connected);
 }
 
 const infoPanels = [
@@ -2013,25 +2017,23 @@ function ApplyInfoPanel(animate, allowBounce = true) {
 	// Animations on text/icons removed to prevent glitches
 }
 
-async function FetchNowPlaying() {
+// Now Playing is PUSHED over the bridge WebSocket (frame `type:"nowplaying"`),
+// so there is no HTTP poll and no 1-second timer. The bridge sends it whenever
+// it changes and at least once per second while a session plays.
+async function ApplyNowPlayingPush(data) {
 	if (!enableNowPlaying) {
 		nowPlayingData.isPlaying = false;
 		return;
 	}
+	if (!data) return;
+	await ApplyNowPlayingData(data);
+}
 
-	try {
-		const response = await fetch(SMTC_BRIDGE_URL);
-		if (!response.ok) throw new Error("Bridge offline");
-
-		const data = await response.json();
-
-		ApplyNowPlayingData(data);
-	} catch (error) {
-		nowPlayingData.isPlaying = false;
-		// Bridge putus -> koneksi berikutnya dianggap sesi baru (lagu pertama tidak lagi
-		// dianggap "ganti lagu").
-		nowPlayingData._seeded = false;
-	}
+// Bridge putus -> koneksi berikutnya dianggap sesi baru (lagu pertama tidak lagi
+// dianggap "ganti lagu").
+function ResetNowPlayingOnDisconnect() {
+	nowPlayingData.isPlaying = false;
+	nowPlayingData._seeded = false;
 }
 
 // Dekode artwork di luar DOM untuk memastikan gambar valid & bisa digambar.
@@ -2050,7 +2052,7 @@ function DecodeArtwork(src) {
 	});
 }
 
-// Inti pemrosesan now playing. Dipanggil dari fetch lokal.
+// Inti pemrosesan now playing. Dipanggil dari push WebSocket bridge.
 async function ApplyNowPlayingData(data) {
 
 	{
@@ -2761,9 +2763,10 @@ async function InitInfoLoop() {
 	LoadSocketIoAndDetect();
 
 	// Isi dulu, tanpa menggambar apa pun.
-	await WithTimeout(Promise.all([FetchWeather(), FetchNowPlaying()]), 2500);
+	await WithTimeout(Promise.all([FetchWeather()]), 2500);
 
-	setInterval(FetchNowPlaying, 1000); // FetchNowPlaying = 1000ms
+	// Now Playing tidak di-poll: bridge mendorongnya lewat WebSocket (lihat
+	// bridgeConnection), jadi tidak ada setInterval di sini.
 	// Cuaca: jadwal pertama ditentukan hasil fetch di atas (sukses 15 menit,
 	// gagal 1,5 menit) — bukan setInterval buta yang mengunci 15 menit.
 	ScheduleWeatherFetch(weatherData ? WEATHER_REFRESH_INTERVAL : WEATHER_RETRY_INTERVAL);
@@ -3395,6 +3398,31 @@ window.testShare = function () {
 	});
 };
 
+// Simulasi Super Fan. testType 'superFan'/'superFanJoin'/'superFanBox' memilih
+// variannya; tanpa argumen dipakai 'superFan' (jadi Super Fan).
+window.testSuperFan = function (kind) {
+	const which = kind || 'superFan';
+	const isBox = which === 'superFanBox';
+	const msg = isBox
+		? (urlParams.get("superFanBoxMessage") || "sent a Super Fan Box x{count}!")
+		: (which === 'superFanJoin'
+			? (urlParams.get("superFanJoinMessage") || "Super Fan joined!")
+			: (urlParams.get("superFanMessage") || "is now a Super Fan!"));
+	const count = 1;
+	TriggerAlert({
+		type: which,
+		icon: typeof ALERT_ICONS !== 'undefined' ? ALERT_ICONS.superFan : '',
+		text: `${testUser} ${msg.replaceAll('{name}', testUser).replaceAll('{count}', count)}`,
+		title: testUser,
+		subtext: msg.replaceAll('{name}', testUser).replaceAll('{count}', count),
+		avatar: testAvatar,
+		badges: testBadges,
+		showIcon: enableSuperFanIcon,
+		event: which,
+		userId: 'test'
+	});
+};
+
 window.testGift = function () {
 	const msg = urlParams.get("giftMessage") || "sent {gift} x{count}!";
 	const action = msg.replaceAll('{name}', testUser).replaceAll('{gift}', 'Galaxy').replaceAll('{count}', '1');
@@ -3444,12 +3472,19 @@ window.testWidgetSelect = function(testType) {
 		window.testGift();
 	} else if (testType === "firstChatter" || testType === "first_chatter") {
 		window.testFirstChatter();
+	} else if (testType === "superFan" || testType === "superfan" || testType === "super_fan") {
+		window.testSuperFan('superFan');
+	} else if (testType === "superFanJoin" || testType === "super_fan_join") {
+		window.testSuperFan('superFanJoin');
+	} else if (testType === "superFanBox" || testType === "super_fan_box") {
+		window.testSuperFan('superFanBox');
 	} else if (testType === "nowPlaying" || testType === "now_playing") {
 		// Simulasi Now Playing memakai DATA UJI (jalur terpisah dari alert musik asli).
 		if (typeof window.testNowPlaying === "function") window.testNowPlaying();
 	} else if (testType === "all") {
 		window.testFollow();
 		window.testSubscribe();
+		window.testSuperFan('superFan');
 		window.testShare();
 		window.testGift();
 		window.testFirstChatter();
@@ -3464,7 +3499,7 @@ window.testWidget = function() {
 // JALUR TERPISAH dari alert musik asli: TIDAK memakai TriggerAlert/ProcessAlertQueue
 // dan TIDAK menyentuh `nowPlayingData` sama sekali, sehingga simulasi tidak pernah
 // mencampuri atau tertimpa data lagu asli. Fungsi ini hanya MENGGAMBAR kartu musik
-// memakai DATA UJI PERSIS di bawah (payload SMTC Bridge apa adanya), lalu memulihkan
+// memakai DATA UJI PERSIS di bawah (payload bridge apa adanya), lalu memulihkan
 // tampilan ambient saat selesai.
 var NOW_PLAYING_TEST_PAYLOAD = {
 	app_version: '1.0.0',
@@ -3476,7 +3511,7 @@ var NOW_PLAYING_TEST_PAYLOAD = {
 		media_properties: {
 			AlbumArtist: '', AlbumTitle: '', AlbumTrackCount: 0,
 			Artist: 'BIGBANG', Genres: [], Subtitle: '',
-			Thumbnail: 'http://127.0.0.1:5000/artwork/comgithubth-chyoutube-music?v=1790583045145',
+			Thumbnail: 'http://127.0.0.1:47800/artwork/comgithubth-chyoutube-music?v=1790583045145',
 			Title: 'BiiiG', TrackNumber: 0
 		},
 		playback_info: { AutoRepeatMode: 0, IsShuffleActive: null, PlaybackRate: 1, PlaybackStatus: 4, PlaybackType: 1 },
@@ -3840,170 +3875,101 @@ if (client) {
 // TIKTOK CLIENT //
 ////////////////////////////////////////
 
-const tikFinityStatus = { connected: false, disconnected: false, error: false };
-const indoFinityStatus = { connected: false, disconnected: false, error: false };
+// Status provider TikTok (dipakai panel viewer count).
+const tikTokStatus = { connected: false, disconnected: false, error: false };
 
-let tikfinityWebsocket = null;
-let indofinityWebsocket = null;
+let bridgeWebsocket = null;
 
-async function tikfinityConnection() {
-	if (tiktokService !== 'tikfinity' && tiktokService !== 'both') {
-		return null;
-	}
-
-	const tikfinityWebSocketURL = `ws://${tikfinityHost}:${tikfinityPort}/`;
+// Geseki Bridge: SATU WebSocket membawa event TikTok DAN Now Playing sekaligus.
+// Menggantikan TikFinity (:21213), IndoFinity (:62024) dan polling HTTP SMTC
+// Bridge (:5000). Bridge mengirim {"type":"tiktok","event":...,"data":...} dan
+// {"type":"nowplaying","data":...} lewat socket yang sama.
+async function bridgeConnection() {
 	const reconnectDelay = 10000;
-	let retryCount = 0;
 	let errorLogged = false;
 
 	function connect() {
 		try {
-			tikfinityWebsocket = new WebSocket(tikfinityWebSocketURL);
+			bridgeWebsocket = new WebSocket(BRIDGE_WS_URL);
 		} catch (err) {
 			if (!errorLogged) {
-				console.debug(`[Geseki][TikFinity] Connection error:`, err);
+				console.debug(`[Geseki][Bridge] Connection error:`, err);
 				errorLogged = true;
 			}
 			setTimeout(connect, reconnectDelay);
 			return null;
 		}
 
-		tikfinityWebsocket.onopen = () => {
-			console.debug(`[Geseki][TikFinity] Connected to TikFinity successfully!`);
-			retryCount = 0;
+		bridgeWebsocket.onopen = () => {
+			console.debug(`[Geseki][Bridge] Connected to ${BRIDGE_WS_URL}`);
 			errorLogged = false;
-
-			tikFinityStatus.connected = true;
+			tikTokStatus.connected = true;
+			tikTokStatus.disconnected = false;
+			tikTokStatus.error = false;
 			UpdateViewerCount(); // provider terhubung -> angka penonton valid
-			tikFinityStatus.disconnected = false;
-			tikFinityStatus.error = false;
 		};
 
-		tikfinityWebsocket.onmessage = (response) => {
+		bridgeWebsocket.onmessage = (response) => {
+			let data;
 			try {
-				const data = JSON.parse(response.data);
-				const tiktokData = data.data;
-
-				console.debug(`[Geseki][TikFinity][TikTok] ${data.event}`, data);
-
-				handleTikTokEvent(data.event, tiktokData, 'TikFinity');
+				data = JSON.parse(response.data);
 			} catch (e) {
-				console.debug(`[Geseki][TikFinity] Error parsing message:`, e);
+				console.debug(`[Geseki][Bridge] Error parsing message:`, e);
+				return;
+			}
+			if (!data || typeof data !== 'object') return;
+
+			switch (data.type) {
+				case 'tiktok':
+					console.debug(`[Geseki][Bridge][TikTok] ${data.event}`, data);
+					handleTikTokEvent(data.event, data.data, 'Geseki Bridge');
+					break;
+				case 'nowplaying':
+					// Push, bukan poll: bridge mengirim saat berubah + heartbeat ~1s.
+					ApplyNowPlayingPush(data.data);
+					break;
+				case 'status':
+					// Sidecar TikTok berubah state -> panel viewer ikut menyesuaikan.
+					if (data.tiktok && typeof data.tiktok.state === 'string') {
+						const up = data.tiktok.state === 'connected';
+						tikTokStatus.connected = up;
+						tikTokStatus.disconnected = !up;
+						tikTokStatus.error = data.tiktok.state === 'error';
+						UpdateViewerCount();
+					}
+					break;
+				default:
+					// hello / pong / tipe masa depan: abaikan (protokol aditif).
+					break;
 			}
 		};
 
-		tikfinityWebsocket.onclose = (event) => {
-			setTimeout(() => {
-				connect();
-			}, reconnectDelay);
+		bridgeWebsocket.onclose = () => {
+			setTimeout(connect, reconnectDelay);
 
-			if (tikFinityStatus.disconnected === false && tikFinityStatus.connected === true) {
-				console.debug(`[Geseki][TikFinity] Disconnected.`);
+			if (tikTokStatus.connected) {
+				console.debug(`[Geseki][Bridge] Disconnected.`);
 			}
 
-			tikFinityStatus.connected = false;
+			tikTokStatus.connected = false;
+			tikTokStatus.disconnected = true;
+			tikTokStatus.error = true;
+			ResetNowPlayingOnDisconnect();
 			UpdateViewerCount(); // provider putus -> panel kembali ke teks offline
-			tikFinityStatus.disconnected = true;
-			tikFinityStatus.error = true;
 		};
 
-		tikfinityWebsocket.onerror = (error) => {
+		bridgeWebsocket.onerror = (error) => {
 			if (!errorLogged) {
-				console.debug(`[Geseki][TikFinity] Connection error:`, error);
+				console.debug(`[Geseki][Bridge] Connection error:`, error);
 				errorLogged = true;
 			}
 
-			if (tikfinityWebsocket && tikfinityWebsocket.readyState !== WebSocket.CLOSED) {
-				tikfinityWebsocket.close();
-			}
-
-			tikFinityStatus.connected = false;
-			tikFinityStatus.disconnected = true;
-			tikFinityStatus.error = true;
-		};
-
-		return tikfinityWebsocket;
-	}
-
-	return connect();
-}
-
-async function indofinityConnection() {
-	if (tiktokService !== 'indofinity' && tiktokService !== 'both') {
-		return null;
-	}
-
-	const indofinityWebSocketURL = `ws://${indofinityHost}:${indofinityPort}/`;
-	const reconnectDelay = 10000;
-	let retryCount = 0;
-	let errorLogged = false;
-
-	function connect() {
-		try {
-			indofinityWebsocket = new WebSocket(indofinityWebSocketURL);
-		} catch (err) {
-			if (!errorLogged) {
-				console.debug(`[Geseki][IndoFinity] Connection error:`, err);
-				errorLogged = true;
-			}
-			setTimeout(connect, reconnectDelay);
-			return null;
-		}
-
-		indofinityWebsocket.onopen = () => {
-			console.debug(`[Geseki][IndoFinity] Connected to IndoFinity successfully!`);
-			retryCount = 0;
-			errorLogged = false;
-
-			indoFinityStatus.connected = true;
-			UpdateViewerCount(); // provider terhubung -> angka penonton valid
-			indoFinityStatus.disconnected = false;
-			indoFinityStatus.error = false;
-		};
-
-		indofinityWebsocket.onmessage = (response) => {
-			try {
-				const data = JSON.parse(response.data);
-				const tiktokData = data.data;
-
-				console.debug(`[Geseki][IndoFinity][TikTok] ${data.event}`, data);
-
-				handleTikTokEvent(data.event, tiktokData, 'IndoFinity');
-			} catch (e) {
-				console.debug(`[Geseki][IndoFinity] Error parsing message:`, e);
+			if (bridgeWebsocket && bridgeWebsocket.readyState !== WebSocket.CLOSED) {
+				bridgeWebsocket.close();
 			}
 		};
 
-		indofinityWebsocket.onclose = (event) => {
-			setTimeout(() => {
-				connect();
-			}, reconnectDelay);
-
-			if (indoFinityStatus.disconnected === false && indoFinityStatus.connected === true) {
-				console.debug(`[Geseki][IndoFinity] Disconnected.`);
-			}
-
-			indoFinityStatus.connected = false;
-			indoFinityStatus.disconnected = true;
-			indoFinityStatus.error = true;
-		};
-
-		indofinityWebsocket.onerror = (error) => {
-			if (!errorLogged) {
-				console.debug(`[Geseki][IndoFinity] Connection error:`, error);
-				errorLogged = true;
-			}
-
-			if (indofinityWebsocket && indofinityWebsocket.readyState !== WebSocket.CLOSED) {
-				indofinityWebsocket.close();
-			}
-
-			indoFinityStatus.connected = false;
-			indoFinityStatus.disconnected = true;
-			indoFinityStatus.error = true;
-		};
-
-		return indofinityWebsocket;
+		return bridgeWebsocket;
 	}
 
 	return connect();
@@ -4152,6 +4118,33 @@ function handleTikTokEvent(event, tiktokData, source) {
 			break;
 		}
 
+		case 'superFan':
+		case 'superFanJoin':
+		case 'superFanBox': {
+			// Super Fan family. `superFanBox` is the paid envelope and has its
+			// own switch + message because it carries a diamond amount.
+			const isBox = event === 'superFanBox';
+			if (isBox ? !enableSuperFanBox : !enableSuperFan) return;
+			const fanMsg = isBox
+				? superFanBoxMessage
+				: (event === 'superFanJoin' ? superFanJoinMessage : superFanMessage);
+			const fanCount = isBox ? (tiktokData.diamondCount || 1) : 1;
+			const fanAction = fanMsg.replaceAll('{name}', displayUser).replaceAll('{count}', fanCount);
+			TriggerAlert({
+				type: event,
+				icon: ALERT_ICONS.superFan,
+				text: `${displayUser} ${fanAction}`,
+				title: displayUser,
+				subtext: fanAction,
+				avatar: avatar,
+				badges: badges,
+				showIcon: enableSuperFanIcon,
+				event: event,
+				userId: tiktokData.userId
+			});
+			break;
+		}
+
 		case 'follow': {
 			if (!enableFollow) return;
 			TriggerAlert({
@@ -4191,10 +4184,9 @@ function handleTikTokEvent(event, tiktokData, source) {
 	}
 }
 
-// Connect TikTok services on ready
+// Connect the Geseki Bridge socket on ready
 function initTikTokServices() {
-	tikfinityConnection();
-	indofinityConnection();
+	bridgeConnection();
 }
 
 if (document.readyState === 'loading') {

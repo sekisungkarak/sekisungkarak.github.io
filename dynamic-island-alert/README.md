@@ -1,8 +1,9 @@
 ## Requirements
 
 - **OBS Studio 30+** with the built-in **obs-websocket** enabled.
-- A TikTok live connection via **TikFinity** or **IndoFinity**, whichever you use to feed events.
-- Now Playing via SMTC bridge (https://github.com/nuttylmao/smtc-bridge)
+- A TikTok live connection and Now Playing, both from **Geseki Bridge** — one
+  WebSocket feeds live events and the current track, so no TikFinity, IndoFinity
+  or SMTC bridge is needed.
 
 ---
 

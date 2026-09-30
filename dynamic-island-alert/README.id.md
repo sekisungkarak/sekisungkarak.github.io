@@ -1,8 +1,9 @@
 ## Kebutuhan
 
 - **OBS Studio 30+** dengan **obs-websocket** bawaan yang aktif.
-- Koneksi live TikTok lewat **TikFinity** atau **IndoFinity**, pilih yang kamu pakai untuk mengirim event.
-- Now Playing lewat SMTC bridge (https://github.com/nuttylmao/smtc-bridge)
+- Koneksi live TikTok dan Now Playing, keduanya dari **Geseki Bridge** — satu
+  WebSocket mengirim event live sekaligus lagu yang sedang diputar, jadi tidak
+  perlu TikFinity, IndoFinity, atau SMTC bridge.
 
 ---
 

@@ -1758,8 +1758,7 @@ function InitTikTokBadge() {
     const status = document.getElementById('status-tiktok');
     if (!status) return;
 
-    let tfWs = null;
-    let ifWs = null;
+    let ws = null;
 
     function isTikTokEnabled() {
         const showTiktokInput = document.getElementById('showTiktok');
@@ -1768,105 +1767,36 @@ function InitTikTokBadge() {
         return true;
     }
 
-    function getSelectedService() {
-        const serviceSelect = document.getElementById('tiktokService');
-        if (serviceSelect?.value) return String(serviceSelect.value).toLowerCase();
-        if (settingsMap.has('tiktokService')) return String(settingsMap.get('tiktokService')).toLowerCase();
-        return 'both';
+    function getBridgePort() {
+        const portInput = document.getElementById('bridgePort');
+        return portInput?.value || settingsMap.get('bridgePort') || 47800;
     }
 
+    // Satu socket ke Geseki Bridge menggantikan TikFinity + IndoFinity.
     function checkTikTok() {
         if (!isTikTokEnabled()) {
-            if (tfWs) { try { tfWs.close(); } catch (e) {} tfWs = null; }
-            if (ifWs) { try { ifWs.close(); } catch (e) {} ifWs = null; }
+            if (ws) { try { ws.close(); } catch (e) {} ws = null; }
             status.classList.remove('connected');
             return;
         }
 
-        const service = getSelectedService();
-        const tfPortInput = document.getElementById('tikfinityPort');
-        const ifPortInput = document.getElementById('indofinityPort');
-        const tfPort = tfPortInput?.value || settingsMap.get('tikfinityPort') || 21213;
-        const ifPort = ifPortInput?.value || settingsMap.get('indofinityPort') || 62024;
-
-        // If NOT using IndoFinity, close and discard any existing IndoFinity socket
-        if (service === 'tikfinity') {
-            if (ifWs) {
-                try { ifWs.close(); } catch (e) {}
-                ifWs = null;
-            }
-        }
-
-        // If NOT using TikFinity, close and discard any existing TikFinity socket
-        if (service === 'indofinity') {
-            if (tfWs) {
-                try { tfWs.close(); } catch (e) {}
-                tfWs = null;
-            }
-        }
-
-        // Connect TikFinity if requested
-        if (service === 'tikfinity' || service === 'both') {
-            if (!tfWs || tfWs.readyState === WebSocket.CLOSED) {
-                try {
-                    tfWs = new WebSocket(`ws://localhost:${tfPort}/`);
-                    tfWs.onopen = () => update();
-                    tfWs.onclose = () => { tfWs = null; update(); };
-                    tfWs.onerror = () => {
-                        if (tfWs && tfWs.readyState !== WebSocket.CLOSED) tfWs.close();
-                        tfWs = null;
-                        update();
-                    };
-                } catch (e) {
-                    tfWs = null;
-                }
-            }
-        }
-
-        // Connect IndoFinity if requested
-        if (service === 'indofinity' || service === 'both') {
-            if (!ifWs || ifWs.readyState === WebSocket.CLOSED) {
-                try {
-                    ifWs = new WebSocket(`ws://localhost:${ifPort}/`);
-                    ifWs.onopen = () => update();
-                    ifWs.onclose = () => { ifWs = null; update(); };
-                    ifWs.onerror = () => {
-                        if (ifWs && ifWs.readyState !== WebSocket.CLOSED) ifWs.close();
-                        ifWs = null;
-                        update();
-                    };
-                } catch (e) {
-                    ifWs = null;
-                }
-            }
-        }
-
-        update();
-    }
-
-    function update() {
-        if (!isTikTokEnabled()) {
-            status.classList.remove('connected');
+        // Sudah terbuka / sedang menyambung: jangan buka socket baru.
+        if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
             return;
         }
 
-        const service = getSelectedService();
-        let isConnected = false;
-
-        const isTfOpen = Boolean(tfWs && tfWs.readyState === WebSocket.OPEN);
-        const isIfOpen = Boolean(ifWs && ifWs.readyState === WebSocket.OPEN);
-
-        if (service === 'tikfinity') {
-            isConnected = isTfOpen;
-        } else if (service === 'indofinity') {
-            isConnected = isIfOpen;
-        } else { // 'both'
-            isConnected = isTfOpen || isIfOpen;
-        }
-
-        if (isConnected) {
-            status.classList.add('connected');
-        } else {
+        const port = getBridgePort();
+        try {
+            ws = new WebSocket(`ws://127.0.0.1:${port}/ws`);
+            ws.onopen = () => status.classList.add('connected');
+            ws.onclose = () => { ws = null; status.classList.remove('connected'); };
+            ws.onerror = () => {
+                if (ws && ws.readyState !== WebSocket.CLOSED) ws.close();
+                ws = null;
+                status.classList.remove('connected');
+            };
+        } catch (e) {
+            ws = null;
             status.classList.remove('connected');
         }
     }
@@ -1877,17 +1807,9 @@ function InitTikTokBadge() {
     const showTiktokInput = document.getElementById('showTiktok');
     if (showTiktokInput) showTiktokInput.addEventListener('change', checkTikTok);
 
-    const serviceSelect = document.getElementById('tiktokService');
-    if (serviceSelect) serviceSelect.addEventListener('change', checkTikTok);
-
-    const tfPortInput = document.getElementById('tikfinityPort');
-    if (tfPortInput) tfPortInput.addEventListener('change', checkTikTok);
-
-    const ifPortInput = document.getElementById('indofinityPort');
-    if (ifPortInput) ifPortInput.addEventListener('change', checkTikTok);
+    const portInput = document.getElementById('bridgePort');
+    if (portInput) portInput.addEventListener('change', checkTikTok);
 }
-
-
 
 /* ============================================================================
    RELAY NOW PLAYING
@@ -2183,8 +2105,8 @@ function InitNowPlayingRelay() {
             return;
         }
 
-        const portInput = document.getElementById('smtcBridgePort');
-        const port = portInput?.value || settingsMap.get('smtcBridgePort') || 5000;
+        const portInput = document.getElementById('bridgePort');
+        const port = portInput?.value || settingsMap.get('bridgePort') || 47800;
         const url = `http://127.0.0.1:${port}/now-playing`;
 
         try {
@@ -2230,8 +2152,8 @@ function InitSMTCBadge() {
             return;
         }
 
-        const portInput = document.getElementById('smtcBridgePort');
-        const port = portInput?.value || settingsMap.get('smtcBridgePort') || 5000;
+        const portInput = document.getElementById('bridgePort');
+        const port = portInput?.value || settingsMap.get('bridgePort') || 47800;
         const url = `http://127.0.0.1:${port}/now-playing`;
 
         try {
@@ -2254,7 +2176,7 @@ function InitSMTCBadge() {
         enableInput.addEventListener('wa-change', checkSMTC);
         enableInput.addEventListener('change', checkSMTC);
     }
-    const portInput = document.getElementById('smtcBridgePort');
+    const portInput = document.getElementById('bridgePort');
     if (portInput) portInput.addEventListener('input', checkSMTC);
 }
 
