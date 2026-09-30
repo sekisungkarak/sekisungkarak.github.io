@@ -1070,8 +1070,8 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 				var note = res.found.length > 1
 					? ' (' + res.found.length + ' sources matched; used the one in the current scene)'
 					: '';
-				ObsSyncStatus('Profile "' + name + '" saved and "' + pick.sourceName + '" pinned to it' + note + '. Reloading...');
-				setTimeout(function () { location.reload(); }, 1200);
+				ObsSyncStatus('Profile "' + name + '" saved and "' + pick.sourceName + '" pinned to it' + note + '.');
+				setTimeout(function () { ReloadAllWidgetSources(); }, 300);
 			});
 		}).catch(function (e) {
 			ObsSyncStatus('OBS sync failed: ' + e.message);
@@ -1851,6 +1851,18 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		}
 	}
 
+	// Muat ulang SEMUA browser source widget di semua scene, tanpa status apa pun.
+	// BroadcastChannel juga sampai ke listener di halaman ini sendiri, jadi panel
+	// ikut termuat ulang tanpa reload terpisah.
+	function ReloadAllWidgetSources() {
+		if (!window.BroadcastChannel) return;
+		try {
+			var rl = new BroadcastChannel('geseki_island_channel');
+			rl.postMessage({ type: 'reload' });
+			setTimeout(function () { try { rl.close(); } catch (e) {} }, 1000);
+		} catch (e) { /* abaikan */ }
+	}
+
 	function SaveNow() {
 		var bad = settings.filter(function (s) {
 			if (!s.minTags || s.type !== 'tags') return false;
@@ -1877,8 +1889,8 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		CFG.setActive(name);
 		CFG.setPref('panelOpen', '1');
 		ClearDirty();
-		SetStatus('Saved to profile "' + name + '". Reloading...');
-		location.reload();
+		SetStatus('Saved to profile "' + name + '".');
+		ReloadAllWidgetSources();
 	}
 
 	/* ================================================================== tab */
@@ -2193,8 +2205,8 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 							if (k && (k.indexOf('geseki:controls:') === 0 || k.indexOf('geseki-scene-') === 0)) keys.push(k);
 						}
 						keys.forEach(function (k) { localStorage.removeItem(k); });
-						SetStatus('All settings deleted. Reloading...');
-						setTimeout(function () { location.reload(); }, 600);
+						SetStatus('All settings deleted.');
+						setTimeout(function () { ReloadAllWidgetSources(); }, 300);
 					} catch (e) { SetStatus('Failed: ' + e.message); }
 				}
 			});
@@ -2324,6 +2336,20 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 
 	var isOpen = false;
 
+	// Panel di tiap scene adalah instance terpisah: satu browser source = satu
+	// dokumen, jadi menutup panel di scene aktif tidak menyentuh panel yang sudah
+	// terbuka di scene lain. State buka/tutup karena itu disiarkan lewat
+	// BroadcastChannel yang sama dengan widget.
+	// panelSyncing menahan siaran balik saat state dari scene lain diterapkan,
+	// supaya tidak terjadi ping-pong pesan antar instance.
+	var panelBc = window.BroadcastChannel ? new BroadcastChannel('geseki_island_channel') : null;
+	var panelSyncing = false;
+
+	function BroadcastPanelState(open) {
+		if (!panelBc || panelSyncing) return;
+		try { panelBc.postMessage({ type: 'panelState', open: open }); } catch (e) { /* abaikan */ }
+	}
+
 	function Open() {
 		if (isOpen) return;
 		isOpen = true;
@@ -2331,6 +2357,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		ApplyPos();
 		requestAnimationFrame(function () { root.classList.add('is-open'); });
 		CFG.setPref('panelOpen', '1');
+		BroadcastPanelState(true);
 		// Panel dibuka dalam keadaan collapsed (mis. ditutup X saat collapsed):
 		// Layout harus ikut hidup lagi supaya "collapsed <=> Layout aktif".
 		if (root.classList.contains('is-collapsed')) SetLayoutMode(true);
@@ -2356,15 +2383,29 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		LayoutExit();
 		root.classList.remove('is-open');
 		CFG.setPref('panelOpen', '0');
+		BroadcastPanelState(false);
 		setTimeout(function () {
 			if (root.parentNode) root.parentNode.removeChild(root);
 		}, 180);
 	}
 	function Toggle() { isOpen ? Close() : Open(); }
 
+	// Terapkan state panel dari scene lain. panelSyncing menahan siaran balik
+	// supaya dua instance tidak saling membalas tanpa henti.
+	if (panelBc) {
+		panelBc.onmessage = function (event) {
+			var d = event && event.data;
+			if (!d || d.type !== 'panelState') return;
+			if (d.open === !!isOpen) return;
+			panelSyncing = true;
+			try { if (d.open) Open(); else Close(); }
+			finally { panelSyncing = false; }
+		};
+	}
+
 	function ReloadWithPanel() {
 		CFG.setPref('panelOpen', '1');
-		location.reload();
+		ReloadAllWidgetSources();
 	}
 
 	document.addEventListener('keydown', function (e) {

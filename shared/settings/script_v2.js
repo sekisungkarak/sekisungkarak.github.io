@@ -60,6 +60,14 @@ setTimeout(() => document.body.classList.remove('wa-pending'), 8000);
 
 const bc = window.BroadcastChannel ? new BroadcastChannel('geseki_island_channel') : null;
 
+// Muat ulang SEMUA browser source widget di semua scene, tanpa menampilkan
+// status apa pun. Setting dibaca widget sekali saat load, jadi tanpa ini source
+// di scene lain tetap memakai setting lama sampai OBS di-restart.
+function ReloadAllWidgetSources() {
+    if (!bc) return;
+    try { bc.postMessage({ type: 'reload' }); } catch (e) { /* abaikan */ }
+}
+
 // Page elements
 const settingsPanel = document.getElementById('settingsPanel');
 const previewContainer = document.getElementById('preview');
@@ -286,6 +294,10 @@ if (saveObsButton) {
                 // Tandai profil ini sebagai pilihan aktif.
                 SetSelectedScene(result.sceneName);
             }
+
+            // Setting sudah tersimpan & source OBS sudah diperbarui: suruh semua
+            // source widget di semua scene memuat ulang dirinya (background).
+            ReloadAllWidgetSources();
 
             SetFooterButtonState(
                 saveObsButton,

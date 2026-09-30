@@ -303,20 +303,54 @@ function ResolveAccentColor(hexPalette) {
 		|| '#8A2BE2';
 }
 
-// Path ../../ karena script ini di subfolder obs/.
-const alertAudio = new Audio("../../resources/sfx/notification.mp3");
-alertAudio.volume = 0.5;
+// Sumber suara notifikasi. URL disimpan sebagai konstanta; elemen Audio-nya
+// dibuat baru tiap pemutaran (lihat PlayAlertSound) supaya dua alert yang datang
+// berdekatan tidak saling memotong.
+const ALERT_SOUND_SRC = "../../resources/sfx/notification.mp3";
+// Turunkan volume karena aslinya sfx ini cukup keras (sesuaikan kalau kurang)
+const ALERT_SOUND_VOLUME = 0.5;
 
 // ---- Suara notifikasi (opsional per overlay) ----
 // Diatur dari Settings > General ("Notification Sound", default ON). Overlay yang
 // hanya perlu tampil visual bisa mematikannya. Suara selalu keluar dari jendela
 // utama: pratinjau iframe di halaman Settings tidak pernah bunyi.
-function PlayAlertSound() {
+//
+// Tiap browser source OBS adalah proses terpisah dan semuanya menerima event
+// TikTok yang sama, jadi tanpa penjagaan di bawah satu event dibunyikan berkali-kali:
+//   - visibility gate: hanya source yang sedang tampil yang bunyi (OBS mengirim
+//     'obsSourceVisibleChanged' saat status tampil berubah, lihat BAGIAN 2).
+//   - dedupe: kalau dua widget benar-benar tampil bersamaan (nested scene),
+//     source pertama yang memproses event mengklaim suara lewat localStorage.
+let sourceVisible = true;
+const SOUND_CLAIM_KEY = 'geseki:sound-claim';
+const SOUND_CLAIM_WINDOW_MS = 1500;
+
+function PlayAlertSound(alertData) {
 	// Pratinjau di iframe dashboard tidak pernah bunyi: suara selalu dari jendela utama (OBS).
 	if (window.top !== window) return;
 	if (!enableSound) return;
-	alertAudio.currentTime = 0; // Ulang suara bila sebelumnya masih main
-	alertAudio.play().catch(e => console.debug("[Geseki] Audio play diblokir oleh browser:", e));
+	// Alert hasil adopsi dari source lain sudah dibunyikan source asalnya.
+	if (alertData && alertData._syncAdopted) return;
+	// Hanya source yang sedang tampil yang bunyi.
+	if (!sourceVisible) return;
+
+	// Dedupe lintas source: hanya source pertama yang memproses event ini yang bunyi.
+	const key = AlertKey(alertData);
+	if (key) {
+		try {
+			const now = Date.now();
+			const raw = localStorage.getItem(SOUND_CLAIM_KEY);
+			const claim = raw ? JSON.parse(raw) : null;
+			if (claim && claim.key === key && (now - claim.at) < SOUND_CLAIM_WINDOW_MS) return;
+			localStorage.setItem(SOUND_CLAIM_KEY, JSON.stringify({ key: key, at: now }));
+		} catch (e) { /* localStorage diblokir: tetap bunyikan */ }
+	}
+
+	// Elemen BARU tiap pemutaran: currentTime = 0 pada elemen yang sedang main
+	// akan menghentikan suara sebelumnya di tengah.
+	const audio = new Audio(ALERT_SOUND_SRC);
+	audio.volume = ALERT_SOUND_VOLUME;
+	audio.play().catch(e => console.debug("[Geseki] Audio play diblokir oleh browser:", e));
 }
 
 // Konstanta Windows SMTC API.
@@ -2554,6 +2588,66 @@ window.SetAlertsPaused = function (on) {
 	if (!on && typeof ProcessAlertQueue === 'function') ProcessAlertQueue();
 };
 
+// ---- Sinkronisasi VISUAL alert antar browser source ----
+// Source yang BARU muncul (pindah scene) atau habis reload punya antrean kosong,
+// jadi pill-nya menampilkan ambient dan alert yang sedang tayang di scene lain
+// terputus. Source yang menayangkan alert mencatatnya di localStorage; source
+// yang baru tampil membaca catatan itu dan ikut menayangkan SISA durasinya.
+const ALERT_SYNC_KEY = 'geseki:alert-sync';
+
+// Identitas event. Dipakai untuk dedupe suara DAN untuk mengenali alert yang sama
+// saat adopsi lintas source.
+function AlertKey(alertData) {
+	if (!alertData) return '';
+	return alertData.event
+		? `evt:${alertData.event}:${alertData.userId || ''}:${alertData.text || alertData.title || ''}`
+		: `${alertData.icon}:${alertData.text || alertData.title}`;
+}
+
+// Catat alert yang sedang tayang. Dilewati untuk alert hasil adopsi supaya tidak
+// saling menimpa (durasi adopsi lebih pendek dari durasi asli).
+function PublishRunningAlert(alertData, duration) {
+	if (!alertData || alertData._syncAdopted) return;
+	try {
+		localStorage.setItem(ALERT_SYNC_KEY, JSON.stringify({
+			key: AlertKey(alertData),
+			data: alertData,
+			startAt: Date.now(),
+			duration: duration
+		}));
+	} catch (e) { /* localStorage diblokir: sinkronisasi visual dilewati */ }
+}
+
+// Ikut menayangkan alert yang sedang berjalan. Hanya jalan saat source ini
+// menganggur; sisa durasinya dihitung dari waktu mulai yang dicatat source asal.
+function AdoptRunningAlert() {
+	if (isAlertActive || alertLocked || alertQueue.length > 0) return;
+	let rec = null;
+	try {
+		const raw = localStorage.getItem(ALERT_SYNC_KEY);
+		if (raw) rec = JSON.parse(raw);
+	} catch (e) { return; }
+	if (!rec || !rec.data || !rec.duration) return;
+	const elapsed = Date.now() - rec.startAt;
+	const remaining = rec.duration - elapsed;
+	// Sudah selesai (atau jam tidak sinkron): jangan ikut.
+	if (elapsed < 0 || remaining <= 0) return;
+	alertQueue.push(Object.assign({}, rec.data, {
+		_syncAdopted: true,
+		_syncRemainingMs: remaining
+	}));
+	ProcessAlertQueue();
+}
+
+// OBS memberi tahu tiap source saat status tampilnya berubah. Saat source ini
+// mulai tampil, cek apakah ada alert yang sedang berjalan di scene lain.
+// Di browser biasa event ini tidak pernah datang, jadi sourceVisible tetap true.
+window.addEventListener('obsSourceVisibleChanged', function (e) {
+	if (!e || !e.detail) return;
+	sourceVisible = !!e.detail.visible;
+	if (sourceVisible) AdoptRunningAlert();
+});
+
 function ProcessAlertQueue() {
 	// Jeda: alert baru ditahan, tetapi yang sedang tayang dibiarkan selesai.
 	if (AlertsPaused()) return;
@@ -2577,7 +2671,7 @@ function ProcessAlertQueue() {
 	StopCycleTimer(); // IMMEDIATELY interrupt the looping widget!
 
 	if (alertData.type !== 'music') {
-		PlayAlertSound();
+		PlayAlertSound(alertData);
 	}
 
 	// Dihitung SETELAH shift(): yang dihitung event yang MASIH MENUNGGU, dan
@@ -2591,6 +2685,12 @@ function ProcessAlertQueue() {
 	} else {
 		currentAlertDuration = ComputeAlertDuration();
 	}
+	// Alert hasil adopsi dari source lain memakai SISA durasinya supaya tidak
+	// molor melewati alert yang sedang tayang di scene lain.
+	if (alertData._syncRemainingMs > 0) currentAlertDuration = alertData._syncRemainingMs;
+	// Catat alert yang sedang tayang supaya source yang baru muncul (pindah scene
+	// atau habis reload) bisa ikut menayangkan sisanya, bukan balik ke ambient.
+	PublishRunningAlert(alertData, currentAlertDuration);
 
 	const { icon, text, title, subtext, avatar, type, rightIcon, badges } = alertData;
 	// showIcon=false (khusus toggle ikon event TikTok) -> sembunyikan TOTAL ikon
@@ -3183,6 +3283,10 @@ if (window.BroadcastChannel) {
 			window.setWidgetScale(event.data.scale);
 		} else if (event.data.type === 'set_rotation') {
 			window.setWidgetRotation(event.data.rotation);
+		} else if (event.data.type === 'reload') {
+			// Save di dashboard / Controls Panel -> muat ulang source ini supaya
+			// setting baru langsung berlaku. Dijalankan di background, tanpa status.
+			location.reload();
 		} else if (event.data.type === 'callFunction') {
 			// Perintah dari settings page lewat BroadcastChannel agar menjangkau
 			// instance OBS, bukan cuma preview.
