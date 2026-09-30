@@ -491,6 +491,119 @@ function GetBoolParam(paramName, defaultValue) {
 	return defaultValue;
 }
 
+// Baca parameter yang berisi DAFTAR nilai (setting tipe 'tags'). Nilai bisa
+// datang sebagai array dari profil (sudah di-join koma oleh ConfigStore) atau
+// sebagai string berkoma dari query string.
+function GetListParam(paramName) {
+	const raw = urlParams.get(paramName);
+	if (!raw) return [];
+	let list;
+	try { list = JSON.parse(raw); } catch (e) { list = null; }
+	if (!Array.isArray(list)) list = String(raw).split(',');
+	return list.map(v => String(v).trim().toLowerCase()).filter(Boolean);
+}
+
+// Peran pengguna dari payload TikTok. Tiap engine mengirim bentuk berbeda,
+// jadi semua jalur yang diketahui diperiksa. `badgeSceneType` adalah kunci yang
+// paling andal karena TikFinity, IndoFinity, dan Geseki Bridge sama-sama
+// mengirim userBadges.
+// Warna badge fan club: OREN = masih member aktif, ABU = keanggotaan dorman
+// (TikTok meng-abu-kan badge dan membekukan hak setelah 7 hari tanpa poin).
+// Payload mengirim warna sebagai #AARRGGBB atau rgba(); warna tanpa rona
+// (selisih channel nyaris nol) dianggap abu. Warna kosong -> bukan abu, supaya
+// sumber yang tidak mengirim warna tidak membuang member asli.
+function BadgeColorIsGrey(raw) {
+	const s = String(raw == null ? '' : raw).trim();
+	if (!s) return false;
+	let r, g, b;
+	const m = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(s);
+	if (m) {
+		r = Number(m[1]); g = Number(m[2]); b = Number(m[3]);
+	} else {
+		const h = s.replace(/^#/, '');
+		if (/^[0-9a-f]{8}$/i.test(h)) {
+			r = parseInt(h.slice(2, 4), 16); g = parseInt(h.slice(4, 6), 16); b = parseInt(h.slice(6, 8), 16);
+		} else if (/^[0-9a-f]{6}$/i.test(h)) {
+			r = parseInt(h.slice(0, 2), 16); g = parseInt(h.slice(2, 4), 16); b = parseInt(h.slice(4, 6), 16);
+		} else {
+			return false;
+		}
+	}
+	const max = Math.max(r, g, b);
+	const min = Math.min(r, g, b);
+	return (max - min) < 24;
+}
+
+// Keaktifan fan club. Geseki Bridge mengirim `fanClubActive` dari proto TikTok
+// (userFansClubStatus / isSleeping); jalur TikFinity tidak punya field itu,
+// jadi warna badge yang menentukan. `false` eksplisit selalu menang.
+function FanClubIsActive(tiktokData, color) {
+	const user = (tiktokData && tiktokData.user) || {};
+	const explicit = tiktokData && tiktokData.fanClubActive !== undefined
+		? tiktokData.fanClubActive
+		: user.fanClubActive;
+	if (explicit === false) return false;
+	return !BadgeColorIsGrey(color);
+}
+
+function UserPermissionFlags(tiktokData) {
+	const flags = { follower: false, fanclub: false, moderator: false, subscriber: false };
+	if (!tiktokData) return flags;
+	const user = tiktokData.user || {};
+
+	// Fan club dideteksi dari BADGE fan club. TikFinity menandainya dengan
+	// badgeSceneType 10; Geseki Bridge mengisi scene itu dari artwork badge
+	// (fans_badge_icon), jadi ketiga sumber mengirim bentuk yang sama. Nama
+	// berkas dicek juga sebagai jaring pengaman bila scene tidak diisi.
+	// Badge ABU (dorman) TIDAK dihitung: TikTok meng-abu-kan badge member
+	// yang berhenti mengumpulkan poin selama 7 hari berturut-turut.
+	const badges = tiktokData.userBadges || user.userBadges || [];
+	let fanBadgeGrey = false;
+	if (Array.isArray(badges)) {
+		for (const b of badges) {
+			if (!b) continue;
+			const st = Number(b.badgeSceneType !== undefined ? b.badgeSceneType : b.sceneType);
+			const url = String(b.image || b.imageUrl || b.url || '');
+			if (st === 1)  flags.moderator = true;
+			if (st === 4)  flags.subscriber = true;
+			const isFanBadge = st === 10 || url.indexOf('fans_badge_icon') !== -1;
+			if (isFanBadge) {
+				if (FanClubIsActive(tiktokData, b.color)) flags.fanclub = true;
+				else fanBadgeGrey = true;
+			}
+		}
+	}
+
+	const identity = tiktokData.userIdentity || user.userIdentity || {};
+	const followRole = Number(tiktokData.followRole !== undefined ? tiktokData.followRole : user.followRole);
+	flags.follower = (isFinite(followRole) && followRole >= 1)
+		|| !!tiktokData.isFollower || !!identity.isFollowerOfAnchor || !!identity.isFollower;
+	flags.moderator = flags.moderator || !!tiktokData.isModerator || !!identity.isModeratorOfAnchor;
+	flags.subscriber = flags.subscriber || !!tiktokData.isSubscriber || !!identity.isSubscriberOfAnchor;
+
+	// Jalur tanpa warna badge (bridge mengirim fanClubBadge + fanClubActive):
+	// pakai sinyal keanggotaan, tapi jangan menyalakan kembali badge yang abu.
+	const clubSignal = !!(tiktokData.fanClubBadge || tiktokData.fansClub
+		|| tiktokData.fansClubInfo || user.fanClubBadge || user.fansClub
+		|| user.fansClubInfo);
+	if (!FanClubIsActive(tiktokData, null)) {
+		flags.fanclub = false;
+	} else if (!fanBadgeGrey && clubSignal) {
+		flags.fanclub = true;
+	}
+	return flags;
+}
+
+// Daftar peran yang diizinkan (setting 'User Permissions'). Kosong = tanpa
+// penyaringan: semua orang tetap disapa seperti sebelumnya.
+const firstChatterPermissions = GetListParam('firstChatterPermissions');
+
+function UserAllowedForFirstChatter(tiktokData) {
+	if (firstChatterPermissions.length === 0) return true;
+	const flags = UserPermissionFlags(tiktokData);
+	return firstChatterPermissions.some(p => flags[p] === true);
+}
+
 // Sama seperti GetIntParam tapi menerima desimal (parseInt memotong 1.5 -> 1).
 function GetFloatParam(paramName, defaultValue) {
 	const paramValue = urlParams.get(paramName);
@@ -676,6 +789,11 @@ function IsIconOnlyBadge(badge) {
 // emote = satu slot, sama seperti yang terlihat di layar.
 const CHAT_MESSAGE_MAX = 30;
 
+// Batas jumlah emote pada alert first chatter. Viewer bisa mengirim puluhan
+// emote sekaligus; tanpa batas ini pill penuh oleh stiker. Emote ke-16 dan
+// seterusnya dipotong, bukan ditampilkan.
+const FIRST_CHATTER_EMOTE_MAX = 15;
+
 // Cocokkan shortcode emote yang DIKENAL pada posisi awal `text`.
 // Mengembalikan panjang token, atau 0 bila bukan shortcode yang dikenal.
 function ChatShortcodeAt(text, index) {
@@ -721,10 +839,29 @@ function ChatVisibleCutIndex(text, emotes, max) {
 	return -1;
 }
 
+// Indeks mentah tempat emote ke-(max+1) mulai; -1 bila jumlah emote masih di
+// dalam batas. Dipakai untuk memotong kelebihan emote.
+function EmoteCutIndex(text, emotes, max) {
+	if (!Array.isArray(emotes) || emotes.length <= max) return -1;
+	const at = [];
+	for (const e of emotes) {
+		const i = Number(e && e.placeInComment);
+		if (isFinite(i) && i >= 0 && i < text.length) at.push(i);
+	}
+	at.sort((a, b) => a - b);
+	return at.length <= max ? -1 : at[max];
+}
+
 // Potong pesan chat pada kuota karakter TERLIHAT; tambahkan elipsis bila ada
-// yang dibuang. Dipakai jalur live maupun tombol Test.
-function TruncateChatMessage(rawMessage, emotes) {
-	const text = String(rawMessage == null ? '' : rawMessage);
+// yang dibuang. `maxEmotes` (opsional) juga membatasi jumlah emote: teks dipotong
+// di emote ke-(maxEmotes+1) sehingga emote berlebih hilang, bukan tampil sebagai
+// karakter mentah. Dipakai jalur live maupun tombol Test.
+function TruncateChatMessage(rawMessage, emotes, maxEmotes) {
+	let text = String(rawMessage == null ? '' : rawMessage);
+	if (maxEmotes > 0) {
+		const emoteCut = EmoteCutIndex(text, emotes, maxEmotes);
+		if (emoteCut >= 0) text = text.slice(0, emoteCut);
+	}
 	const cut = ChatVisibleCutIndex(text, emotes, CHAT_MESSAGE_MAX);
 	return cut < 0 ? text : text.slice(0, cut) + '\u2026';
 }
@@ -1344,7 +1481,12 @@ const infoPanels = [
 		text: () => {
 			// Provider terhubung = angka penonton valid, lewati liveStatus (sumber terpisah).
 			if (!IsTikTokProviderConnected() && liveStatus !== 2) return offlineViewersText;
-			const n = FormatViewers(viewerCount ?? 0);
+			// Terhubung ke websocket TIDAK berarti streamer sudah live. Sembunyikan angka
+			// HANYA bila data penonton belum pernah diterima (null). Bila provider memang
+			// melaporkan 0, itu data nyata -- tetap tampilkan "0 viewers".
+			if (viewerCount === null || viewerCount === undefined
+				|| !isFinite(Number(viewerCount))) return offlineViewersText;
+			const n = FormatViewers(viewerCount);
 			// Ikuti pengaturan Language global (appLanguage): id = "penonton",
 			// en = "viewers". Tidak ada default terpisah.
 			const word = appLanguage === 'en' ? 'viewers' : 'penonton';
@@ -1667,7 +1809,15 @@ function UpdateInfoText(animate = true, allowBounce = true) {
 // Segarkan ikon audio wave (warna lightVibrant) secara diam-diam. Dipakai di semua
 // mode: ambient, senyap, dan pasca-alert.
 function RefreshMusicWaveIcon(force = false) {
-	if (isAlertActive && !force) return;
+	// [ALERT] Slot kanan (#islandEventIcon) dipakai BERSAMA: kartu musik memakai
+	// wave, alert TikTok lain (gift/chat/follow) memakai ikon event-nya. Saat ada
+	// alert aktif, wave HANYA boleh ditulis bila alert itu memang alert musik --
+	// tanpa cek ini, lagu yang berganti di tengah alert gift menimpa ikon gift
+	// dengan wave, dan wave tampak "muncul duluan" sebelum alert musiknya tayang.
+	if (isAlertActive) {
+		const active = window.currentActiveAlertData;
+		if (!active || active.type !== 'music') return;
+	}
 	const panel = infoPanels[currentPanelIndex];
 	if (!panel || panel.id !== 'music' || !panel.rightIcon) return;
 	if (islandEventIcon) {
@@ -2068,7 +2218,11 @@ async function ApplyNowPlayingData(data) {
 
 			// Segarkan wave icon HANYA bila warna benar-benar berubah: force=true me-restart
 			// animasi SMIL <animate>, sehingga memanggilnya tiap tick bikin wave berkedut.
-			if (nowPlayingData.lightVibrant !== prevLightVibrant) {
+			// [ALERT] Saat lagu BERGANTI, biarkan alert musik yang menggambar kartunya
+			// (termasuk wave-nya). Menulis wave ambient lebih dulu membuat pill sempat
+			// menampilkan wave sebelum kartu alert membesar -- itulah kedipan "wave
+			// muncul duluan".
+			if (!songChanged && nowPlayingData.lightVibrant !== prevLightVibrant) {
 				RefreshMusicWaveIcon(true);
 			}
 
@@ -2801,10 +2955,30 @@ function AdoptRunningAlert() {
 // OBS memberi tahu tiap source saat status tampilnya berubah. Saat source ini
 // mulai tampil, cek apakah ada alert yang sedang berjalan di scene lain.
 // Di browser biasa event ini tidak pernah datang, jadi sourceVisible tetap true.
+// Source yang baru bangun dari auto sleep bisa menerima 'obsSourceVisibleChanged'
+// saat renderer CEF masih ter-throttle, sehingga adopsi alert tertunda beberapa
+// detik. Karena itu jangan bergantung pada satu percobaan: ulangi sebentar.
+// AdoptRunningAlert() idempoten (berhenti kalau sudah ada alert), jadi mengulang
+// tidak akan menggandakan alert.
+let adoptRetryTimers = [];
+function ScheduleAdoptRetries() {
+	adoptRetryTimers.forEach(clearTimeout);
+	adoptRetryTimers = [0, 250, 700, 1400, 2500].map(ms => setTimeout(() => {
+		if (sourceVisible) AdoptRunningAlert();
+	}, ms));
+}
+
 window.addEventListener('obsSourceVisibleChanged', function (e) {
 	if (!e || !e.detail) return;
 	sourceVisible = !!e.detail.visible;
-	if (sourceVisible) AdoptRunningAlert();
+	if (sourceVisible) ScheduleAdoptRetries();
+});
+
+// Jaring pengaman tambahan: kalau CEF menyalakan event DOM standar saat renderer
+// bangun, manfaatkan. TIDAK diandalkan - obs-browser memakai jalur sendiri, dan
+// listener 'obsSourceVisibleChanged' di atas adalah pemicu utamanya.
+document.addEventListener('visibilitychange', function () {
+	if (!document.hidden) ScheduleAdoptRetries();
 });
 
 function ProcessAlertQueue() {
@@ -2818,7 +2992,9 @@ function ProcessAlertQueue() {
 
 	// [Prefetch Avatar] Tunggu foto profil 100% selesai didownload SEBELUM membuka widget
 	// agar tidak blink kotak/lingkaran transparan.
-	if (nextAlert.avatar && !nextAlert._avatarLoaded) {
+	// Alert hasil adopsi TIDAK menunggu avatar: source yang baru bangun dari sleep
+	// belum punya avatar di cache, dan menunggunya justru menunda sinkronisasi.
+	if (nextAlert.avatar && !nextAlert._avatarLoaded && !nextAlert._syncAdopted) {
 		alertLocked = true; // Kunci sementara
 		const imgLoader = new Image();
 		imgLoader.onload = () => {
@@ -2842,6 +3018,11 @@ function ProcessAlertQueue() {
 	alertLocked = true;
 	isAlertActive = true;
 	StopCycleTimer(); // IMMEDIATELY interrupt the looping widget!
+	// Alert bisa tayang SEBELUM init panel selesai (source baru bangun dari sleep).
+	// Saat itu pill masih membawa 'island-no-panel' (opacity 0) yang hanya dilepas
+	// SyncIslandVisibility() setelah init selesai -> alert sudah aktif tapi tak
+	// terlihat. Buka paksa di sini supaya alert selalu tampil seketika.
+	if (dynamicIsland) dynamicIsland.classList.remove('island-no-panel');
 	
 	// Mainkan suara notifikasi KECUALI untuk alert lagu baru (music)
 	if (alertData.type !== 'music') {
@@ -3886,6 +4067,10 @@ function handleTikTokEvent(event, tiktokData, source) {
 	switch (event) {
 		case 'chat': {
 			if (!enableFirstChatter) return;
+			// User Permissions: lewati bila pengirim tidak punya peran yang dipilih.
+			// Ditaruh SEBELUM firstChatters.add() supaya orang yang belum memenuhi
+			// syarat tidak ikut ditandai dan masih bisa disapa setelah syaratnya terpenuhi.
+			if (!UserAllowedForFirstChatter(tiktokData)) return;
 			const userId = tiktokData.userId;
 			if (!userId) return;
 
@@ -3895,7 +4080,7 @@ function handleTikTokEvent(event, tiktokData, source) {
 				const rawMessage = tiktokData.comment || tiktokData.msg || tiktokData.text || '';
 				// Potong pada kuota karakter TERLIHAT (emote = 1 slot), lalu render
 				// emote dari hasil potongan itu supaya emote di dalam kuota utuh.
-				const message = TruncateChatMessage(rawMessage, tiktokData.emotes);
+				const message = TruncateChatMessage(rawMessage, tiktokData.emotes, FIRST_CHATTER_EMOTE_MAX);
 				const messageHtml = RenderChatMessageHtml(message, tiktokData.emotes);
 				// Username dibatasi 20 karakter supaya marquee tidak berjalan terlalu jauh.
 				const displayName = displayUser;

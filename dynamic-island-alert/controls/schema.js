@@ -575,6 +575,37 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "defaultValue": true,
    "group": "First Chatter",
    "category": "TikTok Alerts"
+  },
+  {
+   "id": "firstChatterPermissions",
+   "label": "User Permissions",
+   "description": "Only greet viewers with these roles. Leave empty to greet everyone.",
+   "type": "tags",
+   "defaultValue": [
+    "fanclub"
+   ],
+   "options": [
+    {
+     "value": "follower",
+     "label": "Follower"
+    },
+    {
+     "value": "fanclub",
+     "label": "Fan Club"
+    },
+    {
+     "value": "moderator",
+     "label": "Moderator"
+    },
+    {
+     "value": "subscriber",
+     "label": "Subscriber"
+    }
+   ],
+   "group": "First Chatter",
+   "category": "TikTok Alerts",
+   "full": true,
+   "placeholder": "No options"
   }
  ],
  "defaults": {
@@ -629,6 +660,9 @@ window.GESEKI_CONTROLS_SCHEMA = {
   "enableGiftIcon": true,
   "giftMessage": "sent {gift} x{count}!",
   "enableFirstChatter": true,
-  "enableFirstChatterIcon": true
+  "enableFirstChatterIcon": true,
+  "firstChatterPermissions": [
+   "fanclub"
+  ]
  }
 };
