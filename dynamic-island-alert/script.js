@@ -3371,6 +3371,9 @@ function ProcessAlertQueue() {
 // Global test helpers for preview / dev
 const testUser = 'sekisungkarak';
 const testAvatar = '../resources/sekisungkarak_avatar.jpeg';
+// Ikon gift untuk tombol Test: gambar Galaxy asli (webp, disimpan lokal).
+// URL CDN TikTok bertanda tangan & kedaluwarsa, jadi tidak dipakai.
+const testGiftIcon = '../resources/gifts/galaxy.webp';
 // Badge contoh untuk tombol Test di dashboard (grade lv1 + Top Gifter No. 3),
 // diambil dari payload TikTok asli supaya preview = tampilan live.
 const testBadges = [
@@ -3456,7 +3459,7 @@ window.testGift = function () {
 	const action = msg.replaceAll('{name}', testUser).replaceAll('{gift}', 'Galaxy').replaceAll('{count}', '1');
 	TriggerAlert({
 		type: 'gift',
-		icon: typeof ALERT_ICONS !== 'undefined' ? ALERT_ICONS.gift : '',
+		icon: typeof testGiftIcon !== 'undefined' ? testGiftIcon : (typeof ALERT_ICONS !== 'undefined' ? ALERT_ICONS.gift : ''),
 		text: `${testUser} ${action}`,
 		title: testUser,
 		subtext: action,

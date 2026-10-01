@@ -18,6 +18,10 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "open": false,
    "icon": "ri-settings-4-fill"
   },
+  "Appearance": {
+   "open": false,
+   "icon": "ri-palette-fill"
+  },
   "Live Detection": {
    "open": false,
    "icon": "ri-live-fill",
@@ -111,6 +115,118 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "group": "OBS Connection"
   },
   {
+   "id": "language",
+   "label": "Language",
+   "type": "select",
+   "options": [
+    {
+     "value": "id",
+     "label": "Indonesia"
+    },
+    {
+     "value": "en",
+     "label": "English"
+    }
+   ],
+   "defaultValue": "id",
+   "group": "General"
+  },
+  {
+   "id": "timeFormat",
+   "label": "Time Format",
+   "description": "Clock format. Example: HH:mm:ss (24-hour) or hh:mm:ss A (12-hour).",
+   "type": "text",
+   "defaultValue": "HH:mm:ss A",
+   "group": "General"
+  },
+  {
+   "id": "dateFormat",
+   "label": "Date Format",
+   "description": "Date format. Example: dddd, DD MMMM YYYY (Monday, 31 December 2026).",
+   "type": "text",
+   "defaultValue": "dddd, DD MMMM YYYY",
+   "group": "General"
+  },
+  {
+   "id": "weatherLocation",
+   "label": "Weather Location",
+   "description": "City name shown on the weather info panel.",
+   "type": "text",
+   "defaultValue": "Jakarta",
+   "group": "General"
+  },
+  {
+   "id": "infoDuration",
+   "label": "Info Rotation Duration (seconds)",
+   "type": "number",
+   "min": 1,
+   "max": 30,
+   "defaultValue": 4,
+   "group": "General"
+  },
+  {
+   "id": "infoRotationOrder",
+   "label": "Info Rotation Display (Select Min. 3)",
+   "type": "tags",
+   "defaultValue": [
+    "date",
+    "music",
+    "duration",
+    "weather",
+    "viewers"
+   ],
+   "options": [
+    {
+     "value": "date",
+     "label": "Date"
+    },
+    {
+     "value": "music",
+     "label": "Time & Now Playing"
+    },
+    {
+     "value": "duration",
+     "label": "Live Duration"
+    },
+    {
+     "value": "weather",
+     "label": "Weather"
+    },
+    {
+     "value": "viewers",
+     "label": "Viewers"
+    }
+   ],
+   "group": "General",
+   "full": true,
+   "minTags": 3,
+   "placeholder": "No options"
+  },
+  {
+   "id": "alertDuration",
+   "label": "Alert Duration (seconds)",
+   "type": "number",
+   "min": 1,
+   "max": 30,
+   "defaultValue": 4,
+   "group": "General"
+  },
+  {
+   "id": "enableSound",
+   "label": "Notification Sound",
+   "type": "checkbox",
+   "defaultValue": true,
+   "group": "General"
+  },
+  {
+   "id": "enableBadgeIcon",
+   "label": "Show Badge Icon",
+   "description": "Show the TikTok badge (grade / Top Gifter) next to the username on alert cards.",
+   "type": "checkbox",
+   "defaultValue": true,
+   "group": "General"
+  },
+  {
    "id": "testAlertType",
    "label": "Test Alert",
    "type": "select",
@@ -157,16 +273,16 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "type": "select",
    "options": [
     {
-     "value": "glass",
-     "label": "Liquid Glass"
-    },
-    {
      "value": "solid",
      "label": "Solid Black"
+    },
+    {
+     "value": "glass",
+     "label": "Liquid Glass"
     }
    ],
    "defaultValue": "solid",
-   "group": "General"
+   "group": "Appearance"
   },
   {
    "id": "solidBgOpacity",
@@ -176,7 +292,7 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "min": 10,
    "max": 100,
    "step": 1,
-   "group": "General",
+   "group": "Appearance",
    "showIf": "widgetStyle",
    "showIfValue": "solid"
   },
@@ -185,81 +301,7 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "label": "Font",
    "type": "font",
    "defaultValue": "",
-   "group": "General"
-  },
-  {
-   "id": "language",
-   "label": "Language",
-   "type": "select",
-   "options": [
-    {
-     "value": "id",
-     "label": "Indonesia"
-    },
-    {
-     "value": "en",
-     "label": "English"
-    }
-   ],
-   "defaultValue": "id",
-   "group": "General"
-  },
-  {
-   "id": "timeFormat",
-   "label": "Time Format",
-   "description": "Clock format. Example: HH:mm:ss (24-hour) or hh:mm:ss A (12-hour).",
-   "type": "text",
-   "defaultValue": "HH:mm:ss A",
-   "group": "General"
-  },
-  {
-   "id": "dateFormat",
-   "label": "Date Format",
-   "description": "Date format. Example: dddd, DD MMMM YYYY (Monday, 31 December 2026).",
-   "type": "text",
-   "defaultValue": "dddd, DD MMMM YYYY",
-   "group": "General"
-  },
-  {
-   "id": "weatherLocation",
-   "label": "Weather Location",
-   "description": "City name shown on the weather info panel.",
-   "type": "text",
-   "defaultValue": "Jakarta",
-   "group": "General"
-  },
-  {
-   "id": "alertDuration",
-   "label": "Alert Duration (seconds)",
-   "type": "number",
-   "min": 1,
-   "max": 30,
-   "defaultValue": 4,
-   "group": "General"
-  },
-  {
-   "id": "infoDuration",
-   "label": "Info Rotation Duration (seconds)",
-   "type": "number",
-   "min": 1,
-   "max": 30,
-   "defaultValue": 4,
-   "group": "General"
-  },
-  {
-   "id": "enableSound",
-   "label": "Notification Sound",
-   "type": "checkbox",
-   "defaultValue": true,
-   "group": "General"
-  },
-  {
-   "id": "enableBadgeIcon",
-   "label": "Show Badge Icon",
-   "description": "Show the TikTok badge (grade / Top Gifter) next to the username on alert cards.",
-   "type": "checkbox",
-   "defaultValue": true,
-   "group": "General"
+   "group": "Appearance"
   },
   {
    "id": "widgetScale",
@@ -269,45 +311,50 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "min": 0.5,
    "max": 2,
    "step": 0.1,
-   "group": "General"
+   "group": "Appearance"
   },
   {
-   "id": "infoRotationOrder",
-   "label": "Info Rotation Display (Select Min. 3)",
-   "type": "tags",
-   "defaultValue": [
-    "date",
-    "music",
-    "duration",
-    "weather",
-    "viewers"
-   ],
+   "id": "musicStyle",
+   "label": "Now Playing Style",
+   "type": "select",
    "options": [
     {
-     "value": "date",
-     "label": "Date"
+     "value": "big",
+     "label": "Big"
     },
     {
-     "value": "music",
-     "label": "Time & Now Playing"
+     "value": "medium",
+     "label": "Medium"
     },
     {
-     "value": "duration",
-     "label": "Live Duration"
-    },
-    {
-     "value": "weather",
-     "label": "Weather"
-    },
-    {
-     "value": "viewers",
-     "label": "Viewers"
+     "value": "small",
+     "label": "Small"
     }
    ],
-   "group": "General",
-   "full": true,
-   "minTags": 3,
-   "placeholder": "No options"
+   "defaultValue": "big",
+   "group": "Appearance",
+   "description": "Layout used by the Now Playing panel."
+  },
+  {
+   "id": "accentPaletteRole",
+   "label": "Accent Color",
+   "type": "select",
+   "options": [
+    {
+     "value": "lightVibrant",
+     "label": "Light Vibrant"
+    },
+    {
+     "value": "vibrant",
+     "label": "Vibrant"
+    },
+    {
+     "value": "darkVibrant",
+     "label": "Dark Vibrant"
+    }
+   ],
+   "defaultValue": "lightVibrant",
+   "group": "Appearance"
   },
   {
    "id": "enableNowPlaying",
@@ -331,49 +378,6 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "description": "Ignore these apps (comma separated).<br><a href=\"http://127.0.0.1:47800/sessions\" target=\"_blank\">View active sources</a>",
    "type": "text",
    "defaultValue": "",
-   "group": "Now Playing"
-  },
-  {
-   "id": "musicStyle",
-   "label": "Now Playing Style",
-   "type": "select",
-   "options": [
-    {
-     "value": "small",
-     "label": "Small"
-    },
-    {
-     "value": "big",
-     "label": "Big"
-    },
-    {
-     "value": "medium",
-     "label": "Medium"
-    }
-   ],
-   "defaultValue": "big",
-   "group": "Now Playing",
-   "description": "Layout used by the Now Playing panel."
-  },
-  {
-   "id": "accentPaletteRole",
-   "label": "Accent Color",
-   "type": "select",
-   "options": [
-    {
-     "value": "lightVibrant",
-     "label": "Light Vibrant (default)"
-    },
-    {
-     "value": "vibrant",
-     "label": "Vibrant"
-    },
-    {
-     "value": "darkVibrant",
-     "label": "Dark Vibrant"
-    }
-   ],
-   "defaultValue": "lightVibrant",
    "group": "Now Playing"
   },
   {
@@ -635,19 +639,11 @@ window.GESEKI_CONTROLS_SCHEMA = {
   "obsAddress": "127.0.0.1",
   "obsPort": 4455,
   "obsPassword": "",
-  "testAlertType": "",
-  "widgetStyle": "solid",
-  "solidBgOpacity": 100,
-  "font": "",
   "language": "id",
   "timeFormat": "HH:mm:ss A",
   "dateFormat": "dddd, DD MMMM YYYY",
   "weatherLocation": "Jakarta",
-  "alertDuration": 4,
   "infoDuration": 4,
-  "enableSound": true,
-  "enableBadgeIcon": true,
-  "widgetScale": 1,
   "infoRotationOrder": [
    "date",
    "music",
@@ -655,11 +651,19 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "weather",
    "viewers"
   ],
+  "alertDuration": 4,
+  "enableSound": true,
+  "enableBadgeIcon": true,
+  "testAlertType": "",
+  "widgetStyle": "solid",
+  "solidBgOpacity": 100,
+  "font": "",
+  "widgetScale": 1,
+  "musicStyle": "big",
+  "accentPaletteRole": "lightVibrant",
   "enableNowPlaying": true,
   "includedApplications": "",
   "excludedApplications": "",
-  "musicStyle": "big",
-  "accentPaletteRole": "lightVibrant",
   "enableTikTokAlerts": true,
   "enableLiveDetect": true,
   "liveStudioPort": 0,

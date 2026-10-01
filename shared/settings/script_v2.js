@@ -665,6 +665,7 @@ function LoadJSON(settingsJson) {
                 'Streamerbot Connection': '../../resources/icons/platforms/streamerbot-logo.svg',
                 'TikTok Connection': 'ri-tiktok-fill',
                 'General': 'ri-settings-4-fill',
+                'Appearance': 'ri-palette-fill',
                 'Alert Events': 'ri-notification-3-fill'
             };
 

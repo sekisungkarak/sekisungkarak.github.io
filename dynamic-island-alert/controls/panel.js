@@ -2242,7 +2242,10 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		}
 
 		if (activeTab === 'general') {
+			// Tab General berisi dua grup: General (panel info + perilaku alert)
+			// lebih dahulu, lalu Appearance (tampilan widget).
 			body.appendChild(GroupSection('General', { defaultOpen: true }));
+			body.appendChild(GroupSection('Appearance', { defaultOpen: false }));
 			return;
 		}
 
