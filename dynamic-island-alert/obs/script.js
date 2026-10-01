@@ -330,7 +330,16 @@ const ALERT_SOUND_VOLUME = 0.5;
 //     'obsSourceVisibleChanged' saat status tampil berubah, lihat BAGIAN 2).
 //   - dedupe: kalau dua widget benar-benar tampil bersamaan (nested scene),
 //     source pertama yang memproses event mengklaim suara lewat localStorage.
-let sourceVisible = true;
+// Status "source ini sedang tampil" (visible) dan "source ini ada di scene yang
+// sedang tayang" (active). Keduanya fail-open: default true, jadi browser biasa
+// tanpa OBS tetap bunyi. OBS mengabari lewat tiga jalur:
+//   1. status awal saat browser dibuat - CEF WasHidden() menggerakkan
+//      document.hidden, jadi itu yang dibaca saat skrip ini dimuat.
+//   2. 'obsSourceVisibleChanged' saat status tampil berubah.
+//   3. 'obsSourceActiveChanged' saat source masuk/keluar program view - hanya
+//      menyala untuk scene yang SEDANG TAYANG, tidak ikut di preview Studio Mode.
+let sourceVisible = !(typeof document !== 'undefined' && document.hidden);
+let sourceActive = true;
 const SOUND_CLAIM_KEY = 'geseki:sound-claim';
 const SOUND_CLAIM_WINDOW_MS = 1500;
 
@@ -340,8 +349,8 @@ function PlayAlertSound(alertData) {
 	if (!enableSound) return;
 	// Alert hasil adopsi dari source lain sudah dibunyikan source asalnya.
 	if (alertData && alertData._syncAdopted) return;
-	// Hanya source yang sedang tampil yang bunyi.
-	if (!sourceVisible) return;
+	// Hanya source di scene yang sedang tampil + sedang tayang yang bunyi.
+	if (!sourceVisible || !sourceActive) return;
 
 	// Dedupe lintas source: hanya source pertama yang memproses event ini yang bunyi.
 	const key = AlertKey(alertData);
@@ -2839,6 +2848,22 @@ window.addEventListener('obsSourceVisibleChanged', function (e) {
 	sourceVisible = !!e.detail.visible;
 	if (sourceVisible) ScheduleAdoptRetries();
 });
+
+// Sinyal yang lebih tepat: hanya menyala untuk source di scene yang sedang
+// tayang (program view). Fail-open: kalau OBS tidak mengirimnya, tetap true.
+window.addEventListener('obsSourceActiveChanged', function (e) {
+	if (!e || !e.detail) return;
+	sourceActive = !!e.detail.active;
+});
+
+// Status awal. obs-browser memanggil window.obsstudio.onVisibilityChange() /
+// onActiveChange() tepat setelah browser dibuat, jadi fungsi ini didaftarkan
+// supaya kalau panggilan itu datang setelah skrip dimuat, status awal terbaca.
+// document.hidden di deklarasi atas menutup kasus sebaliknya.
+if (typeof window !== 'undefined' && window.obsstudio) {
+	window.obsstudio.onVisibilityChange = function (visible) { sourceVisible = !!visible; };
+	window.obsstudio.onActiveChange = function (active) { sourceActive = !!active; };
+}
 
 // Jaring pengaman tambahan: kalau CEF menyalakan event DOM standar saat renderer
 // bangun, manfaatkan. TIDAK diandalkan - obs-browser memakai jalur sendiri, dan
