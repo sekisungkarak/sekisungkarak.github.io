@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="https://ka-f.webawesome.com/webawesome@3.10.0/styles/webawesome.css" />
     <script type="module" src="https://ka-f.webawesome.com/webawesome@3.10.0/webawesome.loader.js"></script>
 
-    <link rel="stylesheet" href="style.css?v=143">
+    <link rel="stylesheet" href="style.css?v=163">
     <link rel="icon" type="image/png" href="../../shared/assets/images/avatar.png">
 </head>
 
@@ -621,7 +621,6 @@
                         <button id="saveObsButton">Save</button>
                         <button id="loadObsButton" class="load-btn">
                             <span class="load-btn-text">Load</span>
-                            <span class="load-btn-scene" id="loadSceneName"></span>
                         </button>
                         <button id="resetObsButton">Reset</button>
                     </div>
@@ -664,7 +663,7 @@
 
         <h3>Load Saved Settings</h3>
 
-        <div class="info">Pilih scene yang settings-nya ingin dimuat.</div>
+        <div class="info">Choose a scene whose settings you want to load.</div>
 
         <!-- Dropdown kustom, BUKAN <wa-select>.
              Alasan: setiap opsi perlu tombol hapus (silang) di sebelahnya.
@@ -672,7 +671,7 @@
              tombol di dalamnya tidak bisa diikat event-nya dengan andal. -->
         <div id="sceneDropdown" class="scene-dropdown">
             <button type="button" id="sceneDropdownToggle" class="scene-dropdown-toggle">
-                <span id="sceneDropdownLabel">Pilih scene...</span>
+                <span id="sceneDropdownLabel">Select scene...</span>
                 <i class="ri-arrow-down-s-line"></i>
             </button>
             <div id="sceneDropdownMenu" class="scene-dropdown-menu" hidden></div>
@@ -687,8 +686,8 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/node-vibrant/3.1.6/vibrant.min.js"></script>
     <script src="https://unpkg.com/@streamerbot/client/dist/streamerbot-client.js"></script>
-    <script src="obs_source.js?v=14"></script>
-    <script src="script_v2.js?v=159"></script>
+    <script src="obs_source.js?v=15"></script>
+    <script src="script_v2.js?v=176"></script>
 </body>
 
 </html>

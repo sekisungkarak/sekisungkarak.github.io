@@ -20,31 +20,38 @@ window.GESEKI_CONTROLS_SCHEMA = {
   },
   "Live Detection": {
    "open": false,
-   "icon": "ri-live-fill"
+   "icon": "ri-live-fill",
+   "enable": "enableLiveDetect"
   },
   "Follow Alert": {
    "open": false,
-   "icon": "ri-user-add-fill"
+   "icon": "ri-user-add-fill",
+   "enable": "enableFollow"
   },
   "Subscribe Alert": {
    "open": false,
-   "icon": "ri-star-fill"
+   "icon": "ri-star-fill",
+   "enable": "enableSubscribe"
   },
   "Super Fan Alert": {
    "open": false,
-   "icon": "ri-vip-crown-fill"
+   "icon": "ri-vip-crown-fill",
+   "enable": "enableSuperFan"
   },
   "Share Alert": {
    "open": false,
-   "icon": "ri-share-forward-fill"
+   "icon": "ri-share-forward-fill",
+   "enable": "enableShare"
   },
   "Gift Alert": {
    "open": false,
-   "icon": "ri-gift-fill"
+   "icon": "ri-gift-fill",
+   "enable": "enableGift"
   },
   "First Chatter": {
    "open": false,
    "icon": "ri-chat-1-fill",
+   "enable": "enableFirstChatter",
    "button": {
     "label": "Reset",
     "callFunction": "ResetFirstChatter"
@@ -53,13 +60,14 @@ window.GESEKI_CONTROLS_SCHEMA = {
   "Now Playing": {
    "open": false,
    "icon": "ri-music-2-fill",
-   "badge": "smtc"
+   "enable": "enableNowPlaying"
   }
  },
  "categories": {
   "TikTok Alerts": {
    "open": false,
-   "icon": "ri-tiktok-fill"
+   "icon": "ri-tiktok-fill",
+   "enable": "enableTikTokAlerts"
   }
  },
  "settings": [
@@ -103,52 +111,6 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "group": "OBS Connection"
   },
   {
-   "id": "enableNowPlaying",
-   "label": "Show Now Playing",
-   "type": "checkbox",
-   "defaultValue": true,
-   "group": "Now Playing",
-   "description": "Display the Now Playing panel when a track is detected."
-  },
-  {
-   "id": "includedApplications",
-   "label": "Included Apps",
-   "description": "Priority apps (comma separated). Leave empty for automatic detection.<br><a href=\"http://127.0.0.1:47800/sessions\" target=\"_blank\">View active sources</a>",
-   "type": "text",
-   "defaultValue": "",
-   "group": "Now Playing"
-  },
-  {
-   "id": "excludedApplications",
-   "label": "Excluded Apps",
-   "description": "Ignore these apps (comma separated).<br><a href=\"http://127.0.0.1:47800/sessions\" target=\"_blank\">View active sources</a>",
-   "type": "text",
-   "defaultValue": "",
-   "group": "Now Playing"
-  },
-  {
-   "id": "musicStyle",
-   "label": "Now Playing Style",
-   "type": "select",
-   "options": [
-    {
-     "value": "small",
-     "label": "Small"
-    },
-    {
-     "value": "big",
-     "label": "Big"
-    },
-    {
-     "value": "medium",
-     "label": "Medium"
-    }
-   ],
-   "defaultValue": "big",
-   "group": "Now Playing",
-   "description": "Layout used by the Now Playing panel."
-  },
-  {
    "id": "testAlertType",
    "label": "Test Alert",
    "type": "select",
@@ -164,6 +126,10 @@ window.GESEKI_CONTROLS_SCHEMA = {
     {
      "value": "subscribe",
      "label": "Test Subscribe"
+    },
+    {
+     "value": "superFan",
+     "label": "Test Super Fans"
     },
     {
      "value": "share",
@@ -344,6 +310,52 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "placeholder": "No options"
   },
   {
+   "id": "enableNowPlaying",
+   "label": "Show Now Playing",
+   "type": "checkbox",
+   "defaultValue": true,
+   "group": "Now Playing",
+   "description": "Display the Now Playing panel when a track is detected."
+  },
+  {
+   "id": "includedApplications",
+   "label": "Included Apps",
+   "description": "Priority apps (comma separated). Leave empty for automatic detection.<br><a href=\"http://127.0.0.1:47800/sessions\" target=\"_blank\">View active sources</a>",
+   "type": "text",
+   "defaultValue": "",
+   "group": "Now Playing"
+  },
+  {
+   "id": "excludedApplications",
+   "label": "Excluded Apps",
+   "description": "Ignore these apps (comma separated).<br><a href=\"http://127.0.0.1:47800/sessions\" target=\"_blank\">View active sources</a>",
+   "type": "text",
+   "defaultValue": "",
+   "group": "Now Playing"
+  },
+  {
+   "id": "musicStyle",
+   "label": "Now Playing Style",
+   "type": "select",
+   "options": [
+    {
+     "value": "small",
+     "label": "Small"
+    },
+    {
+     "value": "big",
+     "label": "Big"
+    },
+    {
+     "value": "medium",
+     "label": "Medium"
+    }
+   ],
+   "defaultValue": "big",
+   "group": "Now Playing",
+   "description": "Layout used by the Now Playing panel."
+  },
+  {
    "id": "accentPaletteRole",
    "label": "Accent Color",
    "type": "select",
@@ -363,6 +375,15 @@ window.GESEKI_CONTROLS_SCHEMA = {
    ],
    "defaultValue": "lightVibrant",
    "group": "Now Playing"
+  },
+  {
+   "id": "enableTikTokAlerts",
+   "label": "TikTok Alerts",
+   "description": "Master switch for every TikTok alert (follow, subscribe, super fan, share, gift, first chatter).",
+   "type": "checkbox",
+   "defaultValue": true,
+   "group": "TikTok Alerts",
+   "headerOnly": true
   },
   {
    "id": "enableLiveDetect",
@@ -614,10 +635,6 @@ window.GESEKI_CONTROLS_SCHEMA = {
   "obsAddress": "127.0.0.1",
   "obsPort": 4455,
   "obsPassword": "",
-  "enableNowPlaying": true,
-  "includedApplications": "",
-  "excludedApplications": "",
-  "musicStyle": "big",
   "testAlertType": "",
   "widgetStyle": "solid",
   "solidBgOpacity": 100,
@@ -638,7 +655,12 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "weather",
    "viewers"
   ],
+  "enableNowPlaying": true,
+  "includedApplications": "",
+  "excludedApplications": "",
+  "musicStyle": "big",
   "accentPaletteRole": "lightVibrant",
+  "enableTikTokAlerts": true,
   "enableLiveDetect": true,
   "liveStudioPort": 0,
   "offlineText": "Stream Offline",

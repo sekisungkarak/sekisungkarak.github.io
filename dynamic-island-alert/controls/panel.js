@@ -1999,7 +1999,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 						// false = ada alert asli sedang/akan tayang -> jangan ditimpa.
 						var shown = window.testNowPlaying();
 						SetStatus(shown === false
-							? 'Alert sedang tayang, coba lagi sebentar lagi.'
+							? 'An alert is on screen, try again in a moment.'
 							: 'Now Playing simulation sent.');
 					} catch (e) { SetStatus('Simulation failed: ' + e.message); }
 				} else SetStatus('Now Playing simulation is not available.');
@@ -2352,8 +2352,30 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		try { panelBc.postMessage({ type: 'panelState', open: open }); } catch (e) { /* abaikan */ }
 	}
 
+	// Buang edit yang belum di-Save: kembalikan form (dan posisi/skala/rotasi
+	// widget) ke setting TERAKHIR YANG TERSIMPAN. Dipanggil tiap panel dibuka,
+	// supaya perubahan yang tidak jadi disimpan tidak "diingat" panel.
+	function ResetFormToSaved() {
+		values = CurrentMap();
+		layoutState.x = Number(CFG.read('widgetOffsetX')) || 0;
+		layoutState.y = Number(CFG.read('widgetOffsetY')) || 0;
+		layoutState.scale = Number(CFG.read('widgetScale')) || 1;
+		layoutState.rotation = Number(CFG.read('widgetRotation')) || 0;
+		var w = LayoutWidget();
+		if (w) {
+			w.style.marginLeft = layoutState.x + 'px';
+			w.style.marginTop = layoutState.y + 'px';
+		}
+		if (typeof window.setWidgetScale === 'function') window.setWidgetScale(layoutState.scale);
+		if (typeof window.setWidgetRotation === 'function') window.setWidgetRotation(layoutState.rotation);
+		ClearDirty();
+		RenderBodyAndShowIf();
+	}
+
 	function Open() {
 		if (isOpen) return;
+		// Panel dibuka ulang: form kembali ke setting tersimpan.
+		ResetFormToSaved();
 		isOpen = true;
 		document.body.appendChild(root);
 		ApplyPos();

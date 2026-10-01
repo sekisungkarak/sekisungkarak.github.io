@@ -242,6 +242,9 @@ const enableFirstChatter = GetBoolParam("enableFirstChatter", true);
 const enableSuperFan = GetBoolParam("enableSuperFan", true);
 const enableSuperFanBox = GetBoolParam("enableSuperFanBox", true);
 
+// Master switch: mematikan SEMUA alert TikTok sekaligus (dashboard).
+const enableTikTokAlerts = GetBoolParam("enableTikTokAlerts", true);
+
 // Ikon event TikTok (chat/gift/follow/subscribe/share) — KHUSUS event TikTok.
 // Tiap grup event punya toggle sendiri. Default true = perilaku lama tidak berubah.
 // Hanya memengaruhi ikon event di kartu alert; ikon panel ambient (wave/album art)
@@ -3806,6 +3809,8 @@ window.addEventListener('message', (event) => {
 
 function handleTikTokEvent(event, tiktokData, source) {
 	if (!tiktokData) return;
+	// Master switch: alert TikTok dimatikan dari dashboard.
+	if (!enableTikTokAlerts) return;
 
 	const userName = tiktokData.nickname || tiktokData.uniqueId || 'Someone';
 	// Username dibatasi 15 karakter. Dipotong per GRAPHEME (bukan code unit)

@@ -60,6 +60,19 @@ setTimeout(() => document.body.classList.remove('wa-pending'), 8000);
 
 const bc = window.BroadcastChannel ? new BroadcastChannel('geseki_island_channel') : null;
 
+// Status hijau pada tombol aksi header, tepat saat tombol diklik.
+// HANYA menyalakan kelas: ikon centang sudah ada di tombol sejak awal
+// (tersembunyi lewat CSS), jadi lebar tombol tidak berubah sama sekali.
+function FlashHeaderButtonOk(btn) {
+    if (!btn || btn.dataset.flashing === '1') return;
+    btn.dataset.flashing = '1';
+    btn.classList.add('action-ok');
+    setTimeout(() => {
+        btn.classList.remove('action-ok');
+        btn.dataset.flashing = '';
+    }, 3000);
+}
+
 // Muat ulang SEMUA browser source widget di semua scene, tanpa menampilkan
 // status apa pun. Setting dibaca widget sekali saat load, jadi tanpa ini source
 // di scene lain tetap memakai setting lama sampai OBS di-restart.
@@ -250,8 +263,7 @@ function SetFooterButtonState(btn, text, ok) {
 // — kalau disimpan sekali, teks basi akan dikembalikan setelah scene ganti.
     const original = btn.dataset.baseLabel || btn.textContent;
 
-    // Ikon: centang bila berhasil, silang bila gagal. Tulis HANYA ke span teks
-// agar <span class="load-btn-scene"> tidak hilang dan hover tidak rusak.
+    // Tulis HANYA ke span teks, supaya struktur tombol tidak berubah.
     const textSpan = btn.querySelector('.load-btn-text');
     const target = textSpan || btn;
 
@@ -262,12 +274,7 @@ function SetFooterButtonState(btn, text, ok) {
     btn.classList.toggle('copied', ok === true);
     btn.classList.toggle('obs-error', ok === false);
 
-    // Sembunyikan nama scene selama status tampil, lalu munculkan lagi.
-    const sceneSpan = btn.querySelector('.load-btn-scene');
-    if (sceneSpan) sceneSpan.style.display = 'none';
-
     setTimeout(() => {
-        if (sceneSpan) sceneSpan.style.display = '';
         target.textContent = btn.dataset.baseLabel || original;
         btn.classList.remove('copied', 'obs-error');
     }, 3000);
@@ -301,13 +308,13 @@ if (saveObsButton) {
 
             SetFooterButtonState(
                 saveObsButton,
-                result.created ? `Saved — source dibuat: ${result.name}`
-                    : `Saved — ${result.name} diperbarui`,
+                result.created ? `Saved — source created: ${result.name}`
+                    : `Saved — ${result.name} updated`,
                 true
             );
         } catch (err) {
             console.error('[OBS Save]', err);
-            SetFooterButtonState(saveObsButton, 'Gagal: ' + err.message, false);
+            SetFooterButtonState(saveObsButton, 'Failed: ' + err.message, false);
         }
     });
 }
@@ -336,6 +343,30 @@ function CloseSceneMenu() {
 // `selectedScene` sendiri hanya hidup di memori.
 const LAST_SCENE_KEY = 'geseki-last-scene';
 
+// ── Auto-follow scene OBS (dashboard) ────────────────────────────
+// Dashboard harus menampilkan setting milik scene OBS yang SEDANG aktif.
+// Dipicu saat scene BERGANTI (bukan sekadar berbeda dari yang terakhir
+// dimuat), supaya tombol Load tetap bisa dipakai melihat profil scene
+// lain tanpa langsung ditimpa.
+const SCENE_FOLLOW_OBS_KEY = 'geseki-scene-follow-obs';
+let sceneFollowBusy = false;
+
+function ReadFollowObsScene() {
+    try { return sessionStorage.getItem(SCENE_FOLLOW_OBS_KEY) || ''; }
+    catch (e) { return ''; }
+}
+
+function WriteFollowObsScene(name) {
+    try {
+        if (name) sessionStorage.setItem(SCENE_FOLLOW_OBS_KEY, name);
+        else sessionStorage.removeItem(SCENE_FOLLOW_OBS_KEY);
+    } catch (e) { /* abaikan */ }
+}
+
+// Scene OBS yang terakhir terlihat. Disimpan di sessionStorage supaya
+// tidak menerapkan profil dua kali untuk scene yang sama.
+let obsSceneLast = ReadFollowObsScene();
+
 function ReadLastScene() {
     try {
         const v = localStorage.getItem(LAST_SCENE_KEY) || '';
@@ -360,7 +391,7 @@ function WriteLastScene(name) {
 function SetSelectedScene(name) {
     selectedScene = name || '';
     WriteLastScene(selectedScene);
-    if (sceneLabel) sceneLabel.textContent = selectedScene || 'Pilih scene...';
+    if (sceneLabel) sceneLabel.textContent = selectedScene || 'Select scene...';
     // Tombol Load mengikuti pilihan, jadi perbarui labelnya juga.
     RefreshLoadButtonLabel();
 }
@@ -412,7 +443,7 @@ function RenderSceneMenu(scenes) {
         const delBtn = document.createElement('button');
         delBtn.type = 'button';
         delBtn.className = 'scene-option-delete';
-        delBtn.title = `Hapus settings "${scene}"`;
+        delBtn.title = `Delete settings "${scene}"`;
         delBtn.innerHTML = '<i class="ri-close-line"></i>';
         delBtn.addEventListener('click', async (ev) => {
             // Hentikan propagasi supaya baris tidak ikut terpilih.
@@ -423,12 +454,12 @@ function RenderSceneMenu(scenes) {
             if (delBtn.dataset.armed !== '1') {
                 delBtn.dataset.armed = '1';
                 delBtn.classList.add('armed');
-                delBtn.title = 'Klik sekali lagi untuk menghapus';
+                delBtn.title = 'Click again to delete';
                 setTimeout(() => {
                     if (!delBtn.isConnected) return;
                     delBtn.dataset.armed = '';
                     delBtn.classList.remove('armed');
-                    delBtn.title = `Hapus source & settings "${scene}"`;
+                    delBtn.title = `Delete source & settings "${scene}"`;
                 }, 3000);
                 return;
             }
@@ -444,7 +475,7 @@ function RenderSceneMenu(scenes) {
             const settingsRemoved = DeleteSceneSettings(scene);
 
             if (obsError && !settingsRemoved) {
-                SetFooterButtonState(loadObsButton, 'Gagal: ' + obsError.message, false);
+                SetFooterButtonState(loadObsButton, 'Failed: ' + obsError.message, false);
                 return;
             }
 
@@ -455,12 +486,12 @@ function RenderSceneMenu(scenes) {
             if (sceneHintEl) {
                 sceneHintEl.textContent = remaining.length
                     ? ''
-                    : 'Belum ada settings tersimpan. Klik Save dulu di suatu scene.';
+                    : 'No saved settings yet. Click Save in a scene first.';
             }
 
             const msg = removed.length
-                ? `Dihapus: ${removed.length} source`
-                : 'Settings dihapus (source tidak ditemukan)';
+                ? `Deleted: ${removed.length} source`
+                : 'Settings deleted (source not found)';
             SetFooterButtonState(
                 loadObsButton,
                 msg,
@@ -474,23 +505,10 @@ function RenderSceneMenu(scenes) {
     });
 }
 
-// "Current" = saved settings yang TERAKHIR DIPILIH di popup Load.
-// Bukan scene OBS yang sedang aktif. Karenanya cukup memakai
-// `selectedScene` — tidak perlu pelacakan terpisah.
-// Label tombol TETAP "Load". Nama tidak ditulis di tombol — cukup
-// muncul saat hover, supaya lebar tombol tidak berubah-ubah.
+// Label tombol TETAP "Load" (tanpa nama scene).
 function RefreshLoadButtonLabel() {
     if (!loadObsButton) return;
     loadObsButton.dataset.baseLabel = 'Load';
-
-    // Nama ditaruh DI DALAM tombol (bukan tooltip native), lalu
-    // dimunculkan lewat CSS saat kursor mengarah ke tombol.
-    const sceneSpan = document.getElementById('loadSceneName');
-    if (sceneSpan) {
-        sceneSpan.textContent = selectedScene
-            ? `Current: ${selectedScene}`
-            : '';
-    }
 
     if (!loadObsButton.classList.contains('copied')
         && !loadObsButton.classList.contains('obs-error')) {
@@ -506,16 +524,16 @@ if (loadObsButton && loadSceneModal) {
     loadSceneModal.querySelector('.button.save')
         .addEventListener('click', () => {
             if (!selectedScene) {
-                SetFooterButtonState(loadObsButton, 'Pilih scene dulu', false);
+                SetFooterButtonState(loadObsButton, 'Select a scene first', false);
                 return;
             }
             try {
                 LoadSettingsForScene(selectedScene);
                 loadSceneModal.open = false;
-                SetFooterButtonState(loadObsButton, `Dimuat: ${selectedScene}`, true);
+                SetFooterButtonState(loadObsButton, `Loaded: ${selectedScene}`, true);
                 RefreshLoadButtonLabel();
             } catch (err) {
-                SetFooterButtonState(loadObsButton, 'Gagal: ' + err.message, false);
+                SetFooterButtonState(loadObsButton, 'Failed: ' + err.message, false);
             }
         });
 
@@ -553,7 +571,7 @@ if (loadObsButton && loadSceneModal) {
         if (sceneHintEl) {
             sceneHintEl.textContent = scenes.length
                 ? ''
-                : 'Belum ada settings tersimpan. Klik Save dulu di suatu scene.';
+                : 'No saved settings yet. Click Save in a scene first.';
         }
 
         loadSceneModal.open = true;
@@ -652,6 +670,11 @@ function LoadJSON(settingsJson) {
 
             // Render one collapsible section card per group
             for (const groupName in groupedSettings) {
+                // Grup yang SEMUA setting-nya `headerOnly` tidak dirender sebagai
+                // kartu: setting-nya hanya muncul di header kategori (mis. master
+                // switch "TikTok Alerts"). Tanpa ini muncul kartu duplikat.
+                if (groupedSettings[groupName].every(s => s.headerOnly)) continue;
+
                 const section = document.createElement('wa-details');
                 section.classList.add('section');
                 section.dataset.group = groupName;
@@ -716,30 +739,110 @@ function LoadJSON(settingsJson) {
                     header.appendChild(checkSpan);
                 }
 
-                // Header action button (opsional: Reset First Chatter dsb)
-                const headerBtn = data.groups?.[groupName]?.button;
-                if (headerBtn) {
-                    const btn = document.createElement('wa-button');
-                    btn.textContent = headerBtn.label;
-                    btn.setAttribute('variant', 'default');
-                    // Pakai ukuran kecil agar pas di summary header
-                    btn.setAttribute('size', 'small');
-                    
-                    // Dorong ke kanan
-                    btn.style.marginLeft = badgeType ? '12px' : 'auto';
-                    if (!badgeType) btn.style.marginRight = '12px';
-                    
-                    btn.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        CallWidgetFunction(headerBtn.callFunction);
+                // Tombol aksi + switch on/off di summary header.
+                //  - groups[].button  : satu tombol lama (Reset First Chatter),
+                //    tetap tampil di semua tempat seperti sebelumnya, dan
+                //    diletakkan PALING KIRI.
+                //  - groups[].buttons : deret tombol "Simulate" — HANYA di
+                //    dashboard (?dashboard=1), supaya halaman settings mandiri
+                //    dan panel OBS tidak berubah.
+                //  - groups[].enable  : id setting checkbox on/off alert. Di
+                //    dashboard switch-nya DIPINDAH ke header (mengikuti panel
+                //    kontrol), dan tombol Simulate disembunyikan saat alert mati.
+                const groupMeta = data.groups?.[groupName] || {};
+                const legacyButton = groupMeta.button || null;
+                const simButtonsCfg = (isDashboardMode && Array.isArray(groupMeta.buttons))
+                    ? groupMeta.buttons
+                    : [];
+                const enableId = groupMeta.enable;
+                const enableSetting = (isDashboardMode && enableId)
+                    ? data.settings.find(s => s.id === enableId) || null
+                    : null;
+                let enableControl = null;
+
+                if (legacyButton || simButtonsCfg.length || enableSetting) {
+                    const actions = document.createElement('span');
+                    actions.classList.add('header-actions');
+                    // Dorong ke kanan (setelah badge koneksi bila ada).
+                    actions.style.marginLeft = badgeType ? '12px' : 'auto';
+                    if (!badgeType) actions.style.marginRight = '-5px';
+
+                    const mkBtn = (btnCfg) => {
+                        const btn = document.createElement('wa-button');
+                        btn.textContent = btnCfg.label;
+                        btn.setAttribute('variant', 'default');
+                        // Ukuran kecil agar pas di summary header.
+                        btn.setAttribute('size', 'small');
+
+                        btn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            CallWidgetFunction(btnCfg.callFunction, btnCfg.args || []);
+                        });
+                        return btn;
+                    };
+
+                    // 1) Tombol lama (Reset First Chatter) — selalu tampil, paling kiri.
+                    //    Diberi kelas sendiri supaya bisa diberi warna hover tersendiri.
+                    if (legacyButton) {
+                        const legacyEl = mkBtn(legacyButton);
+                        legacyEl.classList.add('reset-chatter-btn');
+                        legacyEl.dataset.label = legacyButton.label || 'Reset';
+                        // Ikon centang selalu ada (disembunyikan CSS) supaya lebar
+                        // tombol sama persis saat status hijau muncul.
+                        // Label saja yang ikut alur (jadi selalu center),
+                        // ikon centang ditaruh absolut supaya tidak menggeser
+                        // label maupun mengubah lebar tombol saat muncul.
+                        legacyEl.innerHTML = '<span class="btn-label">'
+                            + legacyEl.dataset.label + '</span>'
+                            + '<i class="ri-check-line"></i>';
+                        // Status hijau muncul begitu tombol DIKLIK (bukan menunggu
+                        // konfirmasi dari widget).
+                        legacyEl.addEventListener('click', () => FlashHeaderButtonOk(legacyEl));
+                        actions.appendChild(legacyEl);
+                    }
+
+                    // 2) Tombol Simulate (dashboard) — disembunyikan saat alert mati.
+                    const simButtons = simButtonsCfg.map((btnCfg) => {
+                        const btn = mkBtn(btnCfg);
+                        actions.appendChild(btn);
+                        return btn;
                     });
-                    header.appendChild(btn);
+
+                    // 3) Switch on/off alert di kanan deret tombol.
+                    if (enableSetting) {
+                        const swWrap = document.createElement('span');
+                        swWrap.classList.add('header-switch');
+                        // BuildInput dipakai ulang supaya id + penyimpanan
+                        // setting tetap identik dengan baris biasa.
+                        enableControl = BuildInput(enableSetting);
+                        swWrap.appendChild(enableControl);
+                        actions.appendChild(swWrap);
+
+                        // Alert yang dimatikan tidak bisa diuji: sembunyikan
+                        // tombol Simulate selama switch-nya mati.
+                        const syncActions = () => {
+                            const on = !!enableControl.checked;
+                            simButtons.forEach(b => { b.style.display = on ? '' : 'none'; });
+                        };
+                        enableControl.addEventListener('change', syncActions);
+                        enableControl.addEventListener('wa-change', syncActions);
+                        syncActions();
+                    }
+
+                    header.appendChild(actions);
                 }
 
                 section.appendChild(header);
 
+                const categoryEnableId = data.categories?.[groupName]?.enable;
+
                 groupedSettings[groupName].forEach(setting => {
+                    // Setting yang dirender di header (switch kartu / master
+                    // kategori) tidak diulang sebagai baris di body.
+                    if (enableSetting && setting.id === enableId) return;
+                    if (isDashboardMode && categoryEnableId && setting.id === categoryEnableId) return;
+
                     const configRow = document.createElement('div');
                     configRow.classList.add('config');
                     if (setting.full) {
@@ -806,6 +909,24 @@ function LoadJSON(settingsJson) {
                         catTitle.appendChild(catIcon);
                         catTitle.appendChild(document.createTextNode(categoryName));
                         catHeader.appendChild(catTitle);
+
+                        // Master switch kategori (mis. "TikTok Alerts"): nyalakan
+                        // /matikan SEMUA alert di kategori ini sekaligus.
+                        const catEnableId = data.categories?.[categoryName]?.enable;
+                        const catEnableSetting = (isDashboardMode && catEnableId)
+                            ? data.settings.find(s => s.id === catEnableId) || null
+                            : null;
+                        if (catEnableSetting) {
+                            const catActions = document.createElement('span');
+                            catActions.classList.add('header-actions');
+                            catActions.style.marginLeft = 'auto';
+                            const catSwitchWrap = document.createElement('span');
+                            catSwitchWrap.classList.add('header-switch');
+                            catSwitchWrap.appendChild(BuildInput(catEnableSetting));
+                            catActions.appendChild(catSwitchWrap);
+                            catHeader.appendChild(catActions);
+                        }
+
                         catSection.appendChild(catHeader);
 
                         // Cat: liquid glass via CSS (.category-section) — tanpa inline override
@@ -825,6 +946,7 @@ function LoadJSON(settingsJson) {
 
             ApplyShowIfVisibility();
             InitConnectionBadges();
+            InitSceneAutoFollow();
             RefreshWidgetPreview();
             SaveSettingsToStorage();
         })
@@ -832,7 +954,7 @@ function LoadJSON(settingsJson) {
             console.error('Error loading settings:', error);
             // Layar loading wajib ditutup juga saat GAGAL — kalau tidak,
             // overlay fixed z-index 1111 menutupi pesan error sehingga
-            // tombol "Coba Lagi" tidak bisa diklik.
+            // tombol "Try Again" tidak bisa diklik.
             HideLoadingScreen();
             // Gagal pun wajib membuka gerbang, atau panel terkunci
             // sampai pengaman 8 detik. Pesan error harus tetap terlihat.
@@ -842,9 +964,9 @@ function LoadJSON(settingsJson) {
             settingsPanel.innerHTML = `
                 <div style="text-align: center; padding: 40px 20px; color: #f87171;">
                     <i class="ri-error-warning-line" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
-                    <div style="font-weight: bold; margin-bottom: 8px;">Gagal Memuat Settings JSON</div>
+                    <div style="font-weight: bold; margin-bottom: 8px;">Failed to Load Settings JSON</div>
                     <small style="color: #948e9f; display: block; margin-bottom: 16px;">${error.message || error}<br><br>Target: ${settingsJson}</small>
-                    <button onclick="location.reload()" style="background: #26232f; color: #f5f3f7; border: 1px solid rgba(255,255,255,0.14); padding: 6px 16px; border-radius: 6px; cursor: pointer;">Coba Lagi</button>
+                    <button onclick="location.reload()" style="background: #26232f; color: #f5f3f7; border: 1px solid rgba(255,255,255,0.14); padding: 6px 16px; border-radius: 6px; cursor: pointer;">Try Again</button>
                 </div>
             `;
         });
@@ -874,7 +996,7 @@ function RebuildTagSelect(oldSelect, allValues, valueLabels, selectedOrder) {
     next.setAttribute('multiple', '');
     next.setAttribute('with-remove', '');
     next.setAttribute('with-clear', '');
-    next.setAttribute('placeholder', oldSelect.getAttribute('placeholder') || 'Tidak ada opsi');
+    next.setAttribute('placeholder', oldSelect.getAttribute('placeholder') || 'No options');
     if (oldSelect.id) next.id = oldSelect.id;
     if (oldSelect.dataset.setting) next.dataset.setting = oldSelect.dataset.setting;
     next.maxOptionsVisible = allValues.length;
@@ -937,7 +1059,7 @@ function BuildInput(setting) {
 
         case 'checkbox':
             inputElement = document.createElement('wa-switch');
-            inputElement.setAttribute('size', 'xl');
+            inputElement.setAttribute('size', 'l');
             inputElement.checked = Boolean(savedValue);
             break;
 
@@ -960,7 +1082,7 @@ function BuildInput(setting) {
             // Tombol bersihkan bawaan wa-select: hanya muncul bila ada pilihan.
             inputElement.setAttribute('with-clear', '');
             // Teks pengganti saat semua tag dihapus (Close / clear all).
-            inputElement.setAttribute('placeholder', setting.placeholder || 'Tidak ada opsi');
+            inputElement.setAttribute('placeholder', setting.placeholder || 'No options');
             // Tampilkan SEMUA tag (tanpa "+N") agar tiap tag bisa dihapus satu-satu.
 // CATATAN: propertinya `maxOptionsVisible` — atributnya tidak ada.
             inputElement.maxOptionsVisible = setting.options.length;
@@ -1250,22 +1372,106 @@ function ListSavedScenes() {
     return out.sort((a, b) => b.savedAt - a.savedAt);
 }
 
-// Cara paling andal merender ulang semua kontrol adalah reload halaman —
-// nilai sudah tersimpan di localStorage oleh SaveSettingsToStorage().
+// Terapkan settingsMap ke SELURUH kontrol yang sudah dirender, DI TEMPAT.
+// Dulu fungsi ini memanggil location.reload() — cara paling andal, tapi
+// halaman berkedip setiap ganti scene. Sekarang nilainya ditulis langsung
+// ke tiap kontrol (tanpa reload), jadi pergantian scene tak terasa.
+function SetControlValueFromMap(setting) {
+    const el = document.getElementById(setting.id);
+    if (!el) return;
+    const value = settingsMap.has(setting.id)
+        ? settingsMap.get(setting.id)
+        : setting.defaultValue;
+
+    switch (setting.type) {
+        case 'checkbox':
+            el.checked = Boolean(value);
+            break;
+        case 'number':
+        case 'slider':
+            el.value = value ?? '';
+            break;
+        case 'tags': {
+            const list = Array.isArray(value)
+                ? value
+                : String(value ?? '').split(',').map(v => v.trim()).filter(Boolean);
+            // Urutan <wa-option> menentukan urutan tag yang dirender.
+            ApplyTagOrder(el, list);
+            Array.from(el.querySelectorAll('wa-option')).forEach(opt => {
+                if (list.includes(opt.value)) opt.setAttribute('selected', '');
+                else opt.removeAttribute('selected');
+            });
+            el.value = list;
+            const n = Array.isArray(el.value) ? el.value.length : 0;
+            if (n) el.setAttribute('data-has-tags', '');
+            else el.removeAttribute('data-has-tags');
+            break;
+        }
+        default:
+            el.value = value ?? '';
+    }
+}
+
 function ApplySettingsMapToForm() {
-    location.reload();
+    (settingsData?.settings || []).forEach(SetControlValueFromMap);
+    ApplyShowIfVisibility();
+    // Widget di pratinjau (non-dashboard) ikut diperbarui tanpa reload.
+    RefreshWidgetPreview();
 }
 
 function LoadSettingsForScene(sceneName) {
     const raw = localStorage.getItem(SceneStorageKey(sceneName));
-    if (!raw) throw new Error('Tidak ada settings tersimpan untuk scene ini');
+    if (!raw) throw new Error('No saved settings for this scene');
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.settings))
-        throw new Error('Berkas settings rusak');
+        throw new Error('Settings file is corrupted');
 
     settingsMap = new Map(parsed.settings);
     SaveSettingsToStorage();
     ApplySettingsMapToForm();
+}
+
+// ── Ikuti scene OBS yang sedang aktif (DASHBOARD saja) ───────────
+// Halaman settings mandiri (Chrome) TIDAK ikut reload saat scene OBS
+// berganti — hanya dashboard di dock OBS yang perlu selalu selaras
+// dengan scene aktif.
+const SCENE_FOLLOW_INTERVAL = 2000;
+
+function SceneHasProfile(sceneName) {
+    if (!sceneName) return false;
+    try { return !!localStorage.getItem(SceneStorageKey(sceneName)); }
+    catch (e) { return false; }
+}
+
+async function SceneFollowTick() {
+    // Jangan sentuh apa pun sebelum settings.json selesai dirender:
+    // kalau tidak, scene ditandai "sudah diterapkan" padahal belum ada
+    // kontrol yang bisa ditulis.
+    if (!settingsData) return;
+    // Satu pengecekan saja pada satu waktu; kalau OBS lambat, jangan
+    // menumpuk request tiap interval.
+    if (sceneFollowBusy) return;
+    sceneFollowBusy = true;
+    try {
+        const scene = await ObsGetCurrentSceneName();
+        if (!scene || scene === obsSceneLast) return;
+        // Scene OBS BERGANTI: catat lebih dulu (bertahan melewati reload)
+        // supaya pergantian yang sama tidak diproses dua kali.
+        obsSceneLast = scene;
+        WriteFollowObsScene(scene);
+        // Scene ini belum pernah di-Save: tidak ada setting untuk diikuti,
+        // jadi biarkan form apa adanya (jangan reset diam-diam).
+        if (!SceneHasProfile(scene)) return;
+        SetSelectedScene(scene);
+        LoadSettingsForScene(scene); // terapkan profil scene ini DI TEMPAT
+    } catch (e) { /* OBS belum terhubung / profil rusak — abaikan */ }
+    finally { sceneFollowBusy = false; }
+}
+
+function InitSceneAutoFollow() {
+    if (!isDashboardMode) return;
+    SceneFollowTick();
+    setInterval(SceneFollowTick, SCENE_FOLLOW_INTERVAL);
 }
 
 function LoadDefaultSettings() {
@@ -1681,7 +1887,6 @@ LoadJSON(settingsJson);
 function InitConnectionBadges() {
     InitStreamerBotBadge();
     InitTikTokBadge();
-    InitSMTCBadge();
     InitOBSBadge();
     InitNowPlayingRelay();
 }
@@ -2133,55 +2338,8 @@ function InitNowPlayingRelay() {
     setInterval(pollOnce, NP_RELAY_INTERVAL);
 }
 
-function InitSMTCBadge() {
-    const status = document.getElementById('status-smtc');
-    if (!status) return;
-
-    let checkInterval = null;
-
-    function isSMTCEnabled() {
-        const enableInput = document.getElementById('enableNowPlaying');
-        if (enableInput) return enableInput.checked;
-        if (settingsMap.has('enableNowPlaying')) return Boolean(settingsMap.get('enableNowPlaying'));
-        return true;
-    }
-
-    async function checkSMTC() {
-        if (!isSMTCEnabled()) {
-            status.classList.remove('connected');
-            return;
-        }
-
-        const portInput = document.getElementById('bridgePort');
-        const port = portInput?.value || settingsMap.get('bridgePort') || 47800;
-        const url = `http://127.0.0.1:${port}/now-playing`;
-
-        try {
-            const response = await fetch(url);
-            if (response.ok) {
-                status.classList.add('connected');
-            } else {
-                status.classList.remove('connected');
-            }
-        } catch (e) {
-            status.classList.remove('connected');
-        }
-    }
-
-    checkSMTC();
-    checkInterval = setInterval(checkSMTC, 10000);
-
-    const enableInput = document.getElementById('enableNowPlaying');
-    if (enableInput) {
-        enableInput.addEventListener('wa-change', checkSMTC);
-        enableInput.addEventListener('change', checkSMTC);
-    }
-    const portInput = document.getElementById('bridgePort');
-    if (portInput) portInput.addEventListener('input', checkSMTC);
-}
-
 // ── Badge status koneksi OBS ──────────────────────────────────────
-// Pola sama dengan InitSMTCBadge. obs-websocket memakai WebSocket, jadi
+// obs-websocket memakai WebSocket, jadi
 // status diuji dengan membuka koneksi sebentar lalu langsung menutupnya —
 // kalau dibiarkan terbuka, tiap pengecekan menambah koneksi ke OBS.
 function InitOBSBadge() {

@@ -626,6 +626,70 @@ a { color: var(--accent-color); }
     margin-right: 12px;
 }
 
+/* Deret tombol aksi di summary header (mis. Simulate di dashboard). */
+#settings .header .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Tombol aksi header (Reset / Simulate): lebih ringkas dari 'small'. */
+#settings .header .header-actions wa-button::part(base) {
+    padding: 3px 9px;
+    font-size: 12px;
+    min-height: 30px;
+    line-height: 1.15;
+}
+
+/* Tombol Reset First Chatter: hover kuning sesuai aksen. */
+#settings .header .header-actions wa-button.reset-chatter-btn::part(base):hover {
+    background-color: var(--accent-color);
+    color: var(--accent-on, #1a1408);
+    transform: none;
+    box-shadow: 0 0 12px 0 color-mix(in srgb, var(--accent-color) 50%, transparent);
+}
+
+/* Tombol Reset First Chatter: label tetap di alur (jadi lebar tombol tidak
+   pernah berubah), ikon centang ditaruh absolut di tengah. Saat status
+   hijau muncul, label disembunyikan dan HANYA ikon yang tampak. */
+#settings .header .header-actions wa-button.reset-chatter-btn {
+    position: relative;
+}
+#settings .header .header-actions wa-button.reset-chatter-btn .ri-check-line {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    visibility: hidden;
+    font-size: 1.05em;
+    line-height: 1;
+}
+
+/* Status berhasil pada tombol aksi header (Reset): hijau, sama seperti
+   tombol Save/Load di footer. Teksnya dibuang, tinggal ikon centang. */
+#settings .header .header-actions wa-button.reset-chatter-btn.action-ok .ri-check-line {
+    visibility: visible;
+}
+#settings .header .header-actions wa-button.reset-chatter-btn.action-ok .btn-label {
+    visibility: hidden;
+}
+#settings .header .header-actions wa-button.action-ok::part(base) {
+    background-color: color-mix(in srgb, #4ade80 80%, transparent);
+    color: #0f2417;
+    box-shadow: 0 0 16px 0 color-mix(in srgb, #4ade80 45%, transparent);
+}
+body.dashboard-mode #settings .header .header-actions wa-button.action-ok::part(base) {
+    background-color: #1f6b3a;
+    color: #eafff1;
+    box-shadow: none;
+}
+
+/* Switch on/off alert yang dipindah ke header kartu (dashboard). */
+#settings .header .header-switch {
+    display: flex;
+    align-items: center;
+}
+
 #settings .status:not(.connected) wa-badge[variant="success"] {
     display: none;
 }
@@ -1503,7 +1567,7 @@ body.dashboard-mode::before {
 }
 
 .scene-option-last .scene-option-name::after {
-    content: "Terakhir";
+    content: "Last";
     margin-left: 8px;
     padding: 1px 6px;
     border-radius: 6px;
@@ -1561,40 +1625,6 @@ body.dashboard-mode::before {
     50% { transform: scale(1.12); }
 }
 
-/* ── Tombol Load: nama scene muncul saat hover ──────────────
-   Nama scene disembunyikan (max-width 0 + opacity 0) dan mekar saat hover.
-   Memakai max-width agar bisa ditransisikan — `display:none` tidak bisa. */
-
-#settings footer .url-bar button.load-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0;
-    overflow: hidden;
-    white-space: nowrap;
-}
-
-.load-btn-scene {
-    display: inline-block;
-    max-width: 0;
-    opacity: 0;
-    overflow: hidden;
-    font-size: 0.8em;
-    opacity: 0;
-    transition: max-width 260ms var(--glass-ease),
-        opacity 220ms var(--glass-ease),
-        margin-left 260ms var(--glass-ease);
-}
-
-#settings footer .url-bar button.load-btn:hover .load-btn-scene,
-#settings footer .url-bar button.load-btn:focus-visible .load-btn-scene {
-    max-width: 220px;
-    opacity: 0.75;
-    margin-left: 8px;
-}
-
-.load-btn-scene:empty {
-    display: none;
-}
 
 /* ── Tahan tampilan sampai WebAwesome terdefinisi ─────────────
    Tanpa ini, <wa-details>/<wa-input>/… dirender sebagai elemen inline tak

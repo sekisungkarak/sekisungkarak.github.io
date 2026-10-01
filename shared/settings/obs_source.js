@@ -70,13 +70,13 @@ function ObsConnect() {
         try {
             ws = new WebSocket(`ws://${cfg.address}:${cfg.port}`);
         } catch (e) {
-            reject(new Error('WebSocket tidak didukung'));
+            reject(new Error('WebSocket is not supported'));
             return;
         }
 
         const timeout = setTimeout(() => {
             try { ws.close(); } catch (e) {}
-            reject(new Error('Timeout: OBS WebSocket tidak merespons. Pastikan Tools > obs-websocket Settings > Enable WebSocket server aktif.'));
+            reject(new Error('Timeout: OBS WebSocket did not respond. Make sure Tools > obs-websocket Settings > Enable WebSocket server is on.'));
         }, 5000);
 
         ws.addEventListener('open', () => { /* tunggu Hello */ });
@@ -129,13 +129,13 @@ function ObsConnect() {
                 if (!entry) return;
                 obsPending.delete(id);
                 if (msg.d?.requestStatus?.result) entry.resolve(msg.d.responseData);
-                else entry.reject(new Error(msg.d?.requestStatus?.comment || 'Permintaan OBS ditolak'));
+                else entry.reject(new Error(msg.d?.requestStatus?.comment || 'OBS request rejected'));
             }
         });
 
         ws.addEventListener('error', () => {
             clearTimeout(timeout);
-            reject(new Error(`Gagal terhubung ke OBS WebSocket di ${cfg.address}:${cfg.port}`));
+            reject(new Error(`Failed to connect to OBS WebSocket at ${cfg.address}:${cfg.port}`));
         });
     });
 }
@@ -153,7 +153,7 @@ async function ObsSha256Base64(text) {
 function ObsRequest(type, data = {}) {
     return new Promise((resolve, reject) => {
         if (!obsSocket || obsSocket.readyState !== WebSocket.OPEN) {
-            reject(new Error('Belum terhubung ke OBS'));
+            reject(new Error('Not connected to OBS'));
             return;
         }
         const requestId = 'req-' + (++obsRequestId);
@@ -165,7 +165,7 @@ function ObsRequest(type, data = {}) {
         setTimeout(() => {
             if (obsPending.has(requestId)) {
                 obsPending.delete(requestId);
-                reject(new Error('Timeout menunggu OBS: ' + type));
+                reject(new Error('Timeout waiting for OBS: ' + type));
             }
         }, 8000);
     });
@@ -315,7 +315,7 @@ async function ObsSyncBrowserSource(widgetUrl) {
 
     const scene = await ObsRequest('GetCurrentProgramScene');
     const sceneName = scene?.currentProgramSceneName;
-    if (!sceneName) throw new Error('Tidak ada scene aktif di OBS');
+    if (!sceneName) throw new Error('No active scene in OBS');
 
     // Ikat source ini ke profil scene-nya sendiri.
     const pinnedUrl = ObsPinProfileToUrl(widgetUrl, sceneName);
