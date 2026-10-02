@@ -36,6 +36,17 @@
 
 	var CFG = window.GesekiConfig;
 	var SCHEMA = window.GESEKI_CONTROLS_SCHEMA;
+
+	// Namespace per-widget, sama dengan yang dipakai widget (script.js) dan
+	// builder dashboard: 'geseki:<folder widget>:'. Panel berjalan di dokumen
+	// yang sama dengan widget, jadi path-nya bisa dipakai untuk menurunkannya.
+	var WIDGET_NS = (function () {
+		var segs = location.pathname.replace(/\/+$/, '').split('/').filter(Boolean);
+		if (segs.length && segs[segs.length - 1].indexOf('.') !== -1) segs.pop();
+		if (segs.length && (segs[segs.length - 1] === 'obs' || segs[segs.length - 1] === 'controls')) segs.pop();
+		return 'geseki:' + (segs[segs.length - 1] || 'widget') + ':';
+	})();
+	var CHANNEL_NAME = WIDGET_NS + 'channel';
 	if (!CFG || !SCHEMA) {
 		console.warn('[Geseki][Controls] GesekiConfig / GESEKI_CONTROLS_SCHEMA missing, panel aborted.');
 		return;
@@ -1858,7 +1869,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 	function ReloadAllWidgetSources() {
 		if (!window.BroadcastChannel) return;
 		try {
-			var rl = new BroadcastChannel('geseki_island_channel');
+			var rl = new BroadcastChannel(CHANNEL_NAME);
 			rl.postMessage({ type: 'reload' });
 			setTimeout(function () { try { rl.close(); } catch (e) {} }, 1000);
 		} catch (e) { /* abaikan */ }
@@ -2204,7 +2215,12 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 						var keys = [];
 						for (var i = 0; i < localStorage.length; i++) {
 							var k = localStorage.key(i);
-							if (k && (k.indexOf('geseki:controls:') === 0 || k.indexOf('geseki-scene-') === 0)) keys.push(k);
+							if (!k) continue;
+							// Kunci widget ini (ber-namespace) + kunci lama tanpa namespace.
+							if (k.indexOf(WIDGET_NS) === 0 ||
+							    k.indexOf('geseki:controls:') === 0 ||
+							    k.indexOf('geseki-scene-') === 0 ||
+							    k.indexOf('geseki:scene-') === 0) keys.push(k);
 						}
 						keys.forEach(function (k) { localStorage.removeItem(k); });
 						SetStatus('All settings deleted.');
@@ -2347,7 +2363,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 	// BroadcastChannel yang sama dengan widget.
 	// panelSyncing menahan siaran balik saat state dari scene lain diterapkan,
 	// supaya tidak terjadi ping-pong pesan antar instance.
-	var panelBc = window.BroadcastChannel ? new BroadcastChannel('geseki_island_channel') : null;
+	var panelBc = window.BroadcastChannel ? new BroadcastChannel(CHANNEL_NAME) : null;
 	var panelSyncing = false;
 
 	function BroadcastPanelState(open) {

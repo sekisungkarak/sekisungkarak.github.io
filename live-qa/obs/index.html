@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+	<meta charset="UTF-8">
+	<link rel="shortcut icon" href="../../resources/logo/sekisungkarak_logo.png" type="image/jpeg" />
+	<link rel="stylesheet" href="../style.css?v=8" />
+</head>
+
+<body>
+	<div id="qaPanel" class="qa-panel is-empty">
+		<div id="qaHeader" class="qa-header">
+			<span id="qaHeaderIcon" class="qa-header-icon" aria-hidden="true">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+				</svg>
+			</span>
+			<span id="qaHeaderText" class="qa-header-text">Live Q&amp;A</span>
+		</div>
+		<div id="qaCard" class="qa-card"></div>
+		<div id="qaHint" class="qa-hint"></div>
+	</div>
+</body>
+
+<!-- Varian OBS: memuat style.css / script.js dari folder induk — SATU
+     sumber untuk kedua engine, jadi tidak ada dua salinan yang bisa
+     menyimpang. CSS-nya sengaja hanya memakai fitur yang didukung CEF
+     Chromium 127 (OBS 32.2.2). Script dimuat setelah body agar elemen
+     panel sudah ada di DOM. -->
+<script src="../script.js?v=9"></script>
+</html>

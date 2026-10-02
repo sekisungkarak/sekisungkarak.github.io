@@ -58,7 +58,41 @@ Promise.all([WaitForWebAwesome(), settingsReadyPromise])
 // bila salah satu promise di atas tak kunjung selesai.
 setTimeout(() => document.body.classList.remove('wa-pending'), 8000);
 
-const bc = window.BroadcastChannel ? new BroadcastChannel('geseki_island_channel') : null;
+// ── Namespace per-widget ─────────────────────────────────────────
+// Semua kunci localStorage milik widget ini diawali 'geseki:<folder>:',
+// tempat <folder> adalah folder widget (mis. 'dynamic-island-alert' atau
+// 'live-qa'). Tanpa ini dua widget di origin yang sama berbagi kunci
+// `geseki-scene-<scene>` dan `geseki:controls:*`, sehingga profil satu widget
+// menimpa widget lain.
+//
+// keyPrefix = segmen terakhir widgetURL tanpa nama berkas: widgetURL
+// ".../<widget-folder>/index.html" -> "<widget-folder>". Memakai segmen
+// mentah akan menghasilkan "index.html" — kunci yang justru dibagi semua
+// widget.
+const keyPrefix = (() => {
+    let segments = widgetURL.replace(/\/+$/, '').split('/').filter(Boolean);
+    if (segments.length && /\.(html?|php|aspx?)$/i.test(segments[segments.length - 1])) {
+        segments = segments.slice(0, -1);
+    }
+    return segments[segments.length - 1] || 'widget';
+})();
+
+const WIDGET_NS = 'geseki:' + keyPrefix + ':';
+
+// Kanal pesan antar-halaman milik widget ini. Dashboard mengirim 'reload' /
+// 'callFunction' ke sini, dan widget mendengarkannya. Dulu kanalnya dibagi
+// semua widget, jadi dashboard satu widget ikut memuat ulang widget lain.
+const CHANNEL_NAME = WIDGET_NS + 'channel';
+
+// Profil settings per scene: `geseki:<folder>:scene-<nama scene>`.
+const SCENE_SETTINGS_PREFIX = WIDGET_NS + 'scene-';
+
+// Kunci LAMA tanpa namespace (versi sebelum namespace diperkenalkan). Hanya
+// widget yang historis memakainya — dynamic-island-alert — yang membacanya
+// sebagai cadangan, supaya widget baru tidak mencuri profil milik widget lama.
+const LEGACY_SCENE_PREFIX = keyPrefix === 'dynamic-island-alert' ? 'geseki-scene-' : '';
+
+const bc = window.BroadcastChannel ? new BroadcastChannel(CHANNEL_NAME) : null;
 
 // Status hijau pada tombol aksi header, tepat saat tombol diklik.
 // HANYA menyalakan kelas: ikon centang sudah ada di tombol sejak awal
@@ -162,25 +196,194 @@ const loadDefaultsModal = document.getElementById('modalLoadDefaults');
 let settingsData = null;
 let settingsMap = new Map();
 
-// Unique localStorage key prefix per widget = the WIDGET FOLDER name.
-// widgetURL looks like ".../<widget-folder>/index.html", so drop any trailing
-// filename (index.html or a bare "index") before taking the last path segment.
-// Using the raw last segment would yield "index.html" — a shared key that makes
-// every widget overwrite each other's saved settings.
-const keyPrefix = (() => {
-    let segments = widgetURL.replace(/\/+$/, '').split('/').filter(Boolean);
-    if (segments.length && /\.(html?|php|aspx?)$/i.test(segments[segments.length - 1])) {
-        segments = segments.slice(0, -1);
+// Header: widget name. A `widgetName` query parameter wins (it can carry
+// punctuation the folder name cannot, e.g. "Live Q&A"); otherwise the widget
+// folder name is title-cased (kebab-case -> Title Case).
+if (widgetTitle) {
+    const explicitName = urlParams.get('widgetName');
+    if (explicitName) {
+        widgetTitle.textContent = explicitName;
+    } else if (keyPrefix) {
+        widgetTitle.textContent = keyPrefix
+            .split(/[-_]/)
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
     }
-    return segments[segments.length - 1] || 'widget';
-})();
+}
 
-// Header: widget name derived from the widget folder name (kebab-case -> Title Case)
-if (keyPrefix && widgetTitle) {
-    widgetTitle.textContent = keyPrefix
-        .split(/[-_]/)
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
+/* ?skin=queue — pakai gaya halaman Queue: latar rata, kartu rata bergaris
+   tipis, dan baris aksi (Save / Load / Reset + status OBS) dirapikan jadi
+   top bar seperti halaman Queue: judul di kiri, aksi di kanan.
+   Opt-in: hanya dashboard yang meminta, widget lain tetap tema kaca. */
+/* Status aksi Save / Load / Reset. Di skin=queue hasil aksi dilaporkan di
+   elemen ini (di header), BUKAN di dalam tombol — supaya teks dan lebar
+   tombol tidak berubah-ubah saat melaporkan hasil. Widget lain tetap
+   memakai perilaku lama. */
+/* Toast gaya Controls Panel: menumpuk di pojok kiri bawah, hilang sendiri.
+   Wadahnya ditempel ke <body>, jadi posisinya tidak ikut alur header. */
+function SetActionStatus(text, ok) {
+    if (!text) return;
+
+    let box = document.getElementById('skToasts');
+    if (!box) {
+        box = document.createElement('div');
+        box.id = 'skToasts';
+        box.className = 'sk-toasts';
+        document.body.appendChild(box);
+    }
+
+    const t = document.createElement('div');
+    // Gaya panel: border kiri emas untuk berhasil, merah untuk gagal.
+    t.className = 'sk-toast' + (ok === false ? ' is-error' : '');
+    t.textContent = text;
+    box.appendChild(t);
+
+    // Batasi tumpukan supaya tidak memenuhi layar saat pesan beruntun.
+    while (box.children.length > 4) box.removeChild(box.firstChild);
+    setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 3400);
+}
+
+const skinQueue = urlParams.get('skin') === 'queue';
+if (skinQueue) {
+    document.body.classList.add('skin-queue');
+}
+
+/* ?chrome=min — halaman ini dibuka di dalam dock yang SUDAH punya navbar
+   sendiri, jadi header nama widget disembunyikan supaya tidak tampil dua
+   kali. Diabaikan saat skin=queue: header itu justru dipakai ulang sebagai
+   top bar aksi. */
+if (urlParams.get('chrome') === 'min' && !skinQueue
+    && widgetTitle && widgetTitle.parentElement) {
+    widgetTitle.parentElement.style.display = 'none';
+}
+
+if (skinQueue) {
+    const header = document.querySelector('#settings > header');
+    const footerUrlBar = document.querySelector('#settings footer .url-bar');
+    if (header && footerUrlBar) {
+        // Kiri: ikon + nama widget + label "Settings" — seperti "Live Q&A Queue".
+        const title = document.createElement('div');
+        title.className = 'sk-title';
+        title.innerHTML = '<i class="ri-settings-3-line" aria-hidden="true"></i>';
+        header.insertBefore(title, header.firstChild);
+        if (widgetTitle) title.appendChild(widgetTitle);
+        const em = document.createElement('em');
+        em.textContent = 'Settings';
+        title.appendChild(em);
+
+        // Kanan: pil status OBS + Save / Load / Reset. Tombolnya hanya
+        // dipindah dari footer ke sini, jadi id dan pengikat JS tidak berubah.
+        const actions = document.createElement('div');
+        actions.className = 'sk-bar-actions';
+        const pill = document.createElement('span');
+        pill.id = 'statusObsNav';
+        pill.className = 'sk-obs-pill';
+        pill.title = 'Connection to OBS — click to open settings';
+        pill.style.cursor = 'pointer';
+        pill.innerHTML = '<i class="ri-plug-line" aria-hidden="true"></i><span>OBS</span>';
+        pill.addEventListener('click', function () {
+            window.__openSettingsPopup('OBS Connection');
+        });
+        actions.appendChild(pill);
+        actions.appendChild(footerUrlBar);
+        header.appendChild(actions);
+
+        // Footer dikosongkan: isinya sudah pindah ke header.
+        const footer = footerUrlBar.closest('footer');
+        if (footer) footer.style.display = 'none';
+    }
+}
+
+/* ── Popup pengaturan koneksi ─────────────────────────────────────
+   Grup dengan `popup: true` di settings.json (OBS Connection, Connection)
+   TIDAK dirender sebagai kartu di panel: kartunya dipindah ke dalam satu
+   <wa-dialog>. Pil status di header membukanya. Id kontrol tidak berubah,
+   jadi penyimpanan setting dan badge status tetap bekerja seperti biasa. */
+let settingsPopupDialog = null;
+let settingsPopupBody = null;
+let settingsPopupTitle = null;
+const settingsPopupSections = {};
+
+function EnsureSettingsPopup() {
+    if (settingsPopupDialog) return;
+
+    settingsPopupDialog = document.createElement('wa-dialog');
+    settingsPopupDialog.id = 'settingsPopup';
+    settingsPopupDialog.className = 'modal centered sk-popup';
+    settingsPopupDialog.setAttribute('without-header', '');
+
+    // Head: judul + ikon tutup. Tombol "Close" di footer diganti ikon X di
+    // atas supaya dialog terasa ringan, bukan formulir dengan tombol besar.
+    const head = document.createElement('div');
+    head.className = 'sk-popup-head';
+
+    settingsPopupTitle = document.createElement('span');
+    settingsPopupTitle.className = 'sk-popup-title';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'sk-popup-close';
+    closeBtn.title = 'Close';
+    closeBtn.setAttribute('aria-label', 'Close');
+    closeBtn.innerHTML = '<i class="ri-close-line" aria-hidden="true"></i>';
+    closeBtn.addEventListener('click', function () {
+        settingsPopupDialog.open = false;
+    });
+
+    head.appendChild(settingsPopupTitle);
+    head.appendChild(closeBtn);
+
+    settingsPopupBody = document.createElement('div');
+    settingsPopupBody.className = 'sk-popup-body';
+
+    settingsPopupDialog.appendChild(head);
+    settingsPopupDialog.appendChild(settingsPopupBody);
+
+    // Ditaruh DI DALAM #settings supaya aturan kartu `#settings wa-details…`
+    // tetap berlaku; dialog tertutup tidak memakan ruang flex.
+    const host = document.getElementById('settings') || document.body;
+    host.appendChild(settingsPopupDialog);
+}
+
+/* Asal popup: 'queue' bila dipicu pil Bridge di halaman Queue. Dipakai
+   untuk mengembalikan tab dashboard setelah popup ditutup. */
+let settingsPopupSource = null;
+
+/* Dialog ditutup (tombol X, ESC, atau klik latar) -> wa-dialog memancarkan
+   'wa-hide'. Kalau popup dibuka dari Queue, beri tahu dashboard supaya tab
+   kembali ke Queue; kalau dari pil OBS di header Settings, tab dibiarkan. */
+function NotifyPopupClosed() {
+    if (settingsPopupSource !== 'queue') return;
+    settingsPopupSource = null;
+    // Lewat BroadcastChannel yang sama dengan dashboard — dashboard memang
+    // mendengarkan kanal ini, bukan event 'message' dari iframe.
+    try { if (bc) bc.postMessage({ type: 'settings_popup_closed' }); } catch (e) {}
+}
+
+window.__openSettingsPopup = function (groupName, source) {
+    if (!settingsPopupSections[groupName]) return false;
+    EnsureSettingsPopup();
+    settingsPopupSource = source || null;
+    settingsPopupDialog.addEventListener('wa-hide', NotifyPopupClosed);
+    // Hanya kartu yang diminta yang tampil.
+    Object.keys(settingsPopupSections).forEach(function (name) {
+        settingsPopupSections[name].style.display =
+            (name === groupName) ? '' : 'none';
+    });
+    settingsPopupTitle.textContent = groupName;
+    settingsPopupDialog.open = true;
+    return true;
+};
+
+/* Queue page meminta popup lewat kanal yang sama (pil Bridge di header
+   halaman itu ada di dokumen lain). */
+if (bc) {
+    bc.onmessage = function (ev) {
+        const d = ev.data || {};
+        if (d.type === 'open_settings_popup' && d.group) {
+            window.__openSettingsPopup(d.group, d.from);
+        }
+    };
 }
 
 // Header logo auto-fallback for any manual replacement (jpg, png, logo.png, etc.)
@@ -259,6 +462,14 @@ const resetObsButton = document.getElementById('resetObsButton');
 
 function SetFooterButtonState(btn, text, ok) {
     if (!btn) return;
+
+    // skin=queue: hasil aksi tampil di status tersendiri di header, jadi
+    // tombol Save / Load / Reset tidak berubah teks maupun lebarnya.
+    if (document.body.classList.contains('skin-queue')) {
+        SetActionStatus(text, ok);
+        return;
+    }
+
     // Label tombol Load dinamis, jadi selalu baca ulang dari dataset.baseLabel
 // — kalau disimpan sekali, teks basi akan dikembalikan setelah scene ganti.
     const original = btn.dataset.baseLabel || btn.textContent;
@@ -341,14 +552,14 @@ function CloseSceneMenu() {
 // Pilihan terakhir disimpan agar hover tombol Load tetap
 // menampilkan "Current: …" setelah halaman di-reload.
 // `selectedScene` sendiri hanya hidup di memori.
-const LAST_SCENE_KEY = 'geseki-last-scene';
+const LAST_SCENE_KEY = WIDGET_NS + 'last-scene';
 
 // ── Auto-follow scene OBS (dashboard) ────────────────────────────
 // Dashboard harus menampilkan setting milik scene OBS yang SEDANG aktif.
 // Dipicu saat scene BERGANTI (bukan sekadar berbeda dari yang terakhir
 // dimuat), supaya tombol Load tetap bisa dipakai melihat profil scene
 // lain tanpa langsung ditimpa.
-const SCENE_FOLLOW_OBS_KEY = 'geseki-scene-follow-obs';
+const SCENE_FOLLOW_OBS_KEY = WIDGET_NS + 'scene-follow-obs';
 let sceneFollowBusy = false;
 
 function ReadFollowObsScene() {
@@ -372,10 +583,7 @@ function ReadLastScene() {
         const v = localStorage.getItem(LAST_SCENE_KEY) || '';
         if (!v) return '';
         // Hanya pakai bila profilnya masih ada — bisa saja sudah dihapus sesi lalu.
-// PENTING: jangan panggil ListSavedScenes() di sini; SCENE_SETTINGS_PREFIX
-// belum dievaluasi -> ReferenceError (TDZ) yang tertelan catch. Cek
-// localStorage langsung dengan prefix literal.
-        return localStorage.getItem('geseki-scene-' + v) ? v : '';
+        return ReadSceneProfileRaw(v) ? v : '';
     } catch (e) {
         return '';
     }
@@ -397,9 +605,13 @@ function SetSelectedScene(name) {
 }
 
 // Hapus profil scene. Mengembalikan true bila berhasil.
+// Kunci lama (tanpa namespace) ikut dihapus: kalau tidak, profil itu muncul
+// kembali di daftar scene setelah dihapus.
 function DeleteSceneSettings(scene) {
     try {
         localStorage.removeItem(SceneStorageKey(scene));
+        const legacy = LegacySceneStorageKey(scene);
+        if (legacy) localStorage.removeItem(legacy);
         return true;
     } catch (e) {
         return false;
@@ -605,7 +817,7 @@ resetConfirmModal.querySelector('.button.save').addEventListener('click', () => 
     // LoadDefaultSettings(). Catatan: LoadDefaultSettings memuat ulang
     // halaman, jadi nilai disimpan ke localStorage secara langsung.
     try {
-        localStorage.setItem('geseki-preserve', JSON.stringify(preserved));
+        localStorage.setItem(WIDGET_NS + 'preserve', JSON.stringify(preserved));
     } catch (e) { /* abaikan */ }
 
     LoadDefaultSettings();
@@ -879,6 +1091,24 @@ function LoadJSON(settingsJson) {
                     section.appendChild(configRow);
                 });
 
+                // Grup `popup: true`: barisnya masuk ke dialog sebagai daftar
+                // polos — TANPA kartu wa-details. Baris .config diambil dari
+                // section sementara lalu section-nya dibuang, jadi id kontrol,
+                // penyimpanan, dan showIf tetap identik dengan panel biasa.
+                if (data.groups?.[groupName]?.popup === true) {
+                    EnsureSettingsPopup();
+                    const wrap = document.createElement('div');
+                    wrap.className = 'sk-popup-group';
+                    wrap.dataset.group = groupName;
+                    Array.from(section.querySelectorAll('.config')).forEach(function (row) {
+                        wrap.appendChild(row);
+                    });
+                    settingsPopupBody.appendChild(wrap);
+                    settingsPopupSections[groupName] = wrap;
+                    groupIndex++;
+                    continue;
+                }
+
                 // Check category of this group
                 const firstSetting = groupedSettings[groupName][0];
                 const categoryName = firstSetting.category;
@@ -1136,6 +1366,197 @@ function BuildInput(setting) {
             break;
         }
 
+        case 'gift': {
+            // Dropdown gift: ikon + nama + id + harga koin. Nilai yang disimpan
+            // adalah ID gift (string) — satu-satunya yang stabil lintas bahasa.
+            // Kosong = tidak ada gift tiket (penonton boleh langsung bertanya).
+            inputElement = document.createElement('div');
+            inputElement.className = 'gift-select';
+
+            const toggle = document.createElement('button');
+            toggle.type = 'button';
+            toggle.className = 'gift-toggle';
+
+            const toggleBody = document.createElement('span');
+            toggleBody.className = 'gift-toggle-body';
+            const toggleIcon = document.createElement('img');
+            toggleIcon.className = 'gift-icon';
+            toggleIcon.alt = '';
+            const toggleText = document.createElement('span');
+            toggleText.className = 'gift-toggle-text';
+            toggleBody.appendChild(toggleIcon);
+            toggleBody.appendChild(toggleText);
+            toggle.appendChild(toggleBody);
+            const caret = document.createElement('i');
+            caret.className = 'ri-arrow-down-s-line';
+            toggle.appendChild(caret);
+            inputElement.appendChild(toggle);
+
+            const menu = document.createElement('div');
+            menu.className = 'gift-menu';
+            menu.hidden = true;
+
+            const search = document.createElement('input');
+            search.type = 'search';
+            search.className = 'gift-search';
+            search.placeholder = 'Search gift...';
+            menu.appendChild(search);
+
+            const list = document.createElement('div');
+            list.className = 'gift-list';
+            menu.appendChild(list);
+
+            const note = document.createElement('div');
+            note.className = 'gift-note';
+            menu.appendChild(note);
+            inputElement.appendChild(menu);
+
+            let gifts = null;   // cache daftar gift setelah dimuat
+            let loading = false;
+            let current = savedValue == null ? '' : String(savedValue);
+
+            const NONE_LABEL = 'No gift - anyone can ask';
+
+            const SetValue = (id, name, icon) => {
+                current = id == null ? '' : String(id);
+                // Handler umum membaca .value dari elemen ini.
+                inputElement.value = current;
+                if (current) {
+                    toggleIcon.src = icon || '';
+                    toggleIcon.style.display = icon ? '' : 'none';
+                    toggleText.textContent = name ? (name + ' \u00b7 #' + current) : ('#' + current);
+                    inputElement.classList.add('has-gift');
+                } else {
+                    toggleIcon.removeAttribute('src');
+                    toggleIcon.style.display = 'none';
+                    toggleText.textContent = NONE_LABEL;
+                    inputElement.classList.remove('has-gift');
+                }
+            };
+
+            const MakeRow = (icon, name, sub, selected, onPick) => {
+                const row = document.createElement('button');
+                row.type = 'button';
+                row.className = 'gift-row';
+                if (selected) row.classList.add('is-selected');
+                if (icon !== null) {
+                    const img = document.createElement('img');
+                    img.className = 'gift-icon';
+                    img.alt = '';
+                    img.loading = 'lazy';
+                    if (icon) img.src = icon;
+                    row.appendChild(img);
+                }
+                const meta = document.createElement('span');
+                meta.className = 'gift-meta';
+                const nm = document.createElement('span');
+                nm.className = 'gift-name';
+                nm.textContent = name;
+                meta.appendChild(nm);
+                if (sub) {
+                    const sb = document.createElement('span');
+                    sb.className = 'gift-sub';
+                    sb.textContent = sub;
+                    meta.appendChild(sb);
+                }
+                row.appendChild(meta);
+                row.addEventListener('click', onPick);
+                return row;
+            };
+
+            const RenderList = (filter) => {
+                list.innerHTML = '';
+                // Baris pertama selalu "tanpa gift" supaya pilihan kosong bisa
+                // dikembalikan tanpa tombol tambahan.
+                list.appendChild(MakeRow(null, NONE_LABEL, '', !current, () => {
+                    SetValue('', '', '');
+                    menu.hidden = true;
+                    inputElement.dispatchEvent(new Event('input'));
+                }));
+
+                if (!gifts) {
+                    note.textContent = loading ? 'Loading gifts...' : '';
+                    return;
+                }
+                const f = (filter || '').trim().toLowerCase();
+                const rows = gifts.filter(g => !f
+                    || g.name.toLowerCase().includes(f)
+                    || String(g.id).includes(f));
+                rows.forEach(g => {
+                    list.appendChild(MakeRow(g.icon, g.name,
+                        '#' + g.id + ' \u00b7 ' + g.coins + ' coins',
+                        String(g.id) === current, () => {
+                            SetValue(g.id, g.name, g.icon);
+                            menu.hidden = true;
+                            inputElement.dispatchEvent(new Event('input'));
+                        }));
+                });
+                note.textContent = rows.length + ' of ' + gifts.length + ' gifts';
+            };
+
+            const LoadGifts = () => {
+                if (gifts || loading) return;
+                loading = true;
+                note.textContent = 'Loading gifts...';
+                // gifts.json sejajar dengan settings.json (buang query string).
+                const base = String(settingsJson || '').split('?')[0];
+                const url = base.replace(/[^/]*$/, '') + 'gifts.json';
+                fetch(url)
+                    .then(r => r.json())
+                    .then(doc => {
+                        gifts = Array.isArray(doc) ? doc : (doc.gifts || []);
+                        loading = false;
+                        RenderList(search.value);
+                        // Nama + ikon untuk nilai tersimpan baru diketahui sekarang.
+                        if (current) {
+                            const hit = gifts.find(g => String(g.id) === current);
+                            if (hit) SetValue(hit.id, hit.name, hit.icon);
+                        }
+                    })
+                    .catch(err => {
+                        loading = false;
+                        console.error('Failed to load gifts.json', err);
+                        note.textContent = 'Could not load gifts.json.';
+                    });
+            };
+
+            toggle.addEventListener('click', () => {
+                menu.hidden = !menu.hidden;
+                if (!menu.hidden) {
+                    LoadGifts();
+                    search.focus();
+                }
+            });
+            // stopPropagation: kotak pencarian ada DI DALAM elemen setting, dan
+            // handleInput dipasang pada elemen itu. Tanpa ini, tiap huruf yang
+            // diketik ikut tersimpan + memicu refresh pratinjau.
+            search.addEventListener('input', (e) => {
+                e.stopPropagation();
+                RenderList(search.value);
+            });
+            search.addEventListener('keydown', (e) => e.stopPropagation());
+            // Klik di luar menutup menu (toggle sendiri ada di dalam, jadi aman).
+            document.addEventListener('click', (e) => {
+                if (!inputElement.contains(e.target)) menu.hidden = true;
+            });
+
+            // Ganti scene / impor menulis nilai langsung ke elemen (bukan lewat
+            // klik menu), jadi tampilan toggle perlu disinkronkan terpisah.
+            inputElement.__syncGift = (v) => {
+                const next = v == null ? '' : String(v);
+                if (next === current) return;
+                const hit = gifts ? gifts.find(g => String(g.id) === next) : null;
+                SetValue(next, hit ? hit.name : '', hit ? hit.icon : '');
+                if (next && !hit) LoadGifts(); // nama menyusul setelah daftar dimuat
+            };
+            // Jalur impor menyiarkan Event('input') setelah menulis .value.
+            inputElement.addEventListener('input', () => inputElement.__syncGift(inputElement.value));
+
+            SetValue(current, '', '');
+            if (current) setTimeout(LoadGifts, 0);
+            break;
+        }
+
         case 'color':
             inputElement = document.createElement('wa-color-picker');
             inputElement.value = savedValue ?? '#ffffff';
@@ -1327,26 +1748,43 @@ function LoadSettingsFromStorage() {
     // Nilainya ditulis sesaat sebelum LoadDefaultSettings() membersihkan
     // localStorage dan memuat ulang halaman.
     try {
-        const raw = localStorage.getItem('geseki-preserve');
+        const raw = localStorage.getItem(WIDGET_NS + 'preserve');
         if (raw) {
             const preserved = JSON.parse(raw);
             Object.entries(preserved).forEach(([id, value]) => {
                 settingsMap.set(id, value);
             });
-            localStorage.removeItem('geseki-preserve');
+            localStorage.removeItem(WIDGET_NS + 'preserve');
             SaveSettingsToStorage();
         }
     } catch (e) { /* abaikan */ }
 }
 
 // ── Penyimpanan settings per scene ───────────────────────────────
-// Satu scene = satu profil settings, disimpan di localStorage
-// dengan kunci `geseki-scene-<nama scene>`. Jadi "Live" dan "BRB"
-// bisa punya tampilan widget berbeda.
-const SCENE_SETTINGS_PREFIX = 'geseki-scene-';
+// Satu scene = satu profil settings, disimpan di localStorage dengan kunci
+// ber-namespace `geseki:<folder>:scene-<nama scene>`. Jadi "Live" dan "BRB"
+// bisa punya tampilan widget berbeda, dan dua widget berbeda tidak saling
+// menimpa.
 
 function SceneStorageKey(sceneName) {
     return SCENE_SETTINGS_PREFIX + sceneName;
+}
+
+// Kunci profil scene versi LAMA (tanpa namespace). Hanya widget yang historis
+// memakainya yang mengisi ini; widget baru mengabaikannya supaya tidak
+// mencuri profil milik widget lama.
+function LegacySceneStorageKey(sceneName) {
+    return LEGACY_SCENE_PREFIX ? LEGACY_SCENE_PREFIX + sceneName : '';
+}
+
+// Baca profil scene mentah: kunci ber-namespace dulu, lalu kunci lama.
+function ReadSceneProfileRaw(sceneName) {
+    try {
+        const raw = localStorage.getItem(SceneStorageKey(sceneName));
+        if (raw) return raw;
+        const legacy = LegacySceneStorageKey(sceneName);
+        return legacy ? localStorage.getItem(legacy) : null;
+    } catch (e) { return null; }
 }
 
 function SaveSettingsForScene(sceneName) {
@@ -1360,17 +1798,31 @@ function SaveSettingsForScene(sceneName) {
 }
 
 function ListSavedScenes() {
-    const out = [];
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (!key || !key.startsWith(SCENE_SETTINGS_PREFIX)) continue;
-        let savedAt = 0;
-        try {
-            savedAt = JSON.parse(localStorage.getItem(key))?.savedAt || 0;
-        } catch (e) { /* abaikan */ }
-        out.push({ scene: key.slice(SCENE_SETTINGS_PREFIX.length), savedAt });
-    }
-    return out.sort((a, b) => b.savedAt - a.savedAt);
+    const byScene = new Map();
+
+    // Pass 1: kunci ber-namespace milik widget ini. Pass 2: kunci lama yang
+    // belum sempat ditulis ulang (hanya untuk widget historis). Scene yang
+    // sudah ada dari pass 1 tidak ditimpa.
+    const collect = (prefix) => {
+        if (!prefix) return;
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key || !key.startsWith(prefix)) continue;
+            const scene = key.slice(prefix.length);
+            if (byScene.has(scene)) continue;
+            let savedAt = 0;
+            try {
+                savedAt = JSON.parse(localStorage.getItem(key))?.savedAt || 0;
+            } catch (e) { /* abaikan */ }
+            byScene.set(scene, savedAt);
+        }
+    };
+    collect(SCENE_SETTINGS_PREFIX);
+    collect(LEGACY_SCENE_PREFIX);
+
+    return [...byScene.entries()]
+        .map(([scene, savedAt]) => ({ scene, savedAt }))
+        .sort((a, b) => b.savedAt - a.savedAt);
 }
 
 // Terapkan settingsMap ke SELURUH kontrol yang sudah dirender, DI TEMPAT.
@@ -1387,6 +1839,11 @@ function SetControlValueFromMap(setting) {
     switch (setting.type) {
         case 'checkbox':
             el.checked = Boolean(value);
+            break;
+        case 'gift':
+            // Dropdown kustom: .value saja tidak memperbarui ikon/teks.
+            if (typeof el.__syncGift === 'function') el.__syncGift(value);
+            else el.value = value ?? '';
             break;
         case 'number':
         case 'slider':
@@ -1421,7 +1878,7 @@ function ApplySettingsMapToForm() {
 }
 
 function LoadSettingsForScene(sceneName) {
-    const raw = localStorage.getItem(SceneStorageKey(sceneName));
+    const raw = ReadSceneProfileRaw(sceneName);
     if (!raw) throw new Error('No saved settings for this scene');
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.settings))
@@ -1440,7 +1897,7 @@ const SCENE_FOLLOW_INTERVAL = 2000;
 
 function SceneHasProfile(sceneName) {
     if (!sceneName) return false;
-    try { return !!localStorage.getItem(SceneStorageKey(sceneName)); }
+    try { return !!ReadSceneProfileRaw(sceneName); }
     catch (e) { return false; }
 }
 
@@ -1480,7 +1937,7 @@ function LoadDefaultSettings() {
     settingsMap = new Map();
     // Reload SETELAH render selesai. Dulu reload berbarengan dengan LoadJSON()
 // yang async, sehingga fetch terpotong dan form tag kosong sampai F5 manual.
-    try { sessionStorage.removeItem('geseki-reload-once'); } catch (e) {}
+    try { sessionStorage.removeItem(WIDGET_NS + 'reload-once'); } catch (e) {}
     const done = LoadJSON(settingsJson);
     const reload = () => location.reload();
     if (done && typeof done.then === 'function') {
@@ -2021,7 +2478,7 @@ function InitTikTokBadge() {
    RELAY NOW PLAYING
    Halaman settings menjadi SATU-SATUNYA pengumpul data SMTC; widget (OBS/
    TTLS/pratinjau) menerima hasilnya lewat BroadcastChannel
-   `geseki_island_channel`. Tiap instance yang fetch sendiri tiap 2s memicu
+   `CHANNEL_NAME`. Tiap instance yang fetch sendiri tiap 2s memicu
    parse + filter + TriggerAlert di proses yang GPU-nya rebutan encoder.
    Konsekuensi: halaman settings harus terbuka agar now playing jalan.
    ============================================================================ */
@@ -2286,7 +2743,7 @@ async function RelaySongChange(data) {
 function InitNowPlayingRelay() {
     if (!window.BroadcastChannel) return;
 
-    const relay = new BroadcastChannel('geseki_island_channel');
+    const relay = new BroadcastChannel(CHANNEL_NAME);
 
     // Widget memberi tahu relay bahwa ia hidup, supaya relay langsung kirim
     // snapshot terakhir (tanpa menunggu 1s berikutnya).
@@ -2345,12 +2802,16 @@ function InitNowPlayingRelay() {
 // kalau dibiarkan terbuka, tiap pengecekan menambah koneksi ke OBS.
 function InitOBSBadge() {
     const status = document.getElementById('status-obs');
-    if (!status) return;
+    // Pil di bar atas (skin=queue) memakai elemen terpisah; keduanya
+    // dinyalakan bersama supaya tidak perlu dua probe WebSocket.
+    const statusNav = document.getElementById('statusObsNav');
+    if (!status && !statusNav) return;
 
     let probe = null;
 
     function setConnected(ok) {
-        status.classList.toggle('connected', ok === true);
+        if (status) status.classList.toggle('connected', ok === true);
+        if (statusNav) statusNav.classList.toggle('connected', ok === true);
     }
 
     function checkOBS() {

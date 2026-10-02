@@ -1,0 +1,110 @@
+{
+  "groups": {
+    "OBS Connection": {
+      "open": true,
+      "popup": true,
+      "icon": "../../resources/icons/platforms/obs-logo.svg",
+      "badge": "obs"
+    },
+    "Connection": {
+      "open": true,
+      "popup": true,
+      "icon": "ri-plug-fill"
+    },
+    "Ticket": {
+      "open": false,
+      "icon": "ri-ticket-2-fill"
+    },
+    "Questions": {
+      "open": false,
+      "icon": "ri-question-answer-fill"
+    },
+    "Appearance": {
+      "open": false,
+      "icon": "ri-palette-fill"
+    }
+  },
+  "settings": [
+    {
+      "id": "obsAddress",
+      "label": "Server IP",
+      "type": "text",
+      "defaultValue": "127.0.0.1",
+      "group": "OBS Connection"
+    },
+    {
+      "id": "obsPort",
+      "label": "Port",
+      "type": "number",
+      "defaultValue": 4455,
+      "min": 1024,
+      "max": 65535,
+      "group": "OBS Connection"
+    },
+    {
+      "id": "obsPassword",
+      "label": "Password",
+      "type": "password",
+      "defaultValue": "",
+      "group": "OBS Connection"
+    },
+    {
+      "id": "bridgeHost",
+      "label": "Bridge Host",
+      "type": "text",
+      "defaultValue": "127.0.0.1",
+      "group": "Connection"
+    },
+    {
+      "id": "bridgePort",
+      "label": "Bridge Port",
+      "type": "number",
+      "defaultValue": 47800,
+      "min": 1024,
+      "max": 65535,
+      "group": "Connection"
+    },
+    {
+      "id": "ticketGiftId",
+      "label": "Ticket Gift",
+      "description": "Pick a gift to require before someone may ask. The list shows every TikTok gift with its coin price and id, so matching stays exact across languages. Leave it empty and anyone can ask with just the prefix.",
+      "type": "gift",
+      "defaultValue": "",
+      "group": "Ticket",
+      "full": true
+    },
+    {
+      "id": "questionPrefix",
+      "label": "Question Prefix",
+      "description": "A chat starting with this becomes a question. Without a ticket gift, no ticket is needed.",
+      "type": "text",
+      "defaultValue": "!q",
+      "group": "Questions"
+    },
+    {
+      "id": "showAvatar",
+      "label": "Show Avatar",
+      "description": "Show the asker's profile picture next to the question.",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "Appearance"
+    },
+    {
+      "id": "showTicketHint",
+      "label": "Show Ticket Hint",
+      "description": "Show a short hint line explaining how to ask a question.",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "Appearance"
+    },
+    {
+      "id": "ticketHintText",
+      "label": "Hint Text",
+      "description": "Shown only when a ticket gift is set. {gift} and {prefix} are replaced. With no gift, the widget says \"Type {prefix} to ask a question\".",
+      "type": "text",
+      "defaultValue": "Send {gift}, then type {prefix} your question",
+      "group": "Appearance",
+      "showIf": "showTicketHint"
+    }
+  ]
+}

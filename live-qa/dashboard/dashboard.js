@@ -1,0 +1,116 @@
+// Dashboard khusus dock OBS — live-qa/dashboard/
+// Dua tab:
+//   Settings — memuat settings-page-builder dengan ?dashboard=1, sehingga
+//              builder TIDAK membuat iframe preview (hemat CPU/GPU di OBS).
+//   Queue    — daftar pertanyaan yang masuk; klik satu baris untuk
+//              menampilkannya di overlay. Iframe-nya baru dimuat saat tab
+//              pertama kali dibuka.
+//
+// sourceName/sourceWidth/sourceHeight diteruskan ke builder karena
+// shared/settings/obs_source.js membacanya dari query string. Ini WAJIB:
+// kalau Live Q&A memakai nama source default ("Dynamic Island Alert"),
+// tombol Save akan menimpa URL browser source milik widget island.
+
+const dashFrame = document.getElementById('dashFrame');
+const queueFrame = document.getElementById('queueFrame');
+const tabSettings = document.getElementById('tabSettings');
+const tabQueue = document.getElementById('tabQueue');
+const paneSettings = document.getElementById('paneSettings');
+const paneQueue = document.getElementById('paneQueue');
+const queueBadge = document.getElementById('queueBadge');
+const brandName = document.getElementById('brandName');
+
+// Identitas widget. Nama ini juga dipakai sebagai nama OBS source (sourceName)
+// dan judul di navbar.
+const WIDGET_NAME = 'Live Q&A';
+
+// Dari live-qa/dashboard/ -> shared/settings/ ada 2 level atas.
+const settingsPageURL = '../../shared/settings/index.html';
+
+// settings.json sejajar dengan dashboard (folder settings/ sudah dihapus).
+const settingsDir = new URL('./', window.location.href).href;
+
+// Widget yang dikendalikan: index.html di root live-qa.
+const widgetURL = new URL('../index.html', window.location.href).href;
+
+brandName.textContent = WIDGET_NAME;
+
+dashFrame.src =
+    settingsPageURL +
+    '?v=26&settingsJson=' + encodeURIComponent(settingsDir + 'settings.json?v=12') +
+    '&widgetURL=' + encodeURIComponent(widgetURL) +
+    '&sourceName=' + encodeURIComponent(WIDGET_NAME) +
+    '&sourceWidth=1080&sourceHeight=700' +
+    '&widgetName=' + encodeURIComponent(WIDGET_NAME) +
+    // Gaya halaman Queue untuk tab Settings; header halaman itu dipakai
+    // ulang sebagai top bar (judul + Save / Load / Reset + status OBS),
+    // jadi chrome=min tidak dipakai.
+    '&skin=queue' +
+    '&dashboard=1';
+
+// Queue page dibuka dari folder queue/.
+queueFrame.dataset.src = new URL('../queue/index.html', window.location.href).href;
+
+// ── Tab ─────────────────────────────────────────────────────────────────────
+
+let queueLoaded = false;
+
+// Tab yang harus dibuka lagi setelah popup ditutup (null = tetap di Settings).
+let popupReturnTab = null;
+
+function SelectTab(which) {
+    const isQueue = which === 'queue';
+
+    tabSettings.classList.toggle('is-active', !isQueue);
+    tabQueue.classList.toggle('is-active', isQueue);
+    paneSettings.classList.toggle('is-active', !isQueue);
+    paneQueue.classList.toggle('is-active', isQueue);
+
+    if (isQueue && !queueLoaded) {
+        queueFrame.src = queueFrame.dataset.src;
+        queueLoaded = true;
+    }
+}
+
+tabSettings.addEventListener('click', () => SelectTab('settings'));
+tabQueue.addEventListener('click', () => SelectTab('queue'));
+
+// ── Badge jumlah antrean ────────────────────────────────────────────────────
+// Dashboard ikut mendengarkan kanal widget supaya jumlah pertanyaan terlihat
+// bahkan saat tab Settings yang terbuka.
+
+const WIDGET_NS = 'geseki:live-qa:';
+
+if (window.BroadcastChannel) {
+    try {
+        const bc = new BroadcastChannel(WIDGET_NS + 'channel');
+        bc.onmessage = (ev) => {
+            const d = ev.data || {};
+            // Permintaan popup dari Queue: tab Settings harus terlihat dulu,
+            // kalau tidak dialognya terbuka di iframe yang tersembunyi.
+            if (d.type === 'open_settings_popup') {
+                // Popup dari pil Bridge (halaman Queue) -> setelah ditutup
+                // harus kembali ke Queue. Popup dari pil OBS di header
+                // Settings tidak mengubah tab.
+                popupReturnTab = d.from === 'queue' ? 'queue' : null;
+                SelectTab('settings');
+                return;
+            }
+            // Dikirim halaman Settings saat popup ditutup.
+            if (d.type === 'settings_popup_closed') {
+                if (popupReturnTab === 'queue') SelectTab('queue');
+                popupReturnTab = null;
+                return;
+            }
+            if (d.type !== 'qa_state') return;
+            const n = Array.isArray(d.questions) ? d.questions.length : 0;
+            queueBadge.textContent = String(n);
+            queueBadge.hidden = n === 0;
+        };
+    } catch (e) { /* abaikan */ }
+}
+
+// ── Tab awal ────────────────────────────────────────────────────────────────
+// Settings adalah tab default. Iframe-nya sudah dimuat di atas; iframe Queue
+// baru dimuat saat tab-nya pertama kali dibuka.
+SelectTab('settings');

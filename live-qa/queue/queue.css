@@ -1,0 +1,495 @@
+/* ============================================================================
+   Live Q&A — Queue page.
+   ----------------------------------------------------------------------------
+   Same dark theme as the dashboard, but with no Web Awesome components: this
+   page has to stay usable even when that CDN is slow, and the layout is simple
+   enough not to need them.
+   ========================================================================== */
+
+:root {
+	--bg: #121114;
+	--bg-soft: rgba(255, 255, 255, 0.045);
+	--bg-softer: rgba(255, 255, 255, 0.028);
+	--line: rgba(255, 255, 255, 0.09);
+	--text: #eae7ee;
+	--text-dim: rgba(234, 231, 238, 0.62);
+	--gold: #d4a843;
+	--green: #4ecb8d;
+	--amber: #e0b34a;
+	--red: #e2686b;
+	--ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	height: 100%;
+}
+
+body {
+	background: var(--bg);
+	color: var(--text);
+	font-family: "Archivo", "Segoe UI", system-ui, sans-serif;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+/* ── Top bar ────────────────────────────────────────────────────────────── */
+
+.bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	flex-wrap: wrap;
+	padding: 14px 18px;
+	border-bottom: 1px solid var(--line);
+	background: rgba(255, 255, 255, 0.02);
+	flex: 0 0 auto;
+}
+
+.bar-title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-family: "Archivo Black", "Archivo", sans-serif;
+	font-size: 14px;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+}
+
+.bar-title i {
+	color: var(--gold);
+	font-size: 16px;
+}
+
+.bar-title em {
+	font-style: normal;
+	font-family: "Archivo", sans-serif;
+	font-weight: 500;
+	font-size: 11px;
+	letter-spacing: 0.12em;
+	color: var(--text-dim);
+	padding-left: 2px;
+}
+
+.bar-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 10px;
+	border-radius: 999px;
+	border: 1px solid var(--line);
+	background: var(--bg-softer);
+	font-size: 11.5px;
+	white-space: nowrap;
+	color: var(--text-dim);
+}
+
+.pill i {
+	font-size: 13px;
+}
+
+.pill-on {
+	color: var(--green);
+	border-color: rgba(78, 203, 141, 0.35);
+	background: rgba(78, 203, 141, 0.10);
+}
+
+.pill-warn {
+	color: var(--amber);
+	border-color: rgba(224, 179, 74, 0.35);
+	background: rgba(224, 179, 74, 0.10);
+}
+
+.pill-off {
+	color: var(--text-dim);
+}
+
+.btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 12px;
+	border-radius: 9px;
+	border: 1px solid var(--line);
+	background: var(--bg-soft);
+	color: var(--text);
+	font-family: inherit;
+	font-size: 12px;
+	cursor: pointer;
+	transition: background-color 150ms var(--ease), border-color 150ms var(--ease), opacity 150ms var(--ease);
+}
+
+.btn:hover:not(:disabled) {
+	background: rgba(255, 255, 255, 0.10);
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+.btn:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.btn i {
+	font-size: 14px;
+}
+
+.btn-sm {
+	padding: 4px 9px;
+	font-size: 11px;
+}
+
+/* A button waiting for its second confirmation click. */
+.btn.is-armed {
+	border-color: rgba(226, 104, 107, 0.55);
+	background: rgba(226, 104, 107, 0.16);
+	color: #f3b6b8;
+}
+
+/* ── On screen ──────────────────────────────────────────────────────────── */
+
+.onair {
+	flex: 0 0 auto;
+	padding: 14px 18px 16px;
+	border-bottom: 1px solid var(--line);
+}
+
+.onair-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 10px;
+	font-size: 11px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--text-dim);
+}
+
+.onair-head .dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--red);
+	box-shadow: 0 0 0 0 rgba(226, 104, 107, 0.6);
+	animation: pulse 1.8s var(--ease) infinite;
+}
+
+@keyframes pulse {
+	0% { box-shadow: 0 0 0 0 rgba(226, 104, 107, 0.55); }
+	70% { box-shadow: 0 0 0 7px rgba(226, 104, 107, 0); }
+	100% { box-shadow: 0 0 0 0 rgba(226, 104, 107, 0); }
+}
+
+.onair-head .btn {
+	margin-left: auto;
+}
+
+.onair-body {
+	border-radius: 12px;
+	border: 1px solid var(--line);
+	background: var(--bg-softer);
+	padding: 12px;
+	min-height: 62px;
+	display: flex;
+	align-items: center;
+}
+
+.onair-none {
+	margin: 0;
+	font-size: 12.5px;
+	color: var(--text-dim);
+}
+
+.onair-card {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	width: 100%;
+	border-left: 3px solid var(--gold);
+	border-radius: 8px;
+	padding: 8px 10px;
+	background: rgba(255, 255, 255, 0.04);
+}
+
+.onair-text {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	min-width: 0;
+}
+
+.onair-text .name {
+	font-size: 12px;
+	font-weight: 700;
+	color: var(--gold);
+}
+
+.onair-text .text {
+	font-size: 15px;
+	line-height: 1.4;
+	word-break: break-word;
+	overflow-wrap: anywhere;
+}
+
+/* ── Queue ──────────────────────────────────────────────────────────────── */
+
+.queue {
+	flex: 1 1 auto;
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+	padding: 14px 18px 18px;
+}
+
+.queue-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 10px;
+	font-size: 11px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--text-dim);
+}
+
+.queue-head .count {
+	padding: 1px 7px;
+	border-radius: 999px;
+	background: var(--bg-soft);
+	border: 1px solid var(--line);
+	font-size: 11px;
+	letter-spacing: 0;
+}
+
+.queue-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	overflow-y: auto;
+	flex: 1 1 auto;
+	min-height: 0;
+}
+
+.row {
+	display: flex;
+	align-items: stretch;
+	gap: 0;
+	border-radius: 11px;
+	border: 1px solid var(--line);
+	background: var(--bg-softer);
+	overflow: hidden;
+	transition: border-color 150ms var(--ease), background-color 150ms var(--ease);
+}
+
+.row:hover {
+	border-color: rgba(255, 255, 255, 0.18);
+	background: var(--bg-soft);
+}
+
+.row.is-onair {
+	border-color: rgba(212, 168, 67, 0.55);
+	background: rgba(212, 168, 67, 0.08);
+}
+
+.row-main {
+	display: flex;
+	align-items: center;
+	gap: 11px;
+	flex: 1 1 auto;
+	min-width: 0;
+	padding: 10px 12px;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font-family: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+/* A <button> inherits justify-content:center from the UA stylesheet; this row
+   has to read left-aligned like a normal chat list. */
+.row-main {
+	justify-content: flex-start;
+}
+
+.avatar {
+	width: 34px;
+	height: 34px;
+	border-radius: 50%;
+	object-fit: cover;
+	flex: 0 0 auto;
+	background: rgba(255, 255, 255, 0.10);
+}
+
+.row-body {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.row-top {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	min-width: 0;
+}
+
+.row-top .name {
+	font-size: 12.5px;
+	font-weight: 700;
+	color: var(--gold);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.row-top .time {
+	font-size: 10.5px;
+	color: var(--text-dim);
+	flex: 0 0 auto;
+	margin-left: auto;
+}
+
+.row-body .text {
+	font-size: 13.5px;
+	line-height: 1.4;
+	color: var(--text);
+	word-break: break-word;
+	overflow-wrap: anywhere;
+	/* Two lines are enough to recognise a question; the rest is clipped. */
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.tag {
+	flex: 0 0 auto;
+	padding: 3px 7px;
+	border-radius: 6px;
+	font-size: 10px;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--text-dim);
+	background: var(--bg-soft);
+	border: 1px solid var(--line);
+}
+
+.tag-live {
+	color: var(--gold);
+	border-color: rgba(212, 168, 67, 0.45);
+	background: rgba(212, 168, 67, 0.14);
+}
+
+.row-del {
+	flex: 0 0 auto;
+	width: 38px;
+	border: 0;
+	border-left: 1px solid var(--line);
+	background: transparent;
+	color: var(--text-dim);
+	font-size: 17px;
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 150ms var(--ease), background-color 150ms var(--ease), color 150ms var(--ease);
+}
+
+.row:hover .row-del {
+	opacity: 1;
+}
+
+.row-del:hover {
+	background: rgba(226, 104, 107, 0.16);
+	color: var(--red);
+}
+
+/* ── Pager ──────────────────────────────────────────────────────────────── */
+
+.pager {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	flex: 0 0 auto;
+	padding-top: 10px;
+}
+
+.page-label {
+	font-size: 11.5px;
+	letter-spacing: 0.04em;
+	color: var(--text-dim);
+	min-width: 46px;
+	text-align: center;
+}
+
+/* ── Empty state ────────────────────────────────────────────────────────── */
+
+.empty {
+	display: none;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	flex: 1 1 auto;
+	text-align: center;
+	color: var(--text-dim);
+	padding: 24px 12px;
+}
+
+.empty i {
+	font-size: 30px;
+	opacity: 0.5;
+	margin-bottom: 4px;
+}
+
+.empty p {
+	margin: 0;
+	font-size: 13px;
+}
+
+.empty-sub {
+	font-size: 11.5px;
+	max-width: 320px;
+}
+
+.empty code {
+	padding: 1px 6px;
+	border-radius: 5px;
+	background: var(--bg-soft);
+	border: 1px solid var(--line);
+	color: var(--gold);
+	font-size: 11.5px;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────────────────── */
+
+.queue-list::-webkit-scrollbar {
+	width: 8px;
+}
+
+.queue-list::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.12);
+	border-radius: 999px;
+}
+
+.queue-list::-webkit-scrollbar-track {
+	background: transparent;
+}

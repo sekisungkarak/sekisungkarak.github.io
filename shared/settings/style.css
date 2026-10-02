@@ -1611,6 +1611,170 @@ body.dashboard-mode::before {
     color: #f87171;
 }
 
+/* ── Gift dropdown (tipe setting "gift") ──────────────────────────────────
+   Dipakai Live Q&A untuk memilih gift tiket. Kustom, bukan <wa-select>,
+   karena tiap baris menampilkan gambar gift. Menu mengalir (in-flow) seperti
+   dropdown scene, jadi tidak terpotong batas kartu. */
+.gift-select {
+    position: relative;
+    width: 100%;
+    text-align: left;
+}
+
+.gift-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    border: 0;
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.9rem;
+    /* Tombol TIDAK mewarisi text-align dari induknya (bawaannya center), jadi
+       teks gift yang terpilih harus diratakan kiri secara eksplisit. */
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 150ms var(--glass-ease);
+}
+
+.gift-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.gift-toggle-body {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.gift-toggle-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Tanpa gift: kalimat "No gift..." lebih panjang, jadi dicondongkan & redup. */
+.gift-select:not(.has-gift) .gift-toggle-text {
+    color: rgba(255, 255, 255, 0.6);
+    font-style: italic;
+}
+
+.gift-icon {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 auto;
+    object-fit: contain;
+}
+
+.gift-menu {
+    margin-top: 6px;
+    padding: 8px;
+    border-radius: 16px;
+    background-color: rgba(32, 30, 40, 0.72);
+    backdrop-filter: var(--glass-filter);
+    -webkit-backdrop-filter: var(--glass-filter);
+    box-shadow: var(--glass-bevel-outer), 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.gift-menu[hidden] {
+    display: none;
+}
+
+.gift-search {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.28);
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.9rem;
+}
+
+.gift-search:focus {
+    outline: none;
+    border-color: rgba(212, 168, 67, 0.6);
+}
+
+.gift-list {
+    max-height: 240px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+.gift-list::-webkit-scrollbar { width: 8px; }
+
+.gift-list::-webkit-scrollbar-track { background: transparent; }
+
+.gift-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+.gift-row {
+    display: flex;
+    align-items: center;
+    /* <button> mewarisi `justify-content: center` dari UA stylesheet, sehingga
+       gambar + nama + id tampil di TENGAH baris. Rata kiri eksplisit. */
+    justify-content: flex-start;
+    gap: 10px;
+    width: 100%;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #fff;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.gift-row:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+}
+
+.gift-row.is-selected {
+    background-color: rgba(212, 168, 67, 0.18);
+}
+
+.gift-meta {
+    display: flex;
+    flex-direction: column;
+    /* Ambil sisa lebar baris supaya teks panjang terpotong dengan elipsis,
+       bukan melar keluar baris. */
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.gift-name {
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gift-sub {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.75rem;
+}
+
+.gift-note {
+    margin-top: 6px;
+    padding: 0 8px;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.72rem;
+}
+
 /* Mode "siap hapus": klik pertama mengaktifkan, klik kedua
    benar-benar menghapus. Merah solid + berdenyut supaya jelas
    bahwa klik berikutnya tidak bisa dibatalkan. */
@@ -2159,4 +2323,386 @@ body.dashboard-mode .modal .button:not([appearance=outlined])::part(base):hover 
     background-color: var(--accent-color);
     transform: none;
     color: var(--accent-on, #1a1408);
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   SKIN QUEUE (?skin=queue) — gaya halaman Queue.
+   Latar rata tanpa liquid glass. Header dipakai ulang sebagai top bar
+   seperti halaman Queue: judul di kiri, aksi (status OBS + Save / Load /
+   Reset) di kanan. Footer dikosongkan. Opt-in, jadi widget lain tetap
+   memakai tema kaca. Semua selector diawali body.skin-queue.
+   ════════════════════════════════════════════════════════════════ */
+
+body.skin-queue {
+    --sk-bg: #121114;
+    --sk-soft: rgba(255, 255, 255, 0.045);
+    --sk-softer: rgba(255, 255, 255, 0.028);
+    --sk-line: rgba(255, 255, 255, 0.09);
+    --sk-text: #eae7ee;
+    --sk-dim: rgba(234, 231, 238, 0.62);
+    --sk-gold: #d4a843;
+
+    background: var(--sk-bg);
+    color: var(--sk-text);
+}
+
+/* Motif bloom/grid situs dibuang: Queue rata satu warna. */
+body.skin-queue::before {
+    content: none !important;
+    background: none !important;
+    background-image: none !important;
+}
+
+body.skin-queue #settings {
+    padding: 0 0 24px 0;
+}
+
+/* ── Header = top bar gaya Queue ──────────────────────────────── */
+body.skin-queue #settings header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    padding: 14px 18px;
+    margin: 0;
+    /* line-height halaman Settings 1.6em; di bar Queue tingginya normal.
+       Disamakan supaya tinggi bar identik dengan halaman Queue. */
+    line-height: normal;
+    border-bottom: 1px solid var(--sk-line);
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+body.skin-queue .sk-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+body.skin-queue .sk-title i {
+    flex: 0 0 auto;
+    color: var(--sk-gold);
+    font-size: 16px;
+}
+
+body.skin-queue .sk-title em {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-style: normal;
+    font-family: "Archivo", sans-serif;
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--sk-dim);
+    padding-left: 2px;
+}
+
+body.skin-queue #settings header h1 {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    font-family: "Archivo Black", "Archivo", sans-serif;
+    font-weight: normal;
+    font-size: 14px;
+    line-height: 1;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--sk-text);
+    min-width: 0;
+    outline: none;
+}
+
+body.skin-queue .sk-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+}
+
+/* Footer dikosongkan: tombolnya sudah pindah ke header. */
+body.skin-queue #settings footer {
+    display: none;
+}
+
+/* ── Tombol Save / Load / Reset: rata, bukan pill kaca ────────── */
+body.skin-queue .url-bar {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+body.skin-queue .url-bar button {
+    position: static;
+    isolation: auto;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    flex: 0 0 auto;
+    padding: 6px 12px;
+    border: 1px solid var(--sk-line);
+    border-radius: 9px;
+    background-color: var(--sk-soft);
+    background-image: none;
+    color: var(--sk-text);
+    font-family: "Archivo", system-ui, sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    text-shadow: none;
+    box-shadow: none;
+    transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+body.skin-queue .url-bar button::before,
+body.skin-queue .url-bar button::after {
+    content: none;
+}
+
+body.skin-queue .url-bar button:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+    border-color: rgba(255, 255, 255, 0.18);
+    transform: none;
+    box-shadow: none;
+}
+
+body.skin-queue .url-bar button:active {
+    transform: none;
+    box-shadow: none;
+}
+
+body.skin-queue .url-bar button.copied {
+    background-color: rgba(78, 203, 141, 0.16);
+    border-color: rgba(78, 203, 141, 0.45);
+    box-shadow: none;
+}
+
+body.skin-queue .url-bar button.obs-error {
+    background-color: rgba(226, 104, 107, 0.16) !important;
+    border-color: rgba(226, 104, 107, 0.45);
+    box-shadow: none;
+}
+
+/* ── Pil status OBS ───────────────────────────────────────────── */
+body.skin-queue .sk-obs-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border: 1px solid var(--sk-line);
+    border-radius: 999px;
+    background: var(--sk-softer);
+    color: var(--sk-dim);
+    font-size: 11.5px;
+    white-space: nowrap;
+}
+
+body.skin-queue .sk-obs-pill i {
+    font-size: 13px;
+}
+
+body.skin-queue .sk-obs-pill.connected {
+    color: #4ecb8d;
+    border-color: rgba(78, 203, 141, 0.35);
+    background: rgba(78, 203, 141, 0.10);
+}
+
+/* ── Kartu: rata, garis tipis, tanpa kaca ─────────────────────── */
+body.skin-queue #settings wa-details.section {
+    border-radius: 12px;
+    margin-bottom: 10px;
+    transition: none;
+}
+
+body.skin-queue #settings wa-details.section:hover {
+    background-color: transparent;
+}
+
+body.skin-queue #settings wa-details.section::part(base),
+body.skin-queue #settings wa-details.section.category-section::part(base),
+body.skin-queue #settings wa-details.section.nested-section::part(base) {
+    background: var(--sk-softer);
+    background-image: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid var(--sk-line);
+    border-radius: 12px;
+    box-shadow: none;
+    color: var(--sk-text);
+}
+
+body.skin-queue #settings wa-details.section::part(base)::before,
+body.skin-queue #settings wa-details.section::part(base)::after {
+    content: none;
+}
+
+body.skin-queue #settings wa-details.section:not(.category-section):not(.nested-section)::part(header):hover,
+body.skin-queue #settings wa-details.section.category-section::part(header):hover,
+body.skin-queue #settings wa-details.section.nested-section::part(header):hover {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+body.skin-queue #settings wa-details.section::part(header) {
+    padding: 14px 16px;
+}
+
+body.skin-queue #settings wa-details.section:not(.category-section):not(.nested-section)::part(content),
+body.skin-queue #settings wa-details.section::part(content),
+body.skin-queue #settings wa-details.section.category-section::part(content) {
+    padding: 0 16px 16px 16px;
+}
+
+body.skin-queue #settings wa-details.section.nested-section {
+    margin: 0 0 8px 0;
+}
+
+body.skin-queue #settings wa-details.section.nested-section::part(base) {
+    border-radius: 10px;
+}
+
+body.skin-queue #settings wa-details.section::part(expand-icon) {
+    color: var(--sk-dim);
+    transition: none;
+}
+
+/* ── Teks & kontrol ────────────────────────────────────────────── */
+body.skin-queue #settings .config .info .title {
+    color: var(--sk-text);
+}
+
+body.skin-queue #settings .config .info .description {
+    color: var(--sk-dim);
+}
+
+body.skin-queue #settings .config .info .description a {
+    color: var(--sk-gold);
+}
+
+body.skin-queue #settings #settingsPanel {
+    /* Jarak dari header (bar atas) ke kartu pertama. */
+    padding-top: 16px;
+    padding-left: 18px;
+    padding-right: 18px;
+}
+
+/* Status aksi Save / Load / Reset — toast di pojok KIRI BAWAH, gaya yang
+   sama dengan Controls Panel widget lain: border kiri aksen, latar gelap,
+   hilang sendiri. Ditempel ke <body> (position: fixed), jadi tidak pernah
+   menggeser tombol di header. */
+body.skin-queue .sk-toasts {
+    position: fixed;
+    left: 12px;
+    bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+    z-index: 60;
+    pointer-events: none;
+    max-width: min(360px, calc(100% - 24px));
+}
+
+body.skin-queue .sk-toast {
+    padding: 7px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 2px solid var(--sk-gold);
+    border-radius: 4px;
+    background: #201e28;
+    color: var(--sk-text);
+    font-family: "Archivo", system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+    max-width: 100%;
+    word-break: break-word;
+}
+
+body.skin-queue .sk-toast.is-error {
+    border-left-color: #e0524c;
+}
+
+/* ── Popup pengaturan koneksi (grup popup:true) ──────────────────
+   Dialog ringan: judul + ikon tutup di atas, lalu daftar baris polos.
+   Sengaja TIDAK memakai kartu wa-details — isinya cuma beberapa field. */
+body.skin-queue .sk-popup {
+    --width: 460px;
+}
+
+body.skin-queue .sk-popup::part(dialog) {
+    background: var(--sk-bg);
+    background-image: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid var(--sk-line);
+    border-radius: 14px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+    color: var(--sk-text);
+}
+
+body.skin-queue .sk-popup::part(dialog)::backdrop {
+    background: rgba(10, 9, 12, 0.55);
+    backdrop-filter: blur(3px);
+}
+
+body.skin-queue .sk-popup::part(body) {
+    padding: 16px 18px 18px 18px;
+}
+
+body.skin-queue .sk-popup-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    /* Garis pemisah judul. Dipasang di head (bukan di grup) supaya SEMUA
+       popup dapat garis yang sama — aturan "grup + grup" dulu hanya kena
+       grup kedua, sehingga popup dengan satu grup (OBS) tidak bergaris. */
+    border-bottom: 1px solid var(--sk-line);
+}
+
+body.skin-queue .sk-popup-title {
+    font-family: "Archivo Black", "Archivo", sans-serif;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--sk-text);
+}
+
+body.skin-queue .sk-popup-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    flex: 0 0 auto;
+    border: 1px solid var(--sk-line);
+    border-radius: 8px;
+    background: var(--sk-softer);
+    color: var(--sk-dim);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 150ms ease, color 150ms ease;
+}
+
+body.skin-queue .sk-popup-close:hover {
+    background: rgba(255, 255, 255, 0.10);
+    color: var(--sk-text);
+}
+
+/* Baris polos: tanpa bingkai kartu, hanya pemisah antar grup. */
+body.skin-queue .sk-popup-group .config {
+    padding: 6px 0;
 }

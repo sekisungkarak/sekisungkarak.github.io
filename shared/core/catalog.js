@@ -25,4 +25,17 @@ window.CATALOG = [
     docsUrl: 'dynamic-island-alert/docs/',
     widgetUrl: 'dynamic-island-alert/',
   },
+  {
+    id: 'live-qa',
+    name: 'Live Q&A',
+    eyebrow: 'ENGAGEMENT',
+    version: '1.0',
+    description: 'A question feed for TikTok LIVE. Viewers earn a ticket by sending the ticket gift, then type your question prefix in chat to have their question pinned on screen.',
+    tier: 'free',
+    platforms: ['tiktok'],
+    accent: '#D4A843',
+    icon: 'ph:chat-centered-text-bold',
+    docsUrl: 'live-qa/docs/',
+    widgetUrl: 'live-qa/',
+  },
 ];

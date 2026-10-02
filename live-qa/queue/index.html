@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Live Q&amp;A — Queue</title>
+
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700&display=swap">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.9.1/fonts/remixicon.min.css">
+
+	<link rel="icon" type="image/png" href="../../shared/assets/images/avatar.png">
+	<link rel="stylesheet" href="queue.css?v=1">
+</head>
+
+<body>
+
+	<!-- ── Top bar ──────────────────────────────────────────────────────
+	     Title, bridge status, unused tickets, and the clear actions. -->
+	<header class="bar">
+		<div class="bar-title">
+			<i class="ri-question-answer-fill" aria-hidden="true"></i>
+			<span>Live Q&amp;A</span>
+			<em>Queue</em>
+		</div>
+
+		<div class="bar-actions">
+			<span id="statusPill" class="pill pill-off" title="Connection to Geseki Bridge">
+				<i class="ri-plug-line" aria-hidden="true"></i>
+				<span id="statusText">Connecting…</span>
+			</span>
+			<span id="ticketPill" class="pill" title="Viewers holding a ticket">
+				<i class="ri-ticket-2-line" aria-hidden="true"></i>
+				<span id="ticketText">0 tickets</span>
+			</span>
+			<button id="clearTicketsBtn" class="btn btn-ghost" type="button" title="Clear every unused ticket">
+				<i class="ri-eraser-line" aria-hidden="true"></i>
+				<span>Tickets</span>
+			</button>
+			<button id="clearBtn" class="btn btn-ghost" type="button" title="Clear the whole queue">
+				<i class="ri-delete-bin-6-line" aria-hidden="true"></i>
+				<span>Queue</span>
+			</button>
+			<button id="testBtn" class="btn btn-ghost" type="button" title="Add a sample question to test the flow">
+				<i class="ri-flask-line" aria-hidden="true"></i>
+				<span>Sample</span>
+			</button>
+		</div>
+	</header>
+
+	<!-- ── On air ───────────────────────────────────────────────────────
+	     The question currently on the stream. Only ever one. -->
+	<section class="onair">
+		<div class="onair-head">
+			<span class="dot" aria-hidden="true"></span>
+			<span>On screen</span>
+			<button id="hideBtn" class="btn btn-ghost btn-sm" type="button">
+				<i class="ri-eye-off-line" aria-hidden="true"></i>
+				<span>Hide</span>
+			</button>
+		</div>
+		<div id="onairBody" class="onair-body"></div>
+	</section>
+
+	<!-- ── Question queue ───────────────────────────────────────────────
+	     Click a row to put that question on screen. -->
+	<section class="queue">
+		<div class="queue-head">
+			<span>Queue</span>
+			<span id="queueCount" class="count">0</span>
+		</div>
+		<ul id="queueList" class="queue-list"></ul>
+
+		<!-- Pager: antrean ditampilkan 5 baris per halaman. -->
+		<div id="pager" class="pager" hidden>
+			<button id="prevPageBtn" class="btn btn-ghost btn-sm" type="button" title="Previous page">
+				<i class="ri-arrow-left-s-line" aria-hidden="true"></i>
+			</button>
+			<span id="pageLabel" class="page-label">1 / 1</span>
+			<button id="nextPageBtn" class="btn btn-ghost btn-sm" type="button" title="Next page">
+				<i class="ri-arrow-right-s-line" aria-hidden="true"></i>
+			</button>
+		</div>
+
+		<div id="emptyState" class="empty">
+			<i class="ri-inbox-line" aria-hidden="true"></i>
+			<p>No questions yet.</p>
+			<p class="empty-sub">Viewers type <code id="prefixHint">!q</code> in chat and their question shows up here.</p>
+		</div>
+	</section>
+
+	<script src="queue.js?v=3"></script>
+</body>
+
+</html>

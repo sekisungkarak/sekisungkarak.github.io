@@ -11,12 +11,27 @@
 //   4. Ada  -> SetInputSettings (update URL); Tiada -> CreateInput
 
 const OBS_WS_DEFAULT_PORT = 4455;
+
+// Nama & ukuran source bisa di-override lewat query string halaman builder
+// (?sourceName=…&sourceWidth=…&sourceHeight=…). Tanpa param, nilainya persis
+// seperti sebelumnya, jadi widget lama tidak terpengaruh. Ini penting karena
+// Save MENCARI source berdasarkan nama: kalau dua widget memakai nama yang
+// sama, widget kedua akan menimpa URL source widget pertama.
+function ObsBuilderParam(name, fallback) {
+    try {
+        const v = new URLSearchParams(window.location.search).get(name);
+        return (v === null || v === '') ? fallback : v;
+    } catch (e) {
+        return fallback;
+    }
+}
+
 // Ukuran browser source: dipakai CreateInput, SetInputSettings, dan
 // perhitungan posisi tengah.
-const OBS_SOURCE_WIDTH = 1080;
-const OBS_SOURCE_HEIGHT = 700;
+const OBS_SOURCE_WIDTH = Number(ObsBuilderParam('sourceWidth', 1080)) || 1080;
+const OBS_SOURCE_HEIGHT = Number(ObsBuilderParam('sourceHeight', 700)) || 700;
 
-const OBS_SOURCE_BASE_NAME = 'Dynamic Island Alert';
+const OBS_SOURCE_BASE_NAME = ObsBuilderParam('sourceName', 'Dynamic Island Alert');
 
 // Bitmask alignment scene item OBS: 1=Left, 2=Right, 4=Top, 8=Bottom.
 // Top-center = 4 (bit Top saja; bit horizontal kosong -> tengah).

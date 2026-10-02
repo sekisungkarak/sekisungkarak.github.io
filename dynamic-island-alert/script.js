@@ -22,20 +22,66 @@ const _urlSearch = new URLSearchParams(queryString);
    Semua call site di bawah tetap memakai urlParams.get()/has(), jadi tidak ada
    yang perlu disentuh: objeknya saja yang sekarang memetakan ke sumber itu.
    ========================================================================== */
+// ── Namespace per-widget ─────────────────────────────────────────
+// Folder widget (segmen terakhir path setelah nama berkas dan subfolder
+// internal 'obs'/'controls' dibuang) menjadi namespace semua kunci
+// localStorage/sessionStorage dan nama BroadcastChannel widget ini. Tanpa
+// ini, dua widget di origin yang sama berbagi kunci `geseki-scene-<scene>`
+// dan `geseki:controls:*`, sehingga profil satu widget menimpa widget lain.
+const WIDGET_NS = (() => {
+	let segs = location.pathname.replace(/\/+$/, '').split('/').filter(Boolean);
+	if (segs.length && segs[segs.length - 1].indexOf('.') !== -1) segs.pop();
+	if (segs.length && (segs[segs.length - 1] === 'obs' || segs[segs.length - 1] === 'controls')) segs.pop();
+	return 'geseki:' + (segs[segs.length - 1] || 'widget') + ':';
+})();
+
+const CHANNEL_NAME = WIDGET_NS + 'channel';
+
 const ConfigStore = (() => {
-	const KEY_SCHEMA   = 'geseki:controls:schema';
-	const KEY_PROFILES = 'geseki:controls:profiles';
-	const KEY_ACTIVE   = 'geseki:controls:active';
-	const KEY_PREFS    = 'geseki:controls:prefs';
-	// Cocokkan DUA format kunci: 'geseki-scene-<nama>' (yang ditulis dashboard,
-	// dipakai juga saat panel menyimpan) DAN 'geseki:scene-<nama>'. Dulu hanya
-	// bentuk bertitik-dua yang dikenali, sehingga settings tersimpan dari
-	// dashboard TIDAK pernah terbaca sebagai profil di Controls Panel.
-	const PROFILE_RE   = /^geseki[:-]scene-(.+)$/;
+	const KEY_SCHEMA   = WIDGET_NS + 'controls:schema';
+	const KEY_PROFILES = WIDGET_NS + 'controls:profiles';
+	const KEY_ACTIVE   = WIDGET_NS + 'controls:active';
+	const KEY_PREFS    = WIDGET_NS + 'controls:prefs';
+	// Profil scene: kunci ber-namespace `geseki:<folder>:scene-<nama>` (yang
+	// ditulis dashboard & panel). Kunci LAMA tanpa namespace tetap dibaca
+	// sebagai cadangan supaya profil yang sudah tersimpan tidak hilang.
+	const NS_SCENE_PREFIX = WIDGET_NS + 'scene-';
+	const LEGACY_SCENE_PREFIXES = ['geseki-scene-', 'geseki:scene-'];
+	// Kunci controls versi lama (tanpa namespace). Hanya widget historis yang
+	// memilikinya; widget lain tidak menyentuhnya.
+	const LEGACY_CONTROLS_PREFIX = WIDGET_NS === 'geseki:dynamic-island-alert:' ? 'geseki:controls:' : '';
+	function MatchProfileKey(k) {
+		if (!k) return null;
+		if (k.indexOf(NS_SCENE_PREFIX) === 0) return k.slice(NS_SCENE_PREFIX.length);
+		for (let i = 0; i < LEGACY_SCENE_PREFIXES.length; i++) {
+			const p = LEGACY_SCENE_PREFIXES[i];
+			if (k.indexOf(p) === 0) return k.slice(p.length);
+		}
+		return null;
+	}
 
 	const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 	const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 	const lsDel = (k) => { try { localStorage.removeItem(k); } catch (e) {} };
+
+	// Migrasi SEKALI JALAN dari kunci lama tanpa namespace ke namespace widget.
+	// Hanya widget historis (dynamic-island-alert) yang menjalankannya, supaya
+	// widget baru tidak mencuri data miliknya. Setelah tersalin, kode di bawah
+	// hanya memakai kunci ber-namespace.
+	(function MigrateLegacyControlsKeys() {
+		if (!LEGACY_CONTROLS_PREFIX) return;
+		[[LEGACY_CONTROLS_PREFIX + 'schema', KEY_SCHEMA],
+		 [LEGACY_CONTROLS_PREFIX + 'profiles', KEY_PROFILES],
+		 [LEGACY_CONTROLS_PREFIX + 'active', KEY_ACTIVE],
+		 [LEGACY_CONTROLS_PREFIX + 'prefs', KEY_PREFS]].forEach(function (pair) {
+			try {
+				if (lsGet(pair[1]) === null) {
+					const v = localStorage.getItem(pair[0]);
+					if (v !== null) localStorage.setItem(pair[1], v);
+				}
+			} catch (e) { /* abaikan */ }
+		});
+	})();
 
 	// Nilai bawaan, disalin dari settings.json oleh panel. Sebelum panel pernah
 	// dibuka salinan ini kosong; widget tetap jalan karena setiap call site
@@ -43,9 +89,8 @@ const ConfigStore = (() => {
 	let defaults = {};
 	try { defaults = JSON.parse(lsGet(KEY_SCHEMA) || '{}') || {}; } catch (e) { defaults = {}; }
 
-	// Profil. Nama profil sengaja sama dengan key lama dashboard
-	// (geseki-scene-<nama>) supaya pengaturan yang sudah tersimpan di sana
-	// langsung terpakai tanpa migrasi.
+	// Profil. Dibaca dari kunci ber-namespace DAN kunci lama, supaya
+	// pengaturan yang sudah tersimpan sebelum namespace tetap terpakai.
 	const profiles = new Map();
 	try {
 		const raw = lsGet(KEY_PROFILES);
@@ -54,11 +99,11 @@ const ConfigStore = (() => {
 	try {
 		for (let i = 0; i < localStorage.length; i++) {
 			const k = localStorage.key(i);
-			const m = k && k.match(PROFILE_RE);
-			if (!m) continue;
+			const scene = MatchProfileKey(k);
+			if (!scene) continue;
 			const val = JSON.parse(lsGet(k) || '{}');
 			const list = Array.isArray(val.settings) ? val.settings : [];
-			if (list.length) profiles.set(m[1], Object.fromEntries(list));
+			if (list.length) profiles.set(scene, Object.fromEntries(list));
 		}
 	} catch (e) { /* abaikan */ }
 
@@ -119,8 +164,8 @@ const ConfigStore = (() => {
 			profiles.set(name, map);
 			const flat = [...profiles.entries()];
 			lsSet(KEY_PROFILES, JSON.stringify(flat));
-			// Tulis juga ke format lama supaya dashboard tetap bisa membacanya.
-			lsSet('geseki-scene-' + name, JSON.stringify({
+			// Simpan dalam format yang dibaca dashboard: satu profil per scene.
+			lsSet(NS_SCENE_PREFIX + name, JSON.stringify({
 				savedAt: Date.now(),
 				settings: Object.entries(map)
 			}));
@@ -128,7 +173,8 @@ const ConfigStore = (() => {
 		deleteProfile(name) {
 			profiles.delete(name);
 			lsSet(KEY_PROFILES, JSON.stringify([...profiles.entries()]));
-			lsDel('geseki-scene-' + name);
+			lsDel(NS_SCENE_PREFIX + name);
+			LEGACY_SCENE_PREFIXES.forEach(function (p) { lsDel(p + name); });
 		},
 		saveDefaults(map) { defaults = map; lsSet(KEY_SCHEMA, JSON.stringify(map)); },
 		setPref(key, value) { prefs[key] = value; lsSet(KEY_PREFS, JSON.stringify(prefs)); },
@@ -334,7 +380,7 @@ const ALERT_SOUND_VOLUME = 0.5;
 //      menyala untuk scene yang SEDANG TAYANG, tidak ikut di preview Studio Mode.
 let sourceVisible = !(typeof document !== 'undefined' && document.hidden);
 let sourceActive = true;
-const SOUND_CLAIM_KEY = 'geseki:sound-claim';
+const SOUND_CLAIM_KEY = WIDGET_NS + 'sound-claim';
 const SOUND_CLAIM_WINDOW_MS = 1500;
 
 function PlayAlertSound(alertData) {
@@ -1352,7 +1398,7 @@ function GetTimeNowText() {
 // -- Persistensi state pause --
 // Saat reload, nowPlayingData di-reset padahal lagu masih dijeda. Simpan ke
 // localStorage supaya panel musik langsung tampil mode pause setelah reload.
-const PAUSE_STORAGE_KEY = 'geseki-paused-state';
+const PAUSE_STORAGE_KEY = WIDGET_NS + 'paused-state';
 
 // Metadata lagu terakhir yang VALID (bukan "Unknown"), disimpan terpisah supaya
 // judul/artis tidak pernah tertimpa "Unknown" - kalau itu terjadi
@@ -2384,7 +2430,7 @@ const LS_EVENT_SYNC_SETTINGS = 'stream_deck/sync_settings';
 const LS_STATUS = { offline: 0, paused: 1, live: 2 };
 const LS_POLL_INTERVAL = 2500;      // status tidak di-push, harus dipoll
 const LS_RETRY_INTERVAL = 10000;    // jeda bila belum terhubung
-const LS_STORAGE_KEY = 'geseki-live-started-at';
+const LS_STORAGE_KEY = WIDGET_NS + 'live-started-at';
 const LS_MAX_AGE = 12 * 60 * 60 * 1000; // localStorage dianggap basi setelah 12 jam
 
 let lsSocket = null;
@@ -2898,7 +2944,7 @@ let pendingRevealToken = 0;
 // preferensi panel, jadi tetap berlaku setelah overlay dimuat ulang.
 function AlertsPaused() {
 	try {
-		const raw = localStorage.getItem('geseki:controls:prefs');
+		const raw = localStorage.getItem(WIDGET_NS + 'controls:prefs');
 		if (!raw) return false;
 		return JSON.parse(raw).alertsPaused === '1';
 	} catch (e) { return false; }
@@ -2908,10 +2954,10 @@ function AlertsPaused() {
 // antrean langsung diproses lagi supaya alert yang tertahan tidak menunggu.
 window.SetAlertsPaused = function (on) {
 	try {
-		const raw = localStorage.getItem('geseki:controls:prefs');
+		const raw = localStorage.getItem(WIDGET_NS + 'controls:prefs');
 		const prefs = raw ? JSON.parse(raw) : {};
 		prefs.alertsPaused = on ? '1' : '0';
-		localStorage.setItem('geseki:controls:prefs', JSON.stringify(prefs));
+		localStorage.setItem(WIDGET_NS + 'controls:prefs', JSON.stringify(prefs));
 	} catch (e) { /* abaikan */ }
 	if (!on && typeof ProcessAlertQueue === 'function') ProcessAlertQueue();
 };
@@ -2921,7 +2967,7 @@ window.SetAlertsPaused = function (on) {
 // jadi pill-nya menampilkan ambient dan alert yang sedang tayang di scene lain
 // terputus. Source yang menayangkan alert mencatatnya di localStorage; source
 // yang baru tampil membaca catatan itu dan ikut menayangkan SISA durasinya.
-const ALERT_SYNC_KEY = 'geseki:alert-sync';
+const ALERT_SYNC_KEY = WIDGET_NS + 'alert-sync';
 
 // Identitas event. Dipakai untuk dedupe suara DAN untuk mengenali alert yang sama
 // saat adopsi lintas source.
@@ -3756,7 +3802,7 @@ window.setWidgetRotation = function(deg) {
 };
 
 if (window.BroadcastChannel) {
-	const bc = new BroadcastChannel('geseki_island_channel');
+	const bc = new BroadcastChannel(CHANNEL_NAME);
 	bc.onmessage = function(event) {
 		if (!event.data) return;
 		if (event.data.type === 'set_scale') {
@@ -4008,7 +4054,7 @@ async function bridgeConnection() {
 
 // Riwayat first chatter DIPERTAHANKAN lintas reload (localStorage). Hanya dibersihkan
 // via tombol Reset (window.ResetFirstChatter) atau saat live dimulai dari aplikasi.
-const FC_STORAGE_KEY = 'geseki_first_chatters';
+const FC_STORAGE_KEY = WIDGET_NS + 'first-chatters';
 
 function LoadFirstChatters() {
 	try {

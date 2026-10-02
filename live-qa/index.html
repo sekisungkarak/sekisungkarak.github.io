@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+	<meta charset="UTF-8">
+	<link rel="shortcut icon" href="../resources/logo/sekisungkarak_logo.png" type="image/jpeg" />
+	<link rel="stylesheet" href="./style.css?v=8" />
+</head>
+
+<body>
+	<!-- Panel pertanyaan. Tiap baris diisi oleh script.js saat ada chat
+	     ber-prefix. Bila gift tiket dipilih di dashboard, penanya harus
+	     memegang tiket dulu; bila tidak, siapa pun boleh bertanya. -->
+	<div id="qaPanel" class="qa-panel is-empty">
+		<div id="qaHeader" class="qa-header">
+			<span id="qaHeaderIcon" class="qa-header-icon" aria-hidden="true">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+				</svg>
+			</span>
+			<span id="qaHeaderText" class="qa-header-text">Live Q&amp;A</span>
+		</div>
+		<div id="qaCard" class="qa-card"></div>
+		<div id="qaHint" class="qa-hint"></div>
+	</div>
+</body>
+
+<!-- Router Chrome vs OBS, sama seperti dynamic-island-alert: OBS memakai CEF
+     Chromium lama, jadi ./obs/index.html menyediakan paket stabil sendiri.
+     Script dimuat SETELAH body supaya elemen panel sudah ada di DOM. -->
+<script>
+(function () {
+	var q = new URLSearchParams(location.search).get('engine');
+	var ua = navigator.userAgent;
+	var isObs = /OBS/i.test(ua) || typeof window.obsstudio !== 'undefined';
+
+	if (q === 'obs' || isObs) {
+		location.replace('./obs/index.html' + location.search);
+		return;
+	}
+	var v = '9';
+	document.write(
+		'<' + 'script src="./script.js?v=' + v + '"><\/script>'
+	);
+	window.__gesekiEngine = 'chrome';
+})();
+</script>
+</html>
