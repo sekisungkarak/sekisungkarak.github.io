@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="https://ka-f.webawesome.com/webawesome@3.10.0/styles/webawesome.css" />
     <script type="module" src="https://ka-f.webawesome.com/webawesome@3.10.0/webawesome.loader.js"></script>
 
-    <link rel="stylesheet" href="style.css?v=178">
+    <link rel="stylesheet" href="style.css?v=182">
     <link rel="icon" type="image/png" href="../../shared/assets/images/avatar.png">
 </head>
 
@@ -618,11 +618,9 @@
 
                 <footer>
                     <div class="url-bar">
-                        <button id="saveObsButton">Save</button>
-                        <button id="loadObsButton" class="load-btn">
-                            <span class="load-btn-text">Load</span>
-                        </button>
-                        <button id="resetObsButton">Reset</button>
+                        <button id="saveObsButton"><i class="btn-ico ri-save-3-line" aria-hidden="true"></i><span class="btn-text">Save</span></button>
+                        <button id="loadObsButton" class="load-btn"><i class="btn-ico ri-folder-open-line" aria-hidden="true"></i><span class="btn-text">Load</span></button>
+                        <button id="resetObsButton"><i class="btn-ico ri-restart-line" aria-hidden="true"></i><span class="btn-text">Reset</span></button>
                     </div>
                 </footer>
 
@@ -635,59 +633,55 @@
     </div>
 
     <!-- ── Load Defaults Confirm Modal ─────────────────────── -->
-    <wa-dialog id="modalLoadDefaults" class="modal centered" without-header>
+    <wa-dialog id="modalLoadDefaults" class="modal centered sk-popup" without-header>
 
-        <h3>Load Default Settings</h3>
+        <div class="sk-popup-head">
+            <span class="sk-popup-title">Load Default Settings</span>
+            <button type="button" class="sk-popup-close" title="Close" aria-label="Close"><i class="ri-close-line" aria-hidden="true"></i></button>
+        </div>
 
-        <div class="info">Are you sure? All current settings will be reset to their defaults.</div>
+        <div class="sk-popup-group">
+            <div class="info">Are you sure? All current settings will be reset to their defaults.</div>
+        </div>
 
-        <wa-button class="button cancel" slot="footer" appearance="outlined">No</wa-button>
-        <wa-button class="button save" slot="footer" variant="brand">Yes</wa-button>
-
-    </wa-dialog>
-
-    <!-- ── Reset Confirm Modal (tombol Reset footer) ───────── -->
-    <wa-dialog id="modalResetConfirm" class="modal centered" without-header>
-
-        <h3>Reset Settings</h3>
-
-        <div class="info">Are you sure? All current settings will be reset to their defaults.</div>
-
-        <wa-button class="button cancel" slot="footer" appearance="outlined">No</wa-button>
         <wa-button class="button save" slot="footer" variant="brand">Yes</wa-button>
 
     </wa-dialog>
 
     <!-- ── Load Saved Settings (per scene) ────────────────── -->
-    <wa-dialog id="modalLoadScene" class="modal centered" without-header>
+    <wa-dialog id="modalLoadScene" class="modal centered sk-popup" without-header>
 
-        <h3>Load Saved Settings</h3>
-
-        <div class="info">Choose a scene whose settings you want to load.</div>
-
-        <!-- Dropdown kustom, BUKAN <wa-select>.
-             Alasan: setiap opsi perlu tombol hapus (silang) di sebelahnya.
-             <wa-select> merender <wa-option> di dalam shadow DOM, jadi
-             tombol di dalamnya tidak bisa diikat event-nya dengan andal. -->
-        <div id="sceneDropdown" class="scene-dropdown">
-            <button type="button" id="sceneDropdownToggle" class="scene-dropdown-toggle">
-                <span id="sceneDropdownLabel">Select scene...</span>
-                <i class="ri-arrow-down-s-line"></i>
-            </button>
-            <div id="sceneDropdownMenu" class="scene-dropdown-menu" hidden></div>
+        <div class="sk-popup-head">
+            <span class="sk-popup-title">Load Saved Settings</span>
+            <button type="button" class="sk-popup-close" title="Close" aria-label="Close"><i class="ri-close-line" aria-hidden="true"></i></button>
         </div>
 
-        <div id="sceneHint" class="scene-empty"></div>
+        <div class="sk-popup-group">
+            <div class="info">Choose a scene whose settings you want to load.</div>
 
-        <wa-button class="button cancel" slot="footer" appearance="outlined">Cancel</wa-button>
+            <!-- Dropdown kustom, BUKAN <wa-select>.
+                 Alasan: setiap opsi perlu tombol hapus (silang) di sebelahnya.
+                 <wa-select> merender <wa-option> di dalam shadow DOM, jadi
+                 tombol di dalamnya tidak bisa diikat event-nya dengan andal. -->
+            <div id="sceneDropdown" class="scene-dropdown">
+                <button type="button" id="sceneDropdownToggle" class="scene-dropdown-toggle">
+                    <span id="sceneDropdownLabel">Select scene...</span>
+                    <i class="ri-arrow-down-s-line"></i>
+                </button>
+                <div id="sceneDropdownMenu" class="scene-dropdown-menu" hidden></div>
+            </div>
+
+            <div id="sceneHint" class="scene-empty"></div>
+        </div>
+
         <wa-button class="button save" slot="footer" variant="brand">Load</wa-button>
 
     </wa-dialog>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/node-vibrant/3.1.6/vibrant.min.js"></script>
     <script src="https://unpkg.com/@streamerbot/client/dist/streamerbot-client.js"></script>
-    <script src="obs_source.js?v=16"></script>
-    <script src="script_v2.js?v=190"></script>
+    <script src="obs_source.js?v=17"></script>
+    <script src="script_v2.js?v=192"></script>
 </body>
 
 </html>

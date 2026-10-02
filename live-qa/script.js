@@ -187,8 +187,48 @@ function UserKey(data) {
    `shown` menandai sudah pernah tampil (badge di Queue page) — barisnya
    TETAP di daftar supaya streamer bisa menampilkannya lagi. */
 const questions = [];
+/* Pertanyaan yang sedang tayang di overlay SCENE INI. Ikut disimpan bersama
+   antrean scene (kunci per scene), jadi pindah scene menampilkan On screen
+   milik scene itu sendiri — bukan membawa pertanyaan dari scene sebelumnya. */
 let currentId = null;
 let questionSeq = 0;
+
+/* Antrean disimpan PER SCENE, meniru Dynamic Island Alert: tiap scene punya
+   daftar pertanyaannya sendiri. Nama scene datang dari `?profile=<scene>` yang
+   ditempelkan dashboard ke URL tiap browser source, jadi scene "Gameplay" dan
+   "Just Chatting" tidak saling menimpa. Dibuka di browser biasa (tanpa
+   profile), kuncinya jatuh ke daftar bersama. */
+const QUEUE_KEY = WIDGET_NS + 'queue' + (profileName ? ':' + profileName : '');
+
+function SaveQueue() {
+	try {
+		localStorage.setItem(QUEUE_KEY, JSON.stringify({
+			questions: questions,
+			currentId: currentId,
+			questionSeq: questionSeq
+		}));
+	} catch (e) { /* abaikan */ }
+}
+
+function LoadQueue() {
+	try {
+		const raw = localStorage.getItem(QUEUE_KEY);
+		if (!raw) return;
+		const d = JSON.parse(raw);
+		if (Array.isArray(d.questions)) {
+			questions.length = 0;
+			d.questions.forEach(function (q) { questions.push(q); });
+		}
+		// Pulihkan pertanyaan yang sedang tayang di scene ini (bisa saja null).
+		currentId = (d.currentId === undefined) ? null : d.currentId;
+		const seq = Number(d.questionSeq);
+		const fromIds = questions.reduce(function (m, q) {
+			const n = parseInt(String(q.id).replace(/^q/, ''), 10);
+			return isNaN(n) ? m : Math.max(m, n);
+		}, 0);
+		questionSeq = Math.max(isNaN(seq) ? 0 : seq, fromIds);
+	} catch (e) { /* abaikan */ }
+}
 
 function FindQuestion(id) {
 	for (let i = 0; i < questions.length; i++) {
@@ -282,11 +322,13 @@ function AddQuestion(q) {
 
 	while (questions.length > MAX_QUEUE) {
 		let idx = 0;
+		// Jangan buang pertanyaan yang sedang tayang di overlay.
 		while (idx < questions.length && questions[idx].id === currentId) idx += 1;
 		if (idx >= questions.length) break;
 		questions.splice(idx, 1);
 	}
 
+	SaveQueue();
 	BroadcastState();
 	return item;
 }
@@ -299,6 +341,7 @@ function ShowQuestion(id) {
 	currentId = id;
 	q.shown = true;
 	RenderOverlay();
+	SaveQueue();
 	BroadcastState();
 }
 
@@ -306,6 +349,7 @@ function HideQuestion() {
 	if (currentId === null) return;
 	currentId = null;
 	RenderOverlay();
+	SaveQueue();
 	BroadcastState();
 }
 
@@ -315,6 +359,7 @@ function RemoveQuestion(id) {
 	questions.splice(idx, 1);
 	if (currentId === id) currentId = null;
 	RenderOverlay();
+	SaveQueue();
 	BroadcastState();
 }
 
@@ -322,6 +367,7 @@ function ClearQuestions() {
 	questions.length = 0;
 	currentId = null;
 	RenderOverlay();
+	SaveQueue();
 	BroadcastState();
 }
 
@@ -369,7 +415,9 @@ function HandleChat(data) {
 
 function HandleTikTokEvent(event, data) {
 	if (!data || typeof data !== 'object') return;
-
+	// SETIAP source memproses chat: source yang tidak di scene aktif tetap
+	// hidup di belakang layar dan mengisi antrean scene-nya sendiri. Tidak ada
+	// penggandaan karena tiap source memelihara daftar scene-nya masing-masing.
 	switch (event) {
 		case 'gift':
 			HandleGift(data);
@@ -458,12 +506,57 @@ function PostToChannel(msg) {
 	try { channel.postMessage(msg); } catch (e) { /* abaikan */ }
 }
 
+/* Id instance: widget ini bisa hidup di beberapa tempat sekaligus (browser
+   source OBS, tab browser, pratinjau). Tiap instance punya daftar sendiri,
+   jadi Queue page perlu tahu dari instance mana sebuah qa_state datang —
+   tanpa itu daftarnya bergantian antara dua daftar yang berbeda. */
+const INSTANCE_ID = 'w' + Math.random().toString(36).slice(2, 10);
+
+/* Status "source ini ada di scene yang sedang tayang", dari obs-browser.
+   Dipakai HANYA untuk menandai state mana yang ditampilkan halaman Queue —
+   bukan lagi untuk memilih satu pemimpin. SEMUA source tetap aktif di
+   belakang layar dan mengisi antrean scene-nya masing-masing:
+     true  -> diketahui ada di scene yang sedang tayang
+     false -> diketahui TIDAK tayang (scene lain / auto-sleep)
+     null  -> belum tahu (browser biasa, atau OBS belum mengirim event) */
+let activeState = null;
+
+// ── Status aktif dari obs-browser ───────────────────────────────────────
+// 'active' = source ada di scene yang SEDANG TAYANG (bukan sekadar tampil di
+// preview Studio Mode). Dipakai HANYA menandai scene mana yang ditampilkan
+// halaman Queue; semua source tetap memproses chat. Saat scene ini masuk
+// program view, siarkan SEKARANG supaya halaman Queue langsung menampilkan
+// antrean scene yang sedang tayang (termasuk On screen scene itu).
+window.addEventListener('obsSourceActiveChanged', function (e) {
+	if (!e || !e.detail) return;
+	activeState = !!e.detail.active;
+	// Scene ini masuk program view: siarkan SEKARANG supaya halaman Queue
+	// langsung menampilkan antrean scene yang sedang tayang.
+	if (activeState) BroadcastState();
+});
+
+if (typeof window !== 'undefined' && window.obsstudio) {
+	window.obsstudio.onActiveChange = function (active) {
+		activeState = !!active;
+		if (activeState) BroadcastState();
+	};
+}
+
 /* Keadaan yang dibutuhkan Queue page. Dikirim setiap kali berubah, dan saat
    Queue page baru dibuka (qa_hello) supaya daftarnya langsung terisi. */
 function BroadcastState() {
+	// SEMUA source menyiarkan antreannya sendiri, dan tiap qa_state membawa
+	// nama scene + penanda apakah scene itu yang SEDANG TAYANG. Halaman Queue
+	// hanya menampilkan state dari scene yang sedang tayang, jadi daftar dan
+	// angka tidak bertabrakan meski semua source aktif bersamaan.
+	const onAir = currentId === null ? null : FindQuestion(currentId);
 	PostToChannel({
 		type: 'qa_state',
+		instanceId: INSTANCE_ID,
+		scene: profileName,
+		active: activeState === true,
 		currentId: currentId,
+		currentQuestion: onAir,
 		connected: bridgeConnected,
 		ticketCount: ticketHolders.size,
 		ticketRequired: ticketRequired,
@@ -478,6 +571,18 @@ function BroadcastState() {
    postMessage (kalau Queue page berada di iframe halaman yang sama). */
 function HandleQueueMessage(d) {
 	if (!d || typeof d !== 'object') return;
+
+	// qa_state dari source lain tidak ditiru: tiap scene berdiri sendiri.
+	if (d.type === 'qa_state') return;
+
+	// Perintah antrean (tampilkan/hapus/bersihkan) hanya dijalankan scene yang
+	// SEDANG TAYANG: halaman Queue menampilkan antrean scene itu, jadi perintah
+	// diarahkan ke sana. Source di scene lain tetap hidup mengumpulkan chat,
+	// tetapi tidak ikut mengeksekusi. 'qa_hello', 'reload', dan 'callFunction'
+	// tetap dilayani semua instance.
+	const sceneCmd = d.type !== 'qa_hello' && d.type !== 'reload' && d.type !== 'callFunction';
+	if (sceneCmd && activeState === false) return;
+
 	switch (d.type) {
 		case 'qa_hello':
 			BroadcastState();
@@ -521,26 +626,47 @@ window.HideQuestion = HideQuestion;
 window.RemoveQuestion = RemoveQuestion;
 
 /* Teks contoh untuk memeriksa tata letak overlay. Diambil dari tiga paragraf
-   lorem ipsum lalu dipotong pada batas kata dengan panjang acak, supaya
-   pertanyaan pendek dan panjang sama-sama bisa diuji.
+   lorem ipsum lalu dipotong pada batas kata, mulai dari posisi acak.
 
-   CATATAN soal batas karakter: komentar TikTok LIVE dibatasi sekitar 150
-   karakter, jadi teks sepanjang ini tidak datang dari penonton sungguhan —
-   ini murni alat uji tata letak. (Angka 30 karakter yang beredar adalah batas
-   NAMA TAMPILAN, dan 32 karakter adalah batas judul live; bukan chat.) */
+   BATAS PANJANG: chat TikTok LIVE yang bisa dikirim viewer pendek — sekitar
+   100 karakter. Contoh nyata (97 karakter):
+     "Lorem ipsum dolor sit amet, irure exercitation fugiat occaecat.
+      Anim exercitation nisi minim nisi"
+   Jadi sample TIDAK pernah melebihi batas itu, supaya yang diuji benar-benar
+   sepanjang chat sungguhan. (Angka 30 karakter adalah batas NAMA TAMPILAN,
+   dan 32 karakter batas judul live; bukan chat.) */
 const SAMPLE_TEXT = [
 	'Lorem ipsum dolor sit amet, consequat cillum anim ullamco commodo. Aliqua est dolore fugiat et id magna quis occaecat elit. Exercitation irure occaecat aliquip aliqua deserunt reprehenderit enim consectetur dolore do esse. Veniam fugiat pariatur sed esse et cillum pariatur mollit do non ullamco.',
 	'Reprehenderit ut commodo officia in do et sed consequat non in. Elit consectetur est officia dolore exercitation irure velit reprehenderit labore pariatur consequat. Duis esse anim mollit nisi velit occaecat velit ea esse deserunt. Et consectetur do ut irure reprehenderit in nisi cillum labore magna in.',
 	'Duis tempor qui sint anim occaecat esse dolore sint dolore nisi ullamco tempor. Ad esse dolore culpa ut labore dolore nisi sint aliquip voluptate laboris. Consectetur esse elit aute et est velit dolore mollit deserunt. Excepteur anim aute occaecat eu magna esse ex.'
 ].join(' ');
 
-/* Potongan acak: 12-70 kata, mulai dari posisi acak. */
+/* Batas panjang chat TikTok LIVE (karakter). */
+const SAMPLE_MAX_CHARS = 100;
+/* Panjang minimum supaya sample tidak cuma satu-dua kata. */
+const SAMPLE_MIN_CHARS = 24;
+
+/* Potongan acak: mulai dari kata acak, lalu tambah kata sampai mendekati
+   batas karakter. Panjangnya bervariasi (beberapa kata s/d ~100 karakter),
+   tetapi tidak pernah melebihi batas chat TikTok. */
 function RandomSampleText() {
 	const words = SAMPLE_TEXT.split(' ');
-	const maxWords = Math.min(words.length, 70);
-	const count = 12 + Math.floor(Math.random() * (maxWords - 12 + 1));
-	const start = Math.floor(Math.random() * (words.length - count + 1));
-	return words.slice(start, start + count).join(' ');
+
+	function Take(from) {
+		let out = '';
+		for (let i = from; i < words.length; i++) {
+			const next = out ? out + ' ' + words[i] : words[i];
+			if (next.length > SAMPLE_MAX_CHARS) break;
+			out = next;
+		}
+		return out;
+	}
+
+	let out = Take(Math.floor(Math.random() * words.length));
+	// Mulai terlalu jauh di belakang -> potongannya cuma beberapa karakter.
+	// Ambil dari awal teks supaya tetap ada beberapa kata untuk diuji.
+	if (out.length < SAMPLE_MIN_CHARS) out = Take(0);
+	return out;
 }
 
 /* Pertanyaan contoh untuk menguji alur Queue page -> overlay tanpa chat
@@ -580,6 +706,8 @@ function RegisterMessageHooks() {
 
 function Init() {
 	RenderHint();
+	// Muat antrean scene ini DULU (termasuk On screen scene ini), baru gambar.
+	LoadQueue();
 	RenderOverlay();
 	RegisterMessageHooks();
 

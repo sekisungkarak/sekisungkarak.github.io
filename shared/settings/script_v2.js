@@ -412,7 +412,7 @@ if (showUnmuteIndicator)
     unmuteLabel.style.display = 'inline';
 
 
-loadDefaultsModal.querySelector('.button.cancel').addEventListener('click', () => loadDefaultsModal.open = false);
+loadDefaultsModal.querySelector('.sk-popup-close').addEventListener('click', () => loadDefaultsModal.open = false);
 loadDefaultsModal.querySelector('.button.save').addEventListener('click', () => {
     LoadDefaultSettings();
     loadDefaultsModal.open = false;
@@ -475,7 +475,7 @@ function SetFooterButtonState(btn, text, ok) {
     const original = btn.dataset.baseLabel || btn.textContent;
 
     // Tulis HANYA ke span teks, supaya struktur tombol tidak berubah.
-    const textSpan = btn.querySelector('.load-btn-text');
+    const textSpan = btn.querySelector('.btn-text');
     const target = textSpan || btn;
 
     const icon = ok === true ? '<i class="ri-check-line"></i>'
@@ -530,7 +530,6 @@ if (saveObsButton) {
     });
 }
 
-const resetConfirmModal = document.getElementById('modalResetConfirm');
 const loadObsButton = document.getElementById('loadObsButton');
 const loadSceneModal = document.getElementById('modalLoadScene');
 const sceneDropdown = document.getElementById('sceneDropdown');
@@ -724,13 +723,13 @@ function RefreshLoadButtonLabel() {
 
     if (!loadObsButton.classList.contains('copied')
         && !loadObsButton.classList.contains('obs-error')) {
-        const textSpan = loadObsButton.querySelector('.load-btn-text');
+        const textSpan = loadObsButton.querySelector('.btn-text');
         if (textSpan) textSpan.textContent = 'Load';
     }
 }
 
 if (loadObsButton && loadSceneModal) {
-    loadSceneModal.querySelector('.button.cancel')
+    loadSceneModal.querySelector('.sk-popup-close')
         .addEventListener('click', () => loadSceneModal.open = false);
 
     loadSceneModal.querySelector('.button.save')
@@ -797,14 +796,13 @@ if (loadObsButton && loadSceneModal) {
     // memilih/memuat/menghapus, bukan karena scene OBS berganti.
 }
 
-resetConfirmModal.querySelector('.button.cancel').addEventListener('click', () => resetConfirmModal.open = false);
 // Pengaturan yang TIDAK boleh dihapus tombol Reset.
 // Koneksi OBS adalah konfigurasi aplikasi, bukan tampilan widget —
 // kalau ikut tereset, pengguna harus memasukkan ulang IP/password
 // setiap kali reset, lalu Save gagal tanpa sebab yang jelas.
 const RESET_PRESERVE_IDS = ['obsAddress', 'obsPort', 'obsPassword'];
 
-resetConfirmModal.querySelector('.button.save').addEventListener('click', () => {
+function DoResetSettings() {
     // Simpan dulu nilai yang ingin dipertahankan...
     const preserved = {};
     RESET_PRESERVE_IDS.forEach(id => {
@@ -821,15 +819,39 @@ resetConfirmModal.querySelector('.button.save').addEventListener('click', () => 
     } catch (e) { /* abaikan */ }
 
     LoadDefaultSettings();
-    resetConfirmModal.open = false;
-});
+}
 
-if (resetObsButton) {
-    resetObsButton.addEventListener('click', () => {
-        // Tampilkan peringatan dulu — reset menghapus semua pengaturan.
-        resetConfirmModal.open = true;
+/* Konfirmasi dua klik, sama seperti tombol hapus antrean di halaman Queue:
+   klik pertama mengubah tombol jadi "Sure?", klik kedua (dalam 3 detik)
+   menjalankan reset. Tidak memakai <wa-dialog> (berat untuk sekadar
+   konfirmasi) dan tidak memakai confirm() bawaan browser yang bisa
+   membekukan halaman di dock CEF OBS. */
+function ArmConfirmTwice(btn, action) {
+    const original = btn.innerHTML;
+    let armed = false;
+    let timer = null;
+
+    btn.addEventListener('click', () => {
+        if (!armed) {
+            armed = true;
+            btn.classList.add('is-armed');
+            btn.innerHTML = '<i class="ri-alert-line" aria-hidden="true"></i><span>Sure?</span>';
+            timer = setTimeout(() => {
+                armed = false;
+                btn.classList.remove('is-armed');
+                btn.innerHTML = original;
+            }, 3000);
+            return;
+        }
+        clearTimeout(timer);
+        armed = false;
+        btn.classList.remove('is-armed');
+        btn.innerHTML = original;
+        action();
     });
 }
+
+if (resetObsButton) ArmConfirmTwice(resetObsButton, DoResetSettings);
 
 
 /////////////////////////////

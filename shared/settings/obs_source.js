@@ -362,7 +362,12 @@ async function ObsSyncBrowserSource(widgetUrl) {
                 url: pinnedUrl,
                 width: OBS_SOURCE_WIDTH,
                 height: OBS_SOURCE_HEIGHT,
-                reroute_audio: false
+                reroute_audio: false,
+                // Semua source widget aktif bersamaan: JANGAN matikan source
+                // saat scene-nya tidak tayang. Tanpa ini, source di scene lain
+                // berhenti memproses chat sampai scene-nya dibuka lagi.
+                shutdown: false,
+                restart_when_active: false
             },
             overlay: true
         });
@@ -380,7 +385,11 @@ async function ObsSyncBrowserSource(widgetUrl) {
             width: OBS_SOURCE_WIDTH,
             height: OBS_SOURCE_HEIGHT,
             reroute_audio: false,
-            is_local_file: false
+            is_local_file: false,
+            // Semua source widget aktif bersamaan: biarkan hidup walau
+            // scene-nya tidak sedang tayang (lihat catatan di atas).
+            shutdown: false,
+            restart_when_active: false
         },
         sceneItemEnabled: true
     });

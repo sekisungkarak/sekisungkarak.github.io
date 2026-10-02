@@ -20,11 +20,6 @@ const HELLO_TIMEOUT_MS = 1500;
 /* Baris antrean per halaman. */
 const PAGE_SIZE = 5;
 
-const statusPill = document.getElementById('statusPill');
-const statusText = document.getElementById('statusText');
-const ticketPill = document.getElementById('ticketPill');
-const ticketText = document.getElementById('ticketText');
-const clearTicketsBtn = document.getElementById('clearTicketsBtn');
 const clearBtn = document.getElementById('clearBtn');
 const testBtn = document.getElementById('testBtn');
 const hideBtn = document.getElementById('hideBtn');
@@ -33,6 +28,7 @@ const queueList = document.getElementById('queueList');
 const queueCount = document.getElementById('queueCount');
 const emptyState = document.getElementById('emptyState');
 const prefixHint = document.getElementById('prefixHint');
+const sceneTag = document.getElementById('sceneTag');
 const pager = document.getElementById('pager');
 const prevPageBtn = document.getElementById('prevPageBtn');
 const nextPageBtn = document.getElementById('nextPageBtn');
@@ -47,15 +43,31 @@ let queuePage = 1;
 let state = {
 	questions: [],
 	currentId: null,
+	currentQuestion: null,
 	connected: false,
 	ticketCount: 0,
-	ticketRequired: false
+	ticketRequired: false,
+	/* Scene OBS yang antreannya sedang ditampilkan. Widget yang aktif
+	   menyiarkannya, jadi halaman ini selalu mengikuti scene yang tayang. */
+	scene: '',
+	prefix: ''
 };
+
+/* Semua source aktif bersamaan: chat dari scene mana pun bisa datang. Hanya
+   state dari scene yang SEDANG TAYANG yang boleh menampilkan; kalau tidak ada
+   satu pun yang melaporkan aktif (mis. dibuka di browser biasa), state apa pun
+   diterima supaya halaman tetap bisa dipakai. */
+let sawActiveScene = false;
 
 /* The widget only answers while it is alive. With no reply inside
    HELLO_TIMEOUT_MS the page reports the widget as offline. */
 let helloAnswered = false;
 let helloAnsweredEver = false;
+
+/* Halaman ini mengikuti scene OBS yang SEDANG TAYANG. Semua source aktif
+   bersamaan (masing-masing mengisi antrean scene-nya), jadi tiap qa_state
+   membawa nama scene + penanda `active`; hanya state dari scene yang sedang
+   tayang yang ditampilkan di sini. Tiap scene punya antrean sendiri. */
 
 const bc = window.BroadcastChannel ? new BroadcastChannel(CHANNEL_NAME) : null;
 
@@ -83,10 +95,28 @@ function BuildAvatar(q) {
 	return img;
 }
 
+/* Nama scene OBS yang sedang tayang. Ditampilkan supaya jelas antrean milik
+   scene mana — tiap scene punya antrean sendiri. */
+function RenderScene() {
+	if (!sceneTag) return;
+	const s = state.scene || '';
+	if (!s) { sceneTag.hidden = true; sceneTag.textContent = ''; return; }
+	sceneTag.hidden = false;
+	sceneTag.innerHTML = '';
+	const ic = document.createElement('i');
+	ic.className = 'ri-focus-3-line';
+	ic.setAttribute('aria-hidden', 'true');
+	const tx = document.createElement('span');
+	tx.textContent = s;
+	sceneTag.appendChild(ic);
+	sceneTag.appendChild(tx);
+}
+
 function RenderOnAir() {
 	onairBody.innerHTML = '';
 
-	const q = state.questions.find(function (x) { return x.id === state.currentId; });
+	// On screen milik scene ini: selalu ada di daftar scene ini juga.
+	const q = state.currentQuestion || state.questions.find(function (x) { return x.id === state.currentId; }) || null;
 	if (!q) {
 		const none = document.createElement('p');
 		none.className = 'onair-none';
@@ -117,17 +147,19 @@ function RenderOnAir() {
 }
 
 function BuildRow(q) {
+	const isOnAir = q.id === state.currentId;
+
 	const li = document.createElement('li');
 	li.className = 'row';
 	li.dataset.id = q.id;
-	if (q.id === state.currentId) li.classList.add('is-onair');
+	if (isOnAir) li.classList.add('is-onair');
 	if (q.shown) li.classList.add('is-shown');
 
 	// The whole row is clickable: that is the primary action.
 	const main = document.createElement('button');
 	main.className = 'row-main';
 	main.type = 'button';
-	main.title = q.id === state.currentId ? 'Already on screen' : 'Show on stream';
+	main.title = isOnAir ? 'Already on screen' : 'Show on stream';
 
 	main.appendChild(BuildAvatar(q));
 
@@ -153,7 +185,7 @@ function BuildRow(q) {
 	body.appendChild(text);
 	main.appendChild(body);
 
-	if (q.id === state.currentId) {
+	if (isOnAir) {
 		const live = document.createElement('span');
 		live.className = 'tag tag-live';
 		live.textContent = 'LIVE';
@@ -208,33 +240,14 @@ function RenderQueue() {
 	nextPageBtn.disabled = queuePage >= pageCount;
 }
 
-function RenderStatus() {
-	if (state.connected) {
-		statusPill.className = 'pill pill-on';
-		statusText.textContent = 'Bridge online';
-	} else if (helloAnsweredEver) {
-		statusPill.className = 'pill pill-warn';
-		statusText.textContent = 'Bridge offline';
-	} else {
-		statusPill.className = 'pill pill-off';
-		statusText.textContent = 'Widget offline';
-	}
-
-	if (state.ticketRequired) {
-		ticketPill.style.display = '';
-		ticketText.textContent = state.ticketCount + (state.ticketCount === 1 ? ' ticket' : ' tickets');
-		clearTicketsBtn.style.display = '';
-	} else {
-		// With no ticket gift set there are no tickets to show.
-		ticketPill.style.display = 'none';
-		clearTicketsBtn.style.display = 'none';
-	}
-}
-
+/* Bridge status and the ticket counter are no longer shown here; this page
+   only draws the on-screen question and the queue itself. */
 function Render() {
-	RenderStatus();
+	RenderScene();
 	RenderOnAir();
 	RenderQueue();
+	// Prefix ikut scene: scene lain bisa memakai prefix berbeda.
+	if (state.prefix) prefixHint.textContent = state.prefix;
 }
 
 /* ── Messages from the widget ───────────────────────────────────────────── */
@@ -242,12 +255,19 @@ function Render() {
 function OnState(next) {
 	helloAnswered = true;
 	helloAnsweredEver = true;
+	// Abaikan state dari scene yang TIDAK sedang tayang (semua source aktif),
+	// supaya daftar tidak bergantian saat chat masuk dari scene lain.
+	if (!next.active && sawActiveScene) return;
+	if (next.active) sawActiveScene = true;
 	state = {
 		questions: Array.isArray(next.questions) ? next.questions : [],
 		currentId: next.currentId === undefined ? null : next.currentId,
+		currentQuestion: next.currentQuestion || null,
 		connected: Boolean(next.connected),
 		ticketCount: Number(next.ticketCount) || 0,
-		ticketRequired: Boolean(next.ticketRequired)
+		ticketRequired: Boolean(next.ticketRequired),
+		scene: next.scene || '',
+		prefix: next.prefix || ''
 	};
 	Render();
 }
@@ -262,14 +282,6 @@ if (bc) {
 /* ── Actions ────────────────────────────────────────────────────────────── */
 
 hideBtn.addEventListener('click', function () { Send({ type: 'qa_hide' }); });
-
-/* Pil Bridge di header: klik membuka pengaturan koneksinya di tab Settings.
-   Kartunya sendiri sudah tidak tampil di panel settings. */
-statusPill.style.cursor = 'pointer';
-statusPill.title = 'Connection to Geseki Bridge — click to open settings';
-statusPill.addEventListener('click', function () {
-	Send({ type: 'open_settings_popup', group: 'Connection', from: 'queue' });
-});
 
 /* Two-click confirmation, NOT window.confirm: the native modal dialog is not
    reliable inside the OBS CEF dock and can freeze the page. The first click
@@ -300,7 +312,6 @@ function ConfirmTwice(btn, action) {
 }
 
 ConfirmTwice(clearBtn, function () { Send({ type: 'qa_clear' }); });
-ConfirmTwice(clearTicketsBtn, function () { Send({ type: 'qa_clearTickets' }); });
 
 /* Sample question: handy for testing the flow without a real chat. */
 testBtn.addEventListener('click', function () { Send({ type: 'qa_test' }); });
@@ -336,10 +347,9 @@ setInterval(function () {
 	Send({ type: 'qa_hello' });
 	setTimeout(function () {
 		if (!helloAnswered) {
-			// No reply: report offline, but KEEP the list — the widget may
+			// No reply: mark offline, but KEEP the list — the widget may
 			// simply be reloading.
 			state.connected = false;
-			RenderStatus();
 		}
 	}, HELLO_TIMEOUT_MS);
 }, 5000);

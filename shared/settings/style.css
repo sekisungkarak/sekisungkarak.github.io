@@ -1356,6 +1356,22 @@ body.dashboard-mode #settings .header .header-actions wa-button.action-ok::part(
     vertical-align: -2px;
 }
 
+/* Ikon di tombol Save / Load / Reset: di luar span label, jadi tidak ikut
+   terhapus saat label ditulis ulang. Jarak ikon-teks diatur oleh `gap`
+   pada tombol (footer) dan pada aturan skin-queue di bawah. */
+#settings .url-bar button > i {
+    margin: 0;
+    font-size: 1.05em;
+    line-height: 1;
+}
+
+/* Saat tombol melaporkan hasil (ikon centang / silang di dalam label),
+   ikon bawaan disembunyikan supaya tidak tampil dua ikon berdampingan. */
+#settings .url-bar button.copied > .btn-ico,
+#settings .url-bar button.obs-error > .btn-ico {
+    display: none;
+}
+
 #settings footer .url-bar button.obs-error {
     background-color: rgba(248, 113, 113, 0.20) !important;
     box-shadow: var(--glass-bevel-outer),
@@ -2444,6 +2460,10 @@ body.skin-queue .url-bar {
 }
 
 body.skin-queue .url-bar button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     position: static;
     isolation: auto;
     width: auto;
@@ -2490,6 +2510,15 @@ body.skin-queue .url-bar button.copied {
 body.skin-queue .url-bar button.obs-error {
     background-color: rgba(226, 104, 107, 0.16) !important;
     border-color: rgba(226, 104, 107, 0.45);
+    box-shadow: none;
+}
+
+/* Menunggu klik konfirmasi kedua (tombol Reset) — merah, seperti tombol
+   hapus antrean di halaman Queue. */
+.url-bar button.is-armed {
+    background-color: rgba(226, 104, 107, 0.16) !important;
+    border-color: rgba(226, 104, 107, 0.55) !important;
+    color: #f3b6b8 !important;
     box-shadow: none;
 }
 
@@ -2634,6 +2663,8 @@ body.skin-queue .sk-toast.is-error {
 /* ── Popup pengaturan koneksi (grup popup:true) ──────────────────
    Dialog ringan: judul + ikon tutup di atas, lalu daftar baris polos.
    Sengaja TIDAK memakai kartu wa-details — isinya cuma beberapa field. */
+/* Lebar popup ringan (OBS Connection, Load, Reset) — seragam di semua tema. */
+.modal.sk-popup,
 body.skin-queue .sk-popup {
     --width: 460px;
 }
@@ -2658,7 +2689,14 @@ body.skin-queue .sk-popup::part(body) {
     padding: 16px 18px 18px 18px;
 }
 
-body.skin-queue .sk-popup-head {
+/* Tombol aksi di popup (Load / Yes) TIDAK berbentuk pill — sudut membulat
+   kecil, senada dengan tombol rata di bar atas. */
+.modal.sk-popup .button::part(base),
+body.skin-queue .sk-popup .button::part(base) {
+    border-radius: 9px;
+}
+
+.sk-popup-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -2668,18 +2706,18 @@ body.skin-queue .sk-popup-head {
     /* Garis pemisah judul. Dipasang di head (bukan di grup) supaya SEMUA
        popup dapat garis yang sama — aturan "grup + grup" dulu hanya kena
        grup kedua, sehingga popup dengan satu grup (OBS) tidak bergaris. */
-    border-bottom: 1px solid var(--sk-line);
+    border-bottom: 1px solid var(--sk-line, rgba(255, 255, 255, 0.14));
 }
 
-body.skin-queue .sk-popup-title {
+.sk-popup-title {
     font-family: "Archivo Black", "Archivo", sans-serif;
     font-size: 13px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: var(--sk-text);
+    color: var(--sk-text, var(--c-content, #fff));
 }
 
-body.skin-queue .sk-popup-close {
+.sk-popup-close {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -2687,22 +2725,22 @@ body.skin-queue .sk-popup-close {
     height: 28px;
     padding: 0;
     flex: 0 0 auto;
-    border: 1px solid var(--sk-line);
+    border: 1px solid var(--sk-line, rgba(255, 255, 255, 0.14));
     border-radius: 8px;
-    background: var(--sk-softer);
-    color: var(--sk-dim);
+    background: var(--sk-softer, rgba(255, 255, 255, 0.06));
+    color: var(--sk-dim, rgba(255, 255, 255, 0.55));
     font-size: 16px;
     line-height: 1;
     cursor: pointer;
     transition: background-color 150ms ease, color 150ms ease;
 }
 
-body.skin-queue .sk-popup-close:hover {
+.sk-popup-close:hover {
     background: rgba(255, 255, 255, 0.10);
-    color: var(--sk-text);
+    color: var(--sk-text, var(--c-content, #fff));
 }
 
 /* Baris polos: tanpa bingkai kartu, hanya pemisah antar grup. */
-body.skin-queue .sk-popup-group .config {
+.sk-popup-group .config {
     padding: 6px 0;
 }

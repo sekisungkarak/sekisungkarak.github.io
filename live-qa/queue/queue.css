@@ -78,6 +78,31 @@ body {
 	padding-left: 2px;
 }
 
+/* Nama scene OBS yang sedang tayang — antrean ini milik scene tersebut. */
+.scene-tag {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 3px 9px;
+	border-radius: 999px;
+	border: 1px solid rgba(212, 168, 67, 0.42);
+	background: rgba(212, 168, 67, 0.14);
+	color: var(--gold);
+	font-family: "Archivo", sans-serif;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.03em;
+	text-transform: none;
+	white-space: nowrap;
+	max-width: 220px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.scene-tag i {
+	font-size: 12px;
+}
+
 .bar-actions {
 	display: flex;
 	align-items: center;

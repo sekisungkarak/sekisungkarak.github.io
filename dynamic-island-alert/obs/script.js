@@ -2369,7 +2369,12 @@ function ApplyLiveStatus(nextStatus, startOverrideMs) {
 		// liveStartedAtMs sudah ada -> pertahankan, jangan diubah polling.
 		if (prev !== LS_STATUS.live) {
 			console.debug('[Geseki][LiveDetect] LIVE, start =', new Date(liveStartedAtMs).toLocaleString('id-ID'));
-			if (typeof ResetFirstChatter === 'function') ResetFirstChatter();
+			// Bersihkan riwayat first chatter HANYA untuk live yang benar-benar baru.
+			// Saat source OBS di-refresh di tengah sesi, waktu mulai dipulihkan dari
+			// localStorage (liveStartFromStorage = true) dan status pertama langsung
+			// 'live' dengan prev = null. Tanpa penjaga ini, refresh dianggap live baru
+			// dan riwayat first chatter ikut terhapus — padahal sesinya sama.
+			if (!liveStartFromStorage && typeof ResetFirstChatter === 'function') ResetFirstChatter();
 		}
 	} else if (prev === LS_STATUS.live || liveStartFromStorage) {
 		// Live berakhir / bukan reload -> reset agar sesi berikutnya hitung dari nol.

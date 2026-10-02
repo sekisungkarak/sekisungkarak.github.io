@@ -12,33 +12,23 @@
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.9.1/fonts/remixicon.min.css">
 
 	<link rel="icon" type="image/png" href="../../shared/assets/images/avatar.png">
-	<link rel="stylesheet" href="queue.css?v=1">
+	<link rel="stylesheet" href="queue.css?v=2">
 </head>
 
 <body>
 
 	<!-- ── Top bar ──────────────────────────────────────────────────────
-	     Title, bridge status, unused tickets, and the clear actions. -->
+	     Title and the clear / sample actions. Bridge status, tickets and
+	     the OBS / Save / Load / Reset controls are not shown here. -->
 	<header class="bar">
 		<div class="bar-title">
 			<i class="ri-question-answer-fill" aria-hidden="true"></i>
 			<span>Live Q&amp;A</span>
 			<em>Queue</em>
+			<span id="sceneTag" class="scene-tag" hidden></span>
 		</div>
 
 		<div class="bar-actions">
-			<span id="statusPill" class="pill pill-off" title="Connection to Geseki Bridge">
-				<i class="ri-plug-line" aria-hidden="true"></i>
-				<span id="statusText">Connecting…</span>
-			</span>
-			<span id="ticketPill" class="pill" title="Viewers holding a ticket">
-				<i class="ri-ticket-2-line" aria-hidden="true"></i>
-				<span id="ticketText">0 tickets</span>
-			</span>
-			<button id="clearTicketsBtn" class="btn btn-ghost" type="button" title="Clear every unused ticket">
-				<i class="ri-eraser-line" aria-hidden="true"></i>
-				<span>Tickets</span>
-			</button>
 			<button id="clearBtn" class="btn btn-ghost" type="button" title="Clear the whole queue">
 				<i class="ri-delete-bin-6-line" aria-hidden="true"></i>
 				<span>Queue</span>
@@ -91,7 +81,7 @@
 		</div>
 	</section>
 
-	<script src="queue.js?v=3"></script>
+	<script src="queue.js?v=10"></script>
 </body>
 
 </html>

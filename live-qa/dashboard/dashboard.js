@@ -81,6 +81,10 @@ tabQueue.addEventListener('click', () => SelectTab('queue'));
 
 const WIDGET_NS = 'geseki:live-qa:';
 
+// Semua source aktif bersamaan: badge hanya mengikuti scene yang SEDANG
+// TAYANG supaya angkanya tidak berubah-ubah antar scene.
+let sawActiveScene = false;
+
 if (window.BroadcastChannel) {
     try {
         const bc = new BroadcastChannel(WIDGET_NS + 'channel');
@@ -103,6 +107,8 @@ if (window.BroadcastChannel) {
                 return;
             }
             if (d.type !== 'qa_state') return;
+            if (!d.active && sawActiveScene) return;
+            if (d.active) sawActiveScene = true;
             const n = Array.isArray(d.questions) ? d.questions.length : 0;
             queueBadge.textContent = String(n);
             queueBadge.hidden = n === 0;
