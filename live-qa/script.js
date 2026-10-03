@@ -236,6 +236,109 @@ const qaPanel = document.getElementById('qaPanel');
 const qaCard = document.getElementById('qaCard');
 const qaHint = document.getElementById('qaHint');
 
+// ── Layout (geser / skala / rotasi) dari panel overlay ──────────────────────
+// Bukan bagian dari settings.json, jadi disimpan di kunci sendiri oleh panel.
+// Nilainya MENANG atas profil dan URL: panel di overlay adalah aksi terakhir
+// pengguna, sama seperti preferensi panel di dynamic-island-alert.
+const LAYOUT_MIN_SCALE = 0.5;
+const LAYOUT_MAX_SCALE = 2.0;
+const LAYOUT_KEYS = {
+	x: WIDGET_NS + 'layout-x',
+	y: WIDGET_NS + 'layout-y',
+	scale: WIDGET_NS + 'layout-scale',
+	rotation: WIDGET_NS + 'layout-rotation',
+	// Ukuran eksplisit dari fitur resize di panel. 0 = biarkan CSS (auto).
+	width: WIDGET_NS + 'layout-width',
+	height: WIDGET_NS + 'layout-height'
+};
+
+function ReadLayoutNumber(key, fallback) {
+	try {
+		const raw = localStorage.getItem(key);
+		if (raw === null || raw === '') return fallback;
+		const n = Number(raw);
+		return isFinite(n) ? n : fallback;
+	} catch (e) {
+		return fallback;
+	}
+}
+
+function ClampLayoutScale(v) {
+	if (!isFinite(v)) return 1;
+	return Math.min(LAYOUT_MAX_SCALE, Math.max(LAYOUT_MIN_SCALE, Math.round(v * 100) / 100));
+}
+
+function ClampLayoutRotation(v) {
+	if (!isFinite(v)) return 0;
+	let r = v % 360;
+	if (r > 180) r -= 360;
+	if (r <= -180) r += 360;
+	return Math.round(r);
+}
+
+function ReadLayout() {
+	return {
+		x: Math.round(ReadLayoutNumber(LAYOUT_KEYS.x, 0)),
+		y: Math.round(ReadLayoutNumber(LAYOUT_KEYS.y, 0)),
+		scale: ClampLayoutScale(ReadLayoutNumber(LAYOUT_KEYS.scale, 1)),
+		rotation: ClampLayoutRotation(ReadLayoutNumber(LAYOUT_KEYS.rotation, 0)),
+		width: Math.max(0, Math.round(ReadLayoutNumber(LAYOUT_KEYS.width, 0))),
+		height: Math.max(0, Math.round(ReadLayoutNumber(LAYOUT_KEYS.height, 0)))
+	};
+}
+
+/* Offset sebagai MARGIN dari jangkar CSS (kiri-bawah), bukan left/top:
+   mengubah posisi absolut merusak animasi panel. */
+function ApplyLayoutToPanel(st) {
+	qaPanel.style.marginLeft = st.x + 'px';
+	qaPanel.style.marginBottom = st.y + 'px';
+	qaPanel.style.transform = 'scale(' + st.scale + ') rotate(' + st.rotation + 'deg)';
+
+	// Ukuran eksplisit (fitur resize). 0 = kembali ke lebar/tinggi CSS.
+	if (st.width > 0) {
+		qaPanel.style.width = st.width + 'px';
+		// CSS memasang max-width: calc(100vw - 80px); batalkan saat di-resize
+		// supaya lebar pilihan pengguna benar-benar dipakai.
+		qaPanel.style.maxWidth = 'none';
+	} else {
+		qaPanel.style.removeProperty('width');
+		qaPanel.style.removeProperty('max-width');
+	}
+	if (st.height > 0) qaPanel.style.height = st.height + 'px';
+	else qaPanel.style.removeProperty('height');
+}
+
+function SaveLayout(st) {
+	try {
+		localStorage.setItem(LAYOUT_KEYS.x, String(st.x));
+		localStorage.setItem(LAYOUT_KEYS.y, String(st.y));
+		localStorage.setItem(LAYOUT_KEYS.scale, String(st.scale));
+		localStorage.setItem(LAYOUT_KEYS.rotation, String(st.rotation));
+		localStorage.setItem(LAYOUT_KEYS.width, String(st.width));
+		localStorage.setItem(LAYOUT_KEYS.height, String(st.height));
+	} catch (e) { /* abaikan */ }
+}
+
+// Dipakai panel overlay: baca nilai awal, dan simpan hasil geser/skala/rotasi.
+window.GesekiQaLayout = {
+	get: ReadLayout,
+	set: function (st) {
+		const clean = {
+			x: Math.round(Number(st.x) || 0),
+			y: Math.round(Number(st.y) || 0),
+			scale: ClampLayoutScale(Number(st.scale)),
+			rotation: ClampLayoutRotation(Number(st.rotation)),
+			width: Math.max(0, Math.round(Number(st.width) || 0)),
+			height: Math.max(0, Math.round(Number(st.height) || 0))
+		};
+		SaveLayout(clean);
+		ApplyLayoutToPanel(clean);
+		return clean;
+	}
+};
+
+ApplyLayoutToPanel(ReadLayout());
+
 //////////////////
 // TICKET STORE //
 //////////////////

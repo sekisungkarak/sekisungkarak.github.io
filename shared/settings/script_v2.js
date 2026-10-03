@@ -491,6 +491,57 @@ function SetFooterButtonState(btn, text, ok) {
     }, 3000);
 }
 
+// ── Interact: buka dialog Interact browser source (dari navbar dashboard) ──
+// obs-websocket v5 menyediakan request OpenInputInteractDialog. Dashboard
+// tidak memegang koneksi OBS — koneksinya ada di halaman ini — jadi tombol
+// di navbar dokumen induk mengirim pesan ke sini, bukan menyambung sendiri.
+// Nama source dicari persis seperti Save (SourceNameCandidates), supaya
+// tombol ini selalu menunjuk source yang sama dengan yang baru disimpan.
+async function GesekiOpenInteractDialog() {
+    try {
+        await ObsConnect();
+
+        const scene = await ObsRequest('GetCurrentProgramScene');
+        const sceneName = scene?.currentProgramSceneName;
+        if (!sceneName) throw new Error('No active scene in OBS');
+
+        const sceneItems = await ObsRequest('GetSceneItemList', { sceneName });
+        const names = (sceneItems?.sceneItems || []).map(it => it.sourceName);
+        const candidates = [
+            ...SourceNameCandidates(sceneName),
+            ...LegacySourceNameCandidates()
+        ];
+        let target = null;
+        for (const cand of candidates) {
+            if (names.includes(cand)) { target = cand; break; }
+        }
+        if (!target) throw new Error('Source not found — press Save first');
+
+        await ObsRequest('OpenInputInteractDialog', { inputName: target });
+        SetActionStatus('Interact opened — ' + target, true);
+        return { ok: true, name: target };
+    } catch (err) {
+        console.error('[OBS Interact]', err);
+        SetActionStatus('Interact failed: ' + err.message, false);
+        return { ok: false, error: err.message };
+    }
+}
+
+// Dipanggil tombol Interact di navbar dashboard (dokumen induk) lewat
+// postMessage; halaman ini yang menjawabnya dan membalas hasilnya.
+window.addEventListener('message', function (ev) {
+    const d = ev.data || {};
+    if (d.type === 'geseki_open_interact') {
+        GesekiOpenInteractDialog().then(function (res) {
+            try {
+                if (ev.source) ev.source.postMessage({ type: 'geseki_interact_result', result: res }, '*');
+            } catch (e) { /* abaikan */ }
+        });
+    }
+});
+
+window.GesekiOpenInteractDialog = GesekiOpenInteractDialog;
+
 if (saveObsButton) {
     saveObsButton.addEventListener('click', async () => {
         try {

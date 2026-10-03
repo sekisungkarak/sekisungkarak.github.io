@@ -1,0 +1,259 @@
+/* ============================================================================
+   Live Q&A — panel kontrol (layout saja) + bingkai mode Layout.
+   Port dari pola dynamic-island-alert: bingkai + 8 handle + knob rotasi.
+   Ditulis untuk CEF Chromium 127 (OBS 32.2.2) — tanpa properti CSS terbaru.
+   ========================================================================== */
+
+/* ── Panel ──────────────────────────────────────────────────────────────── */
+
+.cp-root {
+	position: fixed;
+	left: 24px;
+	top: 24px;
+	width: 340px;
+	z-index: 2147483000;
+
+	background: rgba(32, 30, 40, 0.96);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 12px;
+	box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+
+	color: #eae7ee;
+	font-family: "Archivo", "Segoe UI", system-ui, sans-serif;
+	font-size: 13px;
+
+	display: none;
+	overflow: hidden;
+}
+.cp-root.is-open { display: block; }
+
+.cp-titlebar {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 10px 12px;
+	background: rgba(255, 255, 255, 0.04);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	cursor: move;
+	user-select: none;
+}
+
+.cp-title {
+	flex: 1 1 auto;
+	font-weight: 700;
+	font-size: 12.5px;
+	letter-spacing: 0.02em;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.cp-btn {
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	background: rgba(255, 255, 255, 0.06);
+	color: #eae7ee;
+	border-radius: 6px;
+	padding: 4px 9px;
+	font-size: 11.5px;
+	font-family: inherit;
+	cursor: pointer;
+	line-height: 1.2;
+}
+.cp-btn:hover { background: rgba(255, 255, 255, 0.12); }
+
+.cp-collapse.is-active {
+	background: #d4a843;
+	border-color: #d4a843;
+	color: #1b1920;
+	font-weight: 700;
+}
+
+.cp-close {
+	padding: 4px 9px;
+	font-size: 15px;
+	line-height: 1;
+}
+
+.cp-body {
+	padding: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.cp-note {
+	margin: 0;
+	font-size: 11.5px;
+	line-height: 1.45;
+	color: rgba(234, 231, 238, 0.62);
+}
+
+.cp-status {
+	font-size: 11.5px;
+	color: #d4a843;
+	min-height: 14px;
+}
+
+/* Baris slider (Scale). */
+.cp-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.cp-label {
+	font-size: 11.5px;
+	color: rgba(234, 231, 238, 0.72);
+	flex: 0 0 auto;
+	min-width: 34px;
+}
+
+.cp-value {
+	font-size: 11.5px;
+	color: #d4a843;
+	font-variant-numeric: tabular-nums;
+	flex: 0 0 auto;
+	min-width: 34px;
+	text-align: right;
+}
+
+.cp-range {
+	flex: 1 1 auto;
+	height: 4px;
+	-webkit-appearance: none;
+	appearance: none;
+	background: rgba(255, 255, 255, 0.14);
+	border-radius: 999px;
+	outline: none;
+	cursor: pointer;
+}
+.cp-range::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: #d4a843;
+	border: 1.5px solid #1b1920;
+	cursor: pointer;
+}
+.cp-range::-moz-range-thumb {
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: #d4a843;
+	border: 1.5px solid #1b1920;
+	cursor: pointer;
+}
+
+.cp-reset {
+	align-self: flex-start;
+}
+
+/* ── Gear kecil (hanya tampak saat mouse mendekat) ─────────────────────── */
+
+.cp-gear {
+	position: fixed;
+	left: 10px;
+	top: 10px;
+	width: 28px;
+	height: 28px;
+	border-radius: 7px;
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	background: rgba(32, 30, 40, 0.85);
+	color: #eae7ee;
+	font-size: 15px;
+	line-height: 1;
+	cursor: pointer;
+	z-index: 2147482900;
+	opacity: 0;
+	transition: opacity 0.18s ease;
+}
+body:hover .cp-gear { opacity: 0.55; }
+.cp-gear:hover { opacity: 1; }
+
+/* ── Bingkai + handle + knob rotasi ────────────────────────────────────── */
+
+.gi-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 2147482950;
+	pointer-events: none;
+	display: none;
+}
+.gi-overlay.is-on { display: block; }
+
+.gi-frame {
+	position: absolute;
+	pointer-events: auto;
+	cursor: grab;
+	border: 1.5px dashed #d4a843;
+	border-radius: 8px;
+	background: rgba(212, 168, 67, 0.07);
+	box-sizing: border-box;
+}
+.gi-frame.is-dragging { cursor: grabbing; }
+
+.gi-handle {
+	position: absolute;
+	width: 12px;
+	height: 12px;
+	margin: -6px 0 0 -6px;
+	background: #d4a843;
+	border: 1.5px solid #1b1920;
+	border-radius: 3px;
+	box-sizing: border-box;
+	pointer-events: auto;
+}
+.gi-handle[data-h="nw"] { left: 0;    top: 0;    cursor: nwse-resize; }
+.gi-handle[data-h="n"]  { left: 50%;  top: 0;    cursor: ns-resize; }
+.gi-handle[data-h="ne"] { left: 100%; top: 0;    cursor: nesw-resize; }
+.gi-handle[data-h="e"]  { left: 100%; top: 50%;  cursor: ew-resize; }
+.gi-handle[data-h="se"] { left: 100%; top: 100%; cursor: nwse-resize; }
+.gi-handle[data-h="s"]  { left: 50%;  top: 100%; cursor: ns-resize; }
+.gi-handle[data-h="sw"] { left: 0;    top: 100%; cursor: nesw-resize; }
+.gi-handle[data-h="w"]  { left: 0;    top: 50%;  cursor: ew-resize; }
+
+.gi-guide {
+	position: absolute;
+	background: #d4a843;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 0.1s ease;
+}
+.gi-guide.is-on { opacity: 0.9; }
+.gi-guide-v { top: 0; bottom: 0; width: 1px; }
+.gi-guide-h { left: 0; right: 0; height: 1px; }
+
+.gi-rotate {
+	position: absolute;
+	left: 50%;
+	top: -30px;
+	width: 16px;
+	height: 16px;
+	margin: -8px 0 0 -8px;
+	border-radius: 50%;
+	background: #d4a843;
+	border: 1.5px solid #1b1920;
+	box-sizing: border-box;
+	pointer-events: auto;
+	cursor: grab;
+}
+.gi-frame.is-rotating .gi-rotate { cursor: grabbing; }
+
+.gi-hint {
+	position: absolute;
+	left: 18px;
+	bottom: 18px;
+	padding: 6px 12px;
+	border-radius: 4px;
+	border: 1px solid rgba(255, 255, 255, 0.10);
+	border-left: 2px solid #d4a843;
+	background: #201e28;
+	color: #eae7ee;
+	font-size: 12.5px;
+	font-weight: 500;
+	box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+	pointer-events: none;
+	white-space: nowrap;
+}

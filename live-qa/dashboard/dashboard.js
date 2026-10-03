@@ -18,6 +18,7 @@ const tabQueue = document.getElementById('tabQueue');
 const paneSettings = document.getElementById('paneSettings');
 const paneQueue = document.getElementById('paneQueue');
 const queueBadge = document.getElementById('queueBadge');
+const tabInteract = document.getElementById('tabInteract');
 
 // Identitas widget. Nama ini juga dipakai sebagai nama OBS source (sourceName)
 // dan judul di navbar.
@@ -34,7 +35,7 @@ const widgetURL = new URL('../index.html', window.location.href).href;
 
 dashFrame.src =
     settingsPageURL +
-    '?v=29&settingsJson=' + encodeURIComponent(settingsDir + 'settings.json?v=16') +
+    '?v=30&settingsJson=' + encodeURIComponent(settingsDir + 'settings.json?v=16') +
     '&widgetURL=' + encodeURIComponent(widgetURL) +
     '&sourceName=' + encodeURIComponent(WIDGET_NAME) +
     '&sourceWidth=1080&sourceHeight=350&sourceAlign=center' +
@@ -71,6 +72,30 @@ function SelectTab(which) {
 
 tabSettings.addEventListener('click', () => SelectTab('settings'));
 tabQueue.addEventListener('click', () => SelectTab('queue'));
+
+// ── Tombol Interact ─────────────────────────────────────────────────────────
+// Dialog Interact adalah jendela native OBS, dibuka lewat request obs-websocket
+// OpenInputInteractDialog. Koneksi OBS hidup di dalam iframe Settings, jadi
+// tombol ini cuma meneruskan permintaan ke sana — bukan menyambung sendiri.
+tabInteract.addEventListener('click', () => {
+    if (!dashFrame.contentWindow) return;
+    tabInteract.classList.add('is-busy');
+    // Pastikan tab Settings aktif supaya iframe hidup dan terlihat.
+    SelectTab('settings');
+    try {
+        dashFrame.contentWindow.postMessage({ type: 'geseki_open_interact' }, '*');
+    } catch (e) { /* abaikan */ }
+    // Lepas status sibuk apa pun hasilnya; dialognya sendiri muncul di OBS.
+    setTimeout(() => tabInteract.classList.remove('is-busy'), 1500);
+});
+
+// Balasan dari iframe Settings (berhasil / gagal) — hanya untuk melepas status.
+window.addEventListener('message', (ev) => {
+    const d = ev.data || {};
+    if (d.type === 'geseki_interact_result') {
+        tabInteract.classList.remove('is-busy');
+    }
+});
 
 // ── Badge jumlah antrean ────────────────────────────────────────────────────
 // Dashboard ikut mendengarkan kanal widget supaya jumlah pertanyaan terlihat

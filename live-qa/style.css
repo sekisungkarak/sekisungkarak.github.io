@@ -64,6 +64,12 @@ html, body {
 	pointer-events: none;
 }
 
+/* Tapi mode Layout harus tetap terlihat walau feed kosong — kalau tidak,
+   bingkai & handle-nya menggantung tanpa panel yang bisa disetel. */
+.qa-panel.is-empty.is-layout {
+	opacity: 1;
+}
+
 /* ── Header ─────────────────────────────────────────────────────────────── */
 
 .qa-header {
@@ -93,7 +99,7 @@ html, body {
 
 .qa-header-text {
 	font-family: "Archivo Black", "Archivo", sans-serif;
-	font-size: 13px;
+	font-size: 18px;
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
 	color: #f4f1f7;
@@ -175,7 +181,7 @@ html, body {
 	flex: 0 0 auto;
 	padding: 9px 18px 12px;
 	border-top: 1px solid rgba(255, 255, 255, 0.08);
-	font-size: 11.5px;
+	font-size: 14px;
 	line-height: 1.4;
 	color: var(--qa-hint-color, #a8a3b0);
 	text-align: var(--qa-align, left);
@@ -187,29 +193,29 @@ html, body {
 
 /* ── Animasi masuk/keluar (grup Design > Animation) ─────────────────────── */
 
-@keyframes qa-in-pop  { from { opacity: 0; transform: scale(0.8); }  to { opacity: 1; transform: scale(1); } }
+@keyframes qa-in-pop  { from { opacity: 0; scale: 0.8; }  to { opacity: 1; scale: 1; } }
 @keyframes qa-in-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes qa-in-up   { from { opacity: 0; transform: translateY(18px); }  to { opacity: 1; transform: none; } }
-@keyframes qa-in-down { from { opacity: 0; transform: translateY(-18px); } to { opacity: 1; transform: none; } }
-@keyframes qa-in-left { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
-@keyframes qa-in-right{ from { opacity: 0; transform: translateX(28px); }  to { opacity: 1; transform: none; } }
-@keyframes qa-in-zoom { from { opacity: 0; transform: scale(1.4); }  to { opacity: 1; transform: scale(1); } }
-@keyframes qa-in-flip { from { opacity: 0; transform: perspective(700px) rotateY(90deg); } to { opacity: 1; transform: perspective(700px) rotateY(0); } }
+@keyframes qa-in-up   { from { opacity: 0; translate: 0 18px; }  to { opacity: 1; translate: 0 0; } }
+@keyframes qa-in-down { from { opacity: 0; translate: 0 -18px; } to { opacity: 1; translate: 0 0; } }
+@keyframes qa-in-left { from { opacity: 0; translate: -28px 0; } to { opacity: 1; translate: 0 0; } }
+@keyframes qa-in-right{ from { opacity: 0; translate: 28px 0; }  to { opacity: 1; translate: 0 0; } }
+@keyframes qa-in-zoom { from { opacity: 0; scale: 1.4; }  to { opacity: 1; scale: 1; } }
+@keyframes qa-in-flip { from { opacity: 0; rotate: y 90deg; } to { opacity: 1; rotate: y 0deg; } }
 @keyframes qa-in-blur { from { opacity: 0; filter: blur(10px); } to { opacity: 1; filter: blur(0); } }
-@keyframes qa-in-drop { from { opacity: 0; transform: translateY(-44px); } to { opacity: 1; transform: none; } }
-@keyframes qa-in-spin { from { opacity: 0; transform: rotate(-200deg) scale(0.6); } to { opacity: 1; transform: rotate(0) scale(1); } }
+@keyframes qa-in-drop { from { opacity: 0; translate: 0 -44px; } to { opacity: 1; translate: 0 0; } }
+@keyframes qa-in-spin { from { opacity: 0; rotate: -200deg; scale: 0.6; } to { opacity: 1; rotate: 0deg; scale: 1; } }
 
-@keyframes qa-out-pop  { from { opacity: 1; transform: scale(1); }  to { opacity: 0; transform: scale(0.8); } }
+@keyframes qa-out-pop  { from { opacity: 1; scale: 1; }  to { opacity: 0; scale: 0.8; } }
 @keyframes qa-out-fade { from { opacity: 1; } to { opacity: 0; } }
-@keyframes qa-out-up   { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-18px); } }
-@keyframes qa-out-down { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(18px); } }
-@keyframes qa-out-left { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(-28px); } }
-@keyframes qa-out-right{ from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(28px); } }
-@keyframes qa-out-zoom { from { opacity: 1; transform: scale(1); }  to { opacity: 0; transform: scale(1.4); } }
-@keyframes qa-out-flip { from { opacity: 1; transform: perspective(700px) rotateY(0); } to { opacity: 0; transform: perspective(700px) rotateY(90deg); } }
+@keyframes qa-out-up   { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 0 -18px; } }
+@keyframes qa-out-down { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 0 18px; } }
+@keyframes qa-out-left { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: -28px 0; } }
+@keyframes qa-out-right{ from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 28px 0; } }
+@keyframes qa-out-zoom { from { opacity: 1; scale: 1; }  to { opacity: 0; scale: 1.4; } }
+@keyframes qa-out-flip { from { opacity: 1; rotate: y 0deg; } to { opacity: 0; rotate: y 90deg; } }
 @keyframes qa-out-blur { from { opacity: 1; filter: blur(0); } to { opacity: 0; filter: blur(10px); } }
-@keyframes qa-out-drop { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-44px); } }
-@keyframes qa-out-spin { from { opacity: 1; transform: rotate(0) scale(1); } to { opacity: 0; transform: rotate(200deg) scale(0.6); } }
+@keyframes qa-out-drop { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 0 -44px; } }
+@keyframes qa-out-spin { from { opacity: 1; rotate: 0deg; scale: 1; } to { opacity: 0; rotate: 200deg; scale: 0.6; } }
 
 /* ── Animasi highlight pada nama (grup Design > Text) ──────────────────── */
 

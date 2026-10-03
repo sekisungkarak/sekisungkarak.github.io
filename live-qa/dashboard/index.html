@@ -73,6 +73,16 @@
 			line-height: 17px;
 		}
 
+		/* Tombol Interact: didorong ke ujung kanan navbar. */
+		#tabInteract {
+			margin-left: auto;
+		}
+
+		#tabInteract.is-busy {
+			opacity: 0.6;
+			pointer-events: none;
+		}
+
 		.pane {
 			flex: 1 1 auto;
 			min-height: 0;
@@ -109,6 +119,15 @@
 			<span>Queue</span>
 			<span id="queueBadge" class="count" hidden>0</span>
 		</button>
+
+		<button id="tabInteract" type="button" title="Open the OBS Interact dialog for this widget's browser source">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<path d="M15 3h6v6"></path>
+				<path d="M10 14 21 3"></path>
+				<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+			</svg>
+			<span>Interact</span>
+		</button>
 	</div>
 
 	<div id="paneQueue" class="pane">
@@ -118,7 +137,7 @@
 		<iframe id="dashFrame" allow="clipboard-write; clipboard-read"></iframe>
 	</div>
 
-	<script src="dashboard.js?v=16"></script>
+	<script src="dashboard.js?v=17"></script>
 </body>
 
 </html>
