@@ -2566,7 +2566,7 @@ body.skin-queue #settings wa-details.section:hover {
     background-color: transparent;
 }
 
-body.skin-queue #settings wa-details.section::part(base),
+body.skin-queue #settings wa-details.section:not(.category-section):not(.nested-section)::part(base),
 body.skin-queue #settings wa-details.section.category-section::part(base),
 body.skin-queue #settings wa-details.section.nested-section::part(base) {
     background: var(--sk-softer);

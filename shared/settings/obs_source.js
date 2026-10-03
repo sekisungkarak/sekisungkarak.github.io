@@ -36,6 +36,11 @@ const OBS_SOURCE_BASE_NAME = ObsBuilderParam('sourceName', 'Dynamic Island Alert
 // Bitmask alignment scene item OBS: 1=Left, 2=Right, 4=Top, 8=Bottom.
 // Top-center = 4 (bit Top saja; bit horizontal kosong -> tengah).
 const OBS_ALIGN_TOP_CENTER = 4;
+// Mode penempatan saat source PERTAMA dibuat:
+//   'top'    -> top-center (perilaku lama: pulau di tepi atas)
+//   'center' -> tengah-tengah canvas (panel Live Q&A)
+// Dipilih lewat ?sourceAlign=center dari dashboard widget terkait.
+const OBS_SOURCE_PLACEMENT = ObsBuilderParam('sourceAlign', 'top');
 
 // Koneksi OBS dibaca dari panel "OBS Connection" bila tersedia, sehingga
 // pengguna bisa mengubah IP/port/password tanpa edit kode.
@@ -282,17 +287,22 @@ async function ObsCenterSourceHorizontally(sceneName, sourceName) {
         const video = await ObsRequest('GetVideoSettings');
         const canvasWidth = video?.baseWidth;
         if (!canvasWidth) return false;
+        const canvasHeight = video?.baseHeight || 0;
 
-        // Jangkar top-center: X = setengah canvas, Y = 0 (tepi atas).
+        // 'center': titik acuan = TENGAH source (alignment 0), jadi
+        // posisi = tengah canvas di kedua sumbu. 'top': acuan top-center
+        // (alignment 4), X = tengah canvas, Y = tepi atas.
+        const useCenter = OBS_SOURCE_PLACEMENT === 'center';
         const positionX = Math.round(canvasWidth / 2);
+        const positionY = useCenter ? Math.round(canvasHeight / 2) : 0;
 
         await ObsRequest('SetSceneItemTransform', {
             sceneName,
             sceneItemId,
             sceneItemTransform: {
                 positionX,
-                positionY: 0,
-                alignment: OBS_ALIGN_TOP_CENTER
+                positionY,
+                alignment: useCenter ? 0 : OBS_ALIGN_TOP_CENTER
             }
         });
         return true;

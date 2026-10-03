@@ -142,6 +142,94 @@ const showAvatar = GetBoolParam('showAvatar', true);
 const showTicketHint = GetBoolParam('showTicketHint', true);
 const ticketHintText = GetParam('ticketHintText', 'Send {gift}, then type {prefix} your question');
 
+// ── Design (grup "Design" di dashboard) ──────────────────────────────────────
+// Semua nilai masuk sebagai custom property CSS; style.css hanya menyediakan
+// nilai bawaan. Opsi mengikuti Better Alerts (kecuali Duration).
+const design = {
+	font: GetParam('designFont', 'Archivo'),
+	showTitle: GetBoolParam('showTitle', true),
+	nameSize: GetIntParam('designNameSize', 22),
+	textSize: GetIntParam('designTextSize', 20),
+	colorName: GetParam('designColorName', '#d4a843'),
+	colorText: GetParam('designColorText', '#f1eef5'),
+	colorHint: GetParam('designColorHint', '#a8a3b0'),
+	highlightOn: GetBoolParam('designHighlightOn', true),
+	highlight: GetParam('designHighlight', '#d4a843'),
+	align: GetParam('designAlign', 'left'),
+	weight: GetIntParam('designWeight', 500),
+	lineGap: GetIntParam('designLineGap', 4),
+	hlAnim: GetParam('designHlAnim', 'none'),
+	outline: parseFloat(GetParam('designOutline', '0')) || 0,
+	outlineColor: GetParam('designOutlineColor', '#000000'),
+	shadow: GetBoolParam('designShadow', true),
+	card: GetParam('designCard', 'solid'),
+	cardColor: GetParam('designCardColor', '#201e28'),
+	cardOpacity: GetIntParam('designCardOpacity', 100),
+	cardRadius: GetIntParam('designCardRadius', 16),
+	animIn: GetParam('designAnimIn', 'up'),
+	animOut: GetParam('designAnimOut', 'fade'),
+	inMs: GetIntParam('designInMs', 500),
+	outMs: GetIntParam('designOutMs', 500)
+};
+
+/* #rrggbb + opacity persen -> rgba(). Nilai aneh jatuh ke warna bawaan. */
+function HexToRgba(hex, opacityPct) {
+	let h = String(hex || '').replace('#', '').trim();
+	if (h.length === 3) h = h.split('').map(function (c) { return c + c; }).join('');
+	if (h.length !== 6) h = '201e28';
+	const r = parseInt(h.slice(0, 2), 16);
+	const g = parseInt(h.slice(2, 4), 16);
+	const b = parseInt(h.slice(4, 6), 16);
+	let a = Number(opacityPct);
+	if (isNaN(a)) a = 100;
+	a = Math.max(0, Math.min(100, a)) / 100;
+	return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+}
+
+/* Muat font dari Google Fonts (sama seperti Dynamic Island Alert). Tanpa ini
+   nama font tidak pernah terpasang di OBS, jadi pilihan Font dan Weight tidak
+   terlihat berubah. */
+function LoadDesignFont(name) {
+	const clean = String(name || '').trim();
+	if (!clean) return;
+	// Font sistem tidak perlu diunduh; biarkan fallback browser yang menangani.
+	const link = document.createElement('link');
+	link.rel = 'stylesheet';
+	link.href = 'https://fonts.googleapis.com/css2?family=' +
+		encodeURIComponent(clean).replace(/%20/g, '+') +
+		':wght@400;500;600;700;800;900&display=swap';
+	document.head.appendChild(link);
+}
+
+/* Pasang grup Design ke CSS. Outline "relatif" Better Alerts adalah fraksi
+   dari ukuran huruf, jadi dikali ukuran teks pertanyaan yang sedang dipakai. */
+function ApplyDesign() {
+	const root = document.documentElement;
+	root.style.setProperty('--qa-font', design.font
+		? '"' + design.font + '", "Archivo", "Segoe UI", system-ui, sans-serif'
+		: '"Archivo", "Segoe UI", system-ui, sans-serif');
+	root.style.setProperty('--qa-name-size', design.nameSize + 'px');
+	root.style.setProperty('--qa-text-size', design.textSize + 'px');
+	root.style.setProperty('--qa-name-color', design.colorName);
+	root.style.setProperty('--qa-text-color', design.colorText);
+	root.style.setProperty('--qa-hint-color', design.colorHint);
+	root.style.setProperty('--qa-hl', design.highlight);
+	root.style.setProperty('--qa-align', design.align);
+	root.style.setProperty('--qa-weight', String(design.weight));
+	root.style.setProperty('--qa-gap', design.lineGap + 'px');
+	root.style.setProperty('--qa-outline-color', design.outlineColor);
+	root.style.setProperty('--qa-outline-px', design.outline > 0 ? (design.outline * design.textSize).toFixed(2) + 'px' : '0px');
+	root.style.setProperty('--qa-shadow', design.shadow ? '0 2px 6px rgba(0, 0, 0, 0.6)' : 'none');
+	root.style.setProperty('--qa-card-radius', design.cardRadius + 'px');
+	root.style.setProperty('--qa-card-bg', HexToRgba(design.cardColor, design.cardOpacity));
+
+	const header = document.getElementById('qaHeader');
+	if (header) header.classList.toggle('hidden', !design.showTitle);
+	qaPanel.classList.remove('card-none', 'card-outline');
+	if (design.card === 'none') qaPanel.classList.add('card-none');
+	else if (design.card === 'outline') qaPanel.classList.add('card-outline');
+}
+
 // ── Elemen ───────────────────────────────────────────────────────────────────
 
 const qaPanel = document.getElementById('qaPanel');
@@ -262,6 +350,10 @@ function BuildCard(q) {
 	const who = document.createElement('span');
 	who.className = 'qa-name';
 	who.textContent = q.name;
+	if (design.highlightOn) {
+		who.classList.add('is-highlight');
+		if (design.hlAnim && design.hlAnim !== 'none') who.classList.add('hl-' + design.hlAnim);
+	}
 
 	const text = document.createElement('span');
 	text.className = 'qa-text';
@@ -273,19 +365,46 @@ function BuildCard(q) {
 	return card;
 }
 
-/* Overlay hanya menampilkan pertanyaan yang sedang dipilih. Tidak ada
-   pertanyaan terpilih -> panel disembunyikan (opacity 0). */
-function RenderOverlay() {
-	qaCard.innerHTML = '';
+/* Mainkan animasi masuk/keluar pada panel. Nama animasi = nilai opsi
+   (pop/fade/up/...), keyframes-nya ada di style.css. */
+function PlayPanelAnim(kind, name, ms) {
+	if (!name || name === 'none') {
+		qaPanel.style.animation = '';
+		return;
+	}
+	// Reset dulu supaya animasi yang sama bisa diputar ulang (ganti pertanyaan).
+	qaPanel.style.animation = 'none';
+	void qaPanel.offsetWidth;
+	qaPanel.style.animation = 'qa-' + kind + '-' + name + ' ' + ms + 'ms ease both';
+}
 
+/* Overlay hanya menampilkan pertanyaan yang sedang dipilih. Tidak ada
+   pertanyaan terpilih -> panel disembunyikan setelah animasi keluar. */
+function RenderOverlay() {
 	const q = currentId === null ? null : FindQuestion(currentId);
+
 	if (!q) {
-		qaPanel.classList.add('is-empty');
+		if (qaPanel.classList.contains('is-empty')) return;
+		// Tanpa animasi keluar: sembunyikan langsung (tidak ada animationend).
+		if (!design.animOut || design.animOut === 'none') {
+			qaPanel.style.animation = '';
+			qaPanel.classList.add('is-empty');
+			return;
+		}
+		PlayPanelAnim('out', design.animOut, design.outMs);
+		const done = function () {
+			qaPanel.style.animation = '';
+			qaPanel.classList.add('is-empty');
+			qaPanel.removeEventListener('animationend', done);
+		};
+		qaPanel.addEventListener('animationend', done);
 		return;
 	}
 
+	qaCard.innerHTML = '';
 	qaCard.appendChild(BuildCard(q));
 	qaPanel.classList.remove('is-empty');
+	PlayPanelAnim('in', design.animIn, design.inMs);
 }
 
 function RenderHint() {
@@ -731,6 +850,8 @@ function RegisterMessageHooks() {
 //////////
 
 function Init() {
+	LoadDesignFont(design.font);
+	ApplyDesign();
 	RenderHint();
 	// Muat antrean scene ini DULU (termasuk On screen scene ini), baru gambar.
 	LoadQueue();

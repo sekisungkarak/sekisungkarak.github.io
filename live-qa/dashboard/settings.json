@@ -19,9 +19,21 @@
       "open": false,
       "icon": "ri-question-answer-fill"
     },
-    "Appearance": {
+    "Text": {
       "open": false,
-      "icon": "ri-palette-fill"
+      "icon": "ri-text"
+    },
+    "Outline & shadow": {
+      "open": false,
+      "icon": "ri-shadow-line"
+    },
+    "Background": {
+      "open": false,
+      "icon": "ri-layout-4-fill"
+    },
+    "Animation": {
+      "open": false,
+      "icon": "ri-play-circle-fill"
     }
   },
   "settings": [
@@ -82,12 +94,167 @@
       "group": "Questions"
     },
     {
-      "id": "showAvatar",
-      "label": "Show Avatar",
-      "description": "Show the asker's profile picture next to the question.",
+      "id": "designFont",
+      "label": "Font",
+      "description": "Font used by the whole card. Any font installed on this PC works.",
+      "type": "font",
+      "defaultValue": "Archivo",
+      "group": "Text",
+      "category": "Design"
+    },
+    {
+      "id": "designNameSize",
+      "label": "Name Size",
+      "type": "slider",
+      "defaultValue": 22,
+      "min": 10,
+      "max": 48,
+      "step": 1,
+      "group": "Text",
+      "category": "Design"
+    },
+    {
+      "id": "designTextSize",
+      "label": "Question Size",
+      "type": "slider",
+      "defaultValue": 20,
+      "min": 12,
+      "max": 64,
+      "step": 1,
+      "group": "Text",
+      "category": "Design"
+    },
+    {
+      "id": "designColorName",
+      "label": "Name Colour",
+      "description": "Colour of the asker's name.",
+      "type": "color",
+      "defaultValue": "#d4a843",
+      "group": "Text",
+      "category": "Design"
+    },
+    {
+      "id": "designColorText",
+      "label": "Question Colour",
+      "description": "Colour of the question text.",
+      "type": "color",
+      "defaultValue": "#f1eef5",
+      "group": "Text",
+      "category": "Design"
+    },
+    {
+      "id": "designColorHint",
+      "label": "Hint Colour",
+      "description": "Colour of the ticket hint line.",
+      "type": "color",
+      "defaultValue": "#a8a3b0",
+      "group": "Text",
+      "category": "Design"
+    },
+    {
+      "id": "designHighlightOn",
+      "label": "Highlight",
+      "description": "Colour the asker's name with the highlight colour.",
       "type": "checkbox",
       "defaultValue": true,
-      "group": "Appearance"
+      "group": "Text",
+      "category": "Design"
+    },
+    {
+      "id": "designHighlight",
+      "label": "Highlight Colour",
+      "type": "color",
+      "defaultValue": "#d4a843",
+      "group": "Text",
+      "category": "Design",
+      "showIf": "designHighlightOn"
+    },
+    {
+      "id": "designAlign",
+      "label": "Align",
+      "type": "select",
+      "options": [
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "center",
+          "label": "Centre"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        }
+      ],
+      "defaultValue": "left",
+      "group": "Text",
+      "category": "Design"
+    },
+    {
+      "id": "designWeight",
+      "label": "Weight",
+      "type": "slider",
+      "defaultValue": 500,
+      "min": 400,
+      "max": 900,
+      "step": 100,
+      "group": "Text",
+      "category": "Design"
+    },
+    {
+      "id": "designLineGap",
+      "label": "Line Gap",
+      "type": "slider",
+      "defaultValue": 4,
+      "min": 0,
+      "max": 40,
+      "step": 1,
+      "group": "Text",
+      "category": "Design"
+    },
+    {
+      "id": "designHlAnim",
+      "label": "Highlight Animation",
+      "description": "Loops on the asker's name.",
+      "type": "select",
+      "options": [
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "pulse",
+          "label": "Pulse"
+        },
+        {
+          "value": "wiggle",
+          "label": "Wiggle"
+        },
+        {
+          "value": "bounce",
+          "label": "Bounce"
+        },
+        {
+          "value": "shake",
+          "label": "Shake"
+        },
+        {
+          "value": "tada",
+          "label": "Tada"
+        },
+        {
+          "value": "glow",
+          "label": "Glow"
+        },
+        {
+          "value": "rainbow",
+          "label": "Rainbow"
+        }
+      ],
+      "defaultValue": "none",
+      "group": "Text",
+      "category": "Design"
     },
     {
       "id": "showTicketHint",
@@ -95,7 +262,8 @@
       "description": "Show a short hint line explaining how to ask a question.",
       "type": "checkbox",
       "defaultValue": true,
-      "group": "Appearance"
+      "group": "Text",
+      "category": "Design"
     },
     {
       "id": "ticketHintText",
@@ -103,8 +271,248 @@
       "description": "Shown only when a ticket gift is set. {gift} and {prefix} are replaced. With no gift, the widget says \"Type {prefix} to ask a question\".",
       "type": "text",
       "defaultValue": "Send {gift}, then type {prefix} your question",
-      "group": "Appearance",
+      "group": "Text",
+      "category": "Design",
       "showIf": "showTicketHint"
+    },
+    {
+      "id": "showAvatar",
+      "label": "Show Avatar",
+      "description": "Show the asker's profile picture next to the question.",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "Text",
+      "category": "Design"
+    },
+    {
+      "id": "showTitle",
+      "label": "Show Title",
+      "description": "Show the \"Live Q&A\" title bar above the question.",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "Text",
+      "category": "Design"
+    },
+    {
+      "id": "designOutline",
+      "label": "Outline",
+      "description": "Relative to the text size. 0 turns it off.",
+      "type": "slider",
+      "defaultValue": 0,
+      "min": 0,
+      "max": 0.12,
+      "step": 0.002,
+      "group": "Outline & shadow",
+      "category": "Design"
+    },
+    {
+      "id": "designOutlineColor",
+      "label": "Outline Colour",
+      "type": "color",
+      "defaultValue": "#000000",
+      "group": "Outline & shadow",
+      "category": "Design"
+    },
+    {
+      "id": "designShadow",
+      "label": "Drop Shadow",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "Outline & shadow",
+      "category": "Design"
+    },
+    {
+      "id": "designCard",
+      "label": "Style",
+      "description": "Sits behind the text block.",
+      "type": "select",
+      "options": [
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "solid",
+          "label": "Solid"
+        },
+        {
+          "value": "outline",
+          "label": "Outline"
+        }
+      ],
+      "defaultValue": "solid",
+      "group": "Background",
+      "category": "Design"
+    },
+    {
+      "id": "designCardColor",
+      "label": "Colour",
+      "type": "color",
+      "defaultValue": "#201e28",
+      "group": "Background",
+      "category": "Design",
+      "showIf": "designCard",
+      "showIfValue": "solid"
+    },
+    {
+      "id": "designCardOpacity",
+      "label": "Opacity",
+      "type": "slider",
+      "defaultValue": 100,
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "group": "Background",
+      "category": "Design",
+      "showIf": "designCard",
+      "showIfValue": "solid"
+    },
+    {
+      "id": "designCardRadius",
+      "label": "Corner Radius",
+      "type": "slider",
+      "defaultValue": 16,
+      "min": 0,
+      "max": 120,
+      "step": 1,
+      "group": "Background",
+      "category": "Design"
+    },
+    {
+      "id": "designAnimIn",
+      "label": "In",
+      "type": "select",
+      "options": [
+        {
+          "value": "pop",
+          "label": "Pop"
+        },
+        {
+          "value": "fade",
+          "label": "Fade"
+        },
+        {
+          "value": "up",
+          "label": "Slide Up"
+        },
+        {
+          "value": "down",
+          "label": "Slide Down"
+        },
+        {
+          "value": "left",
+          "label": "Slide From Left"
+        },
+        {
+          "value": "right",
+          "label": "Slide From Right"
+        },
+        {
+          "value": "zoom",
+          "label": "Zoom"
+        },
+        {
+          "value": "flip",
+          "label": "Flip"
+        },
+        {
+          "value": "blur",
+          "label": "Blur"
+        },
+        {
+          "value": "drop",
+          "label": "Drop"
+        },
+        {
+          "value": "spin",
+          "label": "Spin"
+        }
+      ],
+      "defaultValue": "up",
+      "group": "Animation",
+      "category": "Design"
+    },
+    {
+      "id": "designAnimOut",
+      "label": "Out",
+      "type": "select",
+      "options": [
+        {
+          "value": "pop",
+          "label": "Pop"
+        },
+        {
+          "value": "fade",
+          "label": "Fade"
+        },
+        {
+          "value": "up",
+          "label": "Slide Up"
+        },
+        {
+          "value": "down",
+          "label": "Slide Down"
+        },
+        {
+          "value": "left",
+          "label": "Slide From Left"
+        },
+        {
+          "value": "right",
+          "label": "Slide From Right"
+        },
+        {
+          "value": "zoom",
+          "label": "Zoom"
+        },
+        {
+          "value": "flip",
+          "label": "Flip"
+        },
+        {
+          "value": "blur",
+          "label": "Blur"
+        },
+        {
+          "value": "drop",
+          "label": "Drop"
+        },
+        {
+          "value": "spin",
+          "label": "Spin"
+        }
+      ],
+      "defaultValue": "fade",
+      "group": "Animation",
+      "category": "Design"
+    },
+    {
+      "id": "designInMs",
+      "label": "In Duration",
+      "type": "slider",
+      "defaultValue": 500,
+      "min": 100,
+      "max": 3000,
+      "step": 20,
+      "group": "Animation",
+      "category": "Design"
+    },
+    {
+      "id": "designOutMs",
+      "label": "Out Duration",
+      "type": "slider",
+      "defaultValue": 500,
+      "min": 100,
+      "max": 3000,
+      "step": 20,
+      "group": "Animation",
+      "category": "Design"
     }
-  ]
+  ],
+  "categories": {
+    "Design": {
+      "open": false,
+      "icon": "ri-palette-fill"
+    }
+  }
 }

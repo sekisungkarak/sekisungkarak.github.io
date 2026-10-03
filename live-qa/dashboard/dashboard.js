@@ -34,10 +34,10 @@ const widgetURL = new URL('../index.html', window.location.href).href;
 
 dashFrame.src =
     settingsPageURL +
-    '?v=26&settingsJson=' + encodeURIComponent(settingsDir + 'settings.json?v=12') +
+    '?v=29&settingsJson=' + encodeURIComponent(settingsDir + 'settings.json?v=16') +
     '&widgetURL=' + encodeURIComponent(widgetURL) +
     '&sourceName=' + encodeURIComponent(WIDGET_NAME) +
-    '&sourceWidth=1080&sourceHeight=700' +
+    '&sourceWidth=1080&sourceHeight=350&sourceAlign=center' +
     '&widgetName=' + encodeURIComponent(WIDGET_NAME) +
     // Gaya halaman Queue untuk tab Settings; header halaman itu dipakai
     // ulang sebagai top bar (judul + Save / Load / Reset + status OBS),

@@ -7,6 +7,10 @@
    Panel hanya menampilkan pertanyaan yang dipilih streamer dari Queue page,
    jadi ukurannya lebih besar daripada daftar feed biasa: satu pertanyaan harus
    terbaca dari jauh oleh penonton.
+
+   Semua tampilan diatur oleh grup "Design" di dashboard. Nilainya masuk
+   sebagai custom property (--qa-*) yang dipasang script.js saat startup, jadi
+   berkas ini hanya menyediakan nilai bawaan yang masuk akal.
    ========================================================================== */
 
 html, body {
@@ -27,22 +31,34 @@ html, body {
 	flex-direction: column;
 	box-sizing: border-box;
 
-	background: rgba(32, 30, 40, 0.88);
-	border: 1px solid rgba(255, 255, 255, 0.10);
-	border-radius: 16px;
+	background: var(--qa-card-bg, rgba(32, 30, 40, 1));
+	border: 1px solid var(--qa-card-border, rgba(255, 255, 255, 0.10));
+	border-radius: var(--qa-card-radius, 16px);
 	box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
 
 	color: #eae7ee;
-	font-family: "Archivo", "Segoe UI", system-ui, sans-serif;
+	font-family: var(--qa-font, "Archivo", "Segoe UI", system-ui, sans-serif);
 	overflow: hidden;
 
-	transition: opacity 0.25s ease, transform 0.25s ease;
 	transform-origin: bottom left;
 }
 
+/* Background style: none / solid / outline (grup Design > Background).
+   `solid` memakai .qa-panel apa adanya; dua lainnya menimpanya. */
+.qa-panel.card-none {
+	background: transparent;
+	border-color: transparent;
+	box-shadow: none;
+}
+
+.qa-panel.card-outline {
+	background: transparent;
+	border: 2px solid var(--qa-hl, #d4a843);
+	box-shadow: none;
+}
+
 /* Tidak ada pertanyaan terpilih -> panel tidak memakan tempat di layar.
-   Hanya opacity yang diubah, supaya tidak bertabrakan dengan transform apa pun
-   yang mungkin ditulis di sini nanti. */
+   Disembunyikan seketika; animasi keluar dimainkan lebih dulu oleh script. */
 .qa-panel.is-empty {
 	opacity: 0;
 	pointer-events: none;
@@ -65,7 +81,7 @@ html, body {
 	justify-content: center;
 	width: 18px;
 	height: 18px;
-	color: #d4a843;
+	color: var(--qa-hl, #d4a843);
 	flex: 0 0 auto;
 }
 
@@ -81,6 +97,11 @@ html, body {
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
 	color: #f4f1f7;
+}
+
+/* Judul dimatikan dari dashboard -> header tidak mengambil ruang. */
+.qa-header.hidden {
+	display: none;
 }
 
 /* ── Kartu pertanyaan ───────────────────────────────────────────────────── */
@@ -99,16 +120,7 @@ html, body {
 	padding: 14px 16px;
 	border-radius: 12px;
 	background: rgba(255, 255, 255, 0.05);
-	border-left: 3px solid #d4a843;
-
-	/* Kartu muncul dengan dorongan halus — juga saat streamer mengganti
-	   pertanyaan yang tampil. */
-	animation: qa-in 0.3s ease both;
-}
-
-@keyframes qa-in {
-	from { opacity: 0; transform: translateY(8px); }
-	to   { opacity: 1; transform: translateY(0); }
+	border-left: 3px solid var(--qa-hl, #d4a843);
 }
 
 .qa-avatar {
@@ -123,25 +135,38 @@ html, body {
 .qa-body {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: var(--qa-gap, 4px);
 	min-width: 0;
+	flex: 1 1 auto;
+	text-align: var(--qa-align, left);
 }
 
 .qa-name {
-	font-size: 13px;
-	font-weight: 700;
-	color: #d4a843;
+	font-size: var(--qa-name-size, 22px);
+	font-weight: var(--qa-weight, 500);
+	color: var(--qa-name-color, #d4a843);
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	text-shadow: var(--qa-shadow, 0 2px 6px rgba(0, 0, 0, 0.6));
+	display: inline-block;
+}
+
+/* Highlight aktif: nama memakai warna aksen. */
+.qa-name.is-highlight {
+	color: var(--qa-hl, #d4a843);
 }
 
 .qa-text {
-	font-size: 20px;
+	font-size: var(--qa-text-size, 20px);
+	font-weight: var(--qa-weight, 500);
 	line-height: 1.4;
-	color: #f1eef5;
+	color: var(--qa-text-color, #f1eef5);
 	word-break: break-word;
 	overflow-wrap: anywhere;
+	-webkit-text-stroke: var(--qa-outline-px, 0) var(--qa-outline-color, #000000);
+	paint-order: stroke fill;
+	text-shadow: var(--qa-shadow, 0 2px 6px rgba(0, 0, 0, 0.6));
 }
 
 /* ── Hint tiket ─────────────────────────────────────────────────────────── */
@@ -152,9 +177,54 @@ html, body {
 	border-top: 1px solid rgba(255, 255, 255, 0.08);
 	font-size: 11.5px;
 	line-height: 1.4;
-	color: rgba(234, 231, 238, 0.62);
+	color: var(--qa-hint-color, #a8a3b0);
+	text-align: var(--qa-align, left);
 }
 
 .qa-hint.hidden {
 	display: none;
 }
+
+/* ── Animasi masuk/keluar (grup Design > Animation) ─────────────────────── */
+
+@keyframes qa-in-pop  { from { opacity: 0; transform: scale(0.8); }  to { opacity: 1; transform: scale(1); } }
+@keyframes qa-in-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes qa-in-up   { from { opacity: 0; transform: translateY(18px); }  to { opacity: 1; transform: none; } }
+@keyframes qa-in-down { from { opacity: 0; transform: translateY(-18px); } to { opacity: 1; transform: none; } }
+@keyframes qa-in-left { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+@keyframes qa-in-right{ from { opacity: 0; transform: translateX(28px); }  to { opacity: 1; transform: none; } }
+@keyframes qa-in-zoom { from { opacity: 0; transform: scale(1.4); }  to { opacity: 1; transform: scale(1); } }
+@keyframes qa-in-flip { from { opacity: 0; transform: perspective(700px) rotateY(90deg); } to { opacity: 1; transform: perspective(700px) rotateY(0); } }
+@keyframes qa-in-blur { from { opacity: 0; filter: blur(10px); } to { opacity: 1; filter: blur(0); } }
+@keyframes qa-in-drop { from { opacity: 0; transform: translateY(-44px); } to { opacity: 1; transform: none; } }
+@keyframes qa-in-spin { from { opacity: 0; transform: rotate(-200deg) scale(0.6); } to { opacity: 1; transform: rotate(0) scale(1); } }
+
+@keyframes qa-out-pop  { from { opacity: 1; transform: scale(1); }  to { opacity: 0; transform: scale(0.8); } }
+@keyframes qa-out-fade { from { opacity: 1; } to { opacity: 0; } }
+@keyframes qa-out-up   { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-18px); } }
+@keyframes qa-out-down { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(18px); } }
+@keyframes qa-out-left { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(-28px); } }
+@keyframes qa-out-right{ from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(28px); } }
+@keyframes qa-out-zoom { from { opacity: 1; transform: scale(1); }  to { opacity: 0; transform: scale(1.4); } }
+@keyframes qa-out-flip { from { opacity: 1; transform: perspective(700px) rotateY(0); } to { opacity: 0; transform: perspective(700px) rotateY(90deg); } }
+@keyframes qa-out-blur { from { opacity: 1; filter: blur(0); } to { opacity: 0; filter: blur(10px); } }
+@keyframes qa-out-drop { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-44px); } }
+@keyframes qa-out-spin { from { opacity: 1; transform: rotate(0) scale(1); } to { opacity: 0; transform: rotate(200deg) scale(0.6); } }
+
+/* ── Animasi highlight pada nama (grup Design > Text) ──────────────────── */
+
+@keyframes qa-hl-pulse  { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes qa-hl-wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
+@keyframes qa-hl-bounce { 0%, 100% { transform: translateY(0); } 30% { transform: translateY(-4px); } 60% { transform: translateY(0); } }
+@keyframes qa-hl-shake  { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-2px); } 60% { transform: translateX(2px); } }
+@keyframes qa-hl-tada   { 0%, 100% { transform: scale(1) rotate(0); } 20% { transform: scale(0.92) rotate(-4deg); } 60% { transform: scale(1.08) rotate(4deg); } }
+@keyframes qa-hl-glow   { 0%, 100% { text-shadow: none; } 50% { text-shadow: 0 0 12px currentColor; } }
+@keyframes qa-hl-rainbow{ from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }
+
+.qa-name.hl-pulse   { animation: qa-hl-pulse 1.4s ease-in-out infinite; }
+.qa-name.hl-wiggle  { animation: qa-hl-wiggle 1.2s ease-in-out infinite; }
+.qa-name.hl-bounce  { animation: qa-hl-bounce 1.2s ease-in-out infinite; }
+.qa-name.hl-shake   { animation: qa-hl-shake 1s ease-in-out infinite; }
+.qa-name.hl-tada    { animation: qa-hl-tada 1.4s ease-in-out infinite; }
+.qa-name.hl-glow    { animation: qa-hl-glow 1.6s ease-in-out infinite; }
+.qa-name.hl-rainbow { animation: qa-hl-rainbow 3s linear infinite; }
