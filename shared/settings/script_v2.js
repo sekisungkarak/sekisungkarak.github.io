@@ -1000,7 +1000,6 @@ function LoadJSON(settingsJson) {
                     actions.classList.add('header-actions');
                     // Dorong ke kanan (setelah badge koneksi bila ada).
                     actions.style.marginLeft = badgeType ? '12px' : 'auto';
-                    if (!badgeType) actions.style.marginRight = '-5px';
 
                     const mkBtn = (btnCfg) => {
                         const btn = document.createElement('wa-button');

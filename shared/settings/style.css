@@ -2296,6 +2296,15 @@ body.dashboard-mode #settings footer .url-bar button.obs-error {
     box-shadow: none;
 }
 
+/* Dashboard DIA saja (bukan skin-queue): tombol Reset saat menunggu klik
+   konfirmasi kedua memakai latar SOLID, bukan transparan — di dock gelap
+   latar 16% nyaris tak terlihat sehingga status "Sure?" terbaca ambigu. */
+body.dashboard-mode:not(.skin-queue) .url-bar button.is-armed {
+    background-color: #7a2b2b !important;
+    border-color: #a34245 !important;
+    color: #ffe8e8 !important;
+}
+
 /* Popup scene (Load) & modal: panel solid. */
 body.dashboard-mode .scene-dropdown-toggle,
 body.dashboard-mode .scene-dropdown-menu {

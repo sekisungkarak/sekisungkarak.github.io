@@ -120,15 +120,15 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "type": "select",
    "options": [
     {
-     "value": "id",
-     "label": "Indonesia"
-    },
-    {
      "value": "en",
      "label": "English"
+    },
+    {
+     "value": "id",
+     "label": "Indonesia"
     }
    ],
-   "defaultValue": "id",
+   "defaultValue": "en",
    "group": "General"
   },
   {
@@ -639,7 +639,7 @@ window.GESEKI_CONTROLS_SCHEMA = {
   "obsAddress": "127.0.0.1",
   "obsPort": 4455,
   "obsPassword": "",
-  "language": "id",
+  "language": "en",
   "timeFormat": "HH:mm:ss A",
   "dateFormat": "dddd, DD MMMM YYYY",
   "weatherLocation": "Jakarta",

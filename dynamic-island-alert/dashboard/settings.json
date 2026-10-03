@@ -109,15 +109,15 @@
       "type": "select",
       "options": [
         {
-          "value": "id",
-          "label": "Indonesia"
-        },
-        {
           "value": "en",
           "label": "English"
+        },
+        {
+          "value": "id",
+          "label": "Indonesia"
         }
       ],
-      "defaultValue": "id",
+      "defaultValue": "en",
       "group": "General"
     },
     {

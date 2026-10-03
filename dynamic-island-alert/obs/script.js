@@ -260,7 +260,9 @@ if (contentSize && contentSize > 0) {
 // replacing TikFinity, IndoFinity and the SMTC Bridge HTTP poll.
 const bridgePort = GetIntParam("bridgePort", 47800);
 const bridgeHost = urlParams.get("bridgeHost") || "127.0.0.1";
-const BRIDGE_WS_URL = `ws://${bridgeHost}:${bridgePort}/ws`;
+// Resolved once at startup by ResolveBridgePort(); discovery may move it
+// to whatever port the plugin is actually listening on.
+let BRIDGE_WS_URL = `ws://${bridgeHost}:${bridgePort}/ws`;
 
 // Live detection (TikTok LIVE Studio -> Stream Deck Socket.IO channel)
 const enableLiveDetect = GetBoolParam("enableLiveDetect", true);
@@ -1360,7 +1362,7 @@ function GetLiveDurationText() {
 	return `Live • ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
-const appLanguage = urlParams.get("language") || "id";
+const appLanguage = urlParams.get("language") || "en";
 
 // Mengaktifkan bahasa pilihan untuk dayjs (jika dimuat)
 if (typeof dayjs !== 'undefined') {
@@ -1512,7 +1514,7 @@ const infoPanels = [
 				return `${weatherData.desc} • ${weatherData.tempC}°C`;
 			}
 			// Ikuti Language global, sama seperti deskripsi cuaca di FetchWeather.
-			return (appLanguage || "id").toLowerCase().startsWith("id")
+			return (appLanguage || "en").toLowerCase().startsWith("id")
 				? 'Cuaca tidak tersedia'
 				: 'Weather unavailable';
 		}
@@ -3752,7 +3754,31 @@ let bridgeWebsocket = null;
 // Menggantikan TikFinity (:21213), IndoFinity (:62024) dan polling HTTP SMTC
 // Bridge (:5000). Bridge mengirim {"type":"tiktok","event":...,"data":...} dan
 // {"type":"nowplaying","data":...} lewat socket yang sama.
+// Port discovery: ask the fixed discovery port which port the bridge's
+// WebSocket is on, so a port change in the plugin needs no edit here. Silent
+// fallback to the configured port when discovery is unreachable (older bridge,
+// or the discovery port is taken).
+async function ResolveBridgePort(fallbackPort) {
+	try {
+		const ctl = new AbortController();
+		const t = setTimeout(() => ctl.abort(), 1500);
+		const r = await fetch(`http://${bridgeHost}:47800/bridge-port`, { signal: ctl.signal });
+		clearTimeout(t);
+		if (!r.ok) return fallbackPort;
+		const d = await r.json();
+		const p = Number(d && d.wsPort);
+		if (Number.isInteger(p) && p > 0 && p <= 65535) {
+			if (p !== fallbackPort) console.debug(`[Geseki][Bridge] discovery: ws port ${p}`);
+			return p;
+		}
+	} catch (e) { /* discovery tidak tersedia: pakai port dari URL */ }
+	return fallbackPort;
+}
+
 async function bridgeConnection() {
+	// Discovery first: the plugin may be listening on another port.
+	BRIDGE_WS_URL = `ws://${bridgeHost}:${await ResolveBridgePort(bridgePort)}/ws`;
+
 	const reconnectDelay = 10000;
 	let errorLogged = false;
 
