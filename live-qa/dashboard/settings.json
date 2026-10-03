@@ -31,6 +31,10 @@
       "open": false,
       "icon": "ri-layout-4-fill"
     },
+    "Content": {
+      "open": false,
+      "icon": "ri-article-fill"
+    },
     "Animation": {
       "open": false,
       "icon": "ri-play-circle-fill"
@@ -185,6 +189,10 @@
         {
           "value": "right",
           "label": "Right"
+        },
+        {
+          "value": "justify",
+          "label": "Justify"
         }
       ],
       "defaultValue": "left",
@@ -369,13 +377,85 @@
     },
     {
       "id": "designCardRadius",
-      "label": "Corner Radius",
+      "label": "Background Corner Radius",
       "type": "slider",
       "defaultValue": 16,
       "min": 0,
       "max": 120,
       "step": 1,
       "group": "Background",
+      "category": "Design"
+    },
+    {
+      "id": "designOutlineFill",
+      "label": "Fill",
+      "description": "Fill the area behind the outline.",
+      "type": "checkbox",
+      "defaultValue": false,
+      "group": "Background",
+      "category": "Design",
+      "showIf": "designCard",
+      "showIfValue": "outline"
+    },
+    {
+      "id": "designOutlineFillColor",
+      "label": "Fill Colour",
+      "type": "color",
+      "defaultValue": "#201e28",
+      "group": "Background",
+      "category": "Design",
+      "showIf": "designOutlineFill"
+    },
+    {
+      "id": "designOutlineFillOpacity",
+      "label": "Fill Opacity",
+      "type": "slider",
+      "defaultValue": 100,
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "group": "Background",
+      "category": "Design",
+      "showIf": "designOutlineFill"
+    },
+    {
+      "id": "designEmbed",
+      "label": "Embed",
+      "description": "Discord-style card behind the question (accent stripe + fill).",
+      "type": "checkbox",
+      "defaultValue": true,
+      "group": "Content",
+      "category": "Design"
+    },
+    {
+      "id": "designEmbedColor",
+      "label": "Content Colour",
+      "type": "color",
+      "defaultValue": "#ffffff",
+      "group": "Content",
+      "category": "Design"
+    },
+    {
+      "id": "designEmbedOpacity",
+      "label": "Content Opacity",
+      "type": "slider",
+      "defaultValue": 5,
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "group": "Content",
+      "category": "Design"
+    },
+    {
+      "id": "designContentRadius",
+      "label": "Content Radius",
+      "description": "Inner content card.",
+      "type": "slider",
+      "defaultValue": 12,
+      "min": 0,
+      "max": 120,
+      "step": 1,
+      "group": "Content",
       "category": "Design"
     },
     {

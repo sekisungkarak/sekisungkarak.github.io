@@ -366,6 +366,7 @@
 	// klik sekali lagi = keluar.
 	function BuildGear() {
 		gear = h('button', 'cp-gear', '\u2699');
+		gear.type = 'button';
 		gear.title = 'Layout (S)';
 		gear.addEventListener('click', Toggle);
 		document.body.appendChild(gear);

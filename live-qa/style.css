@@ -56,7 +56,8 @@ html, body {
 }
 
 .qa-panel.card-outline {
-	background: transparent;
+	/* Latar transparan kecuali opsi Fill diaktifkan (--qa-outline-fill). */
+	background: var(--qa-outline-fill, transparent);
 	border: 2px solid var(--qa-hl, #d4a843);
 	box-shadow: none;
 }
@@ -128,9 +129,16 @@ html, body {
 	align-items: flex-start;
 	gap: 14px;
 	padding: 14px 16px;
-	border-radius: 12px;
-	background: rgba(255, 255, 255, 0.05);
+	/* Radius kartu konten (Design > Background: Content Radius). */
+	border-radius: var(--qa-content-radius, 12px);
+	/* Latar konten (Design > Background: Content Colour + Content Opacity). */
+	background: var(--qa-content-bg, rgba(255, 255, 255, 0.05));
 	border-left: 3px solid var(--qa-hl, #d4a843);
+}
+
+/* Embed dimatikan: desain embed (stripe aksen) hilang; latar konten tetap. */
+.qa-panel.no-embed .qa-item {
+	border-left-color: transparent;
 }
 
 .qa-avatar {

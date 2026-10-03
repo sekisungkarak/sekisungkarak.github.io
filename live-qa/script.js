@@ -166,6 +166,15 @@ const design = {
 	cardColor: GetParam('designCardColor', '#201e28'),
 	cardOpacity: GetIntParam('designCardOpacity', 100),
 	cardRadius: GetIntParam('designCardRadius', 16),
+	// Isi latar khusus style Outline (toggle + warna + opacity).
+	outlineFill: GetBoolParam('designOutlineFill', false),
+	outlineFillColor: GetParam('designOutlineFillColor', '#201e28'),
+	outlineFillOpacity: GetIntParam('designOutlineFillOpacity', 100),
+	// Desain "embed": kartu konten di dalam panel (stripe aksen + latar).
+	embed: GetBoolParam('designEmbed', true),
+	embedColor: GetParam('designEmbedColor', '#ffffff'),
+	embedOpacity: GetIntParam('designEmbedOpacity', 5),
+	contentRadius: GetIntParam('designContentRadius', 12),
 	animIn: GetParam('designAnimIn', 'up'),
 	animOut: GetParam('designAnimOut', 'fade'),
 	inMs: GetIntParam('designInMs', 500),
@@ -222,12 +231,22 @@ function ApplyDesign() {
 	root.style.setProperty('--qa-shadow', design.shadow ? '0 2px 6px rgba(0, 0, 0, 0.6)' : 'none');
 	root.style.setProperty('--qa-card-radius', design.cardRadius + 'px');
 	root.style.setProperty('--qa-card-bg', HexToRgba(design.cardColor, design.cardOpacity));
+	// Style Outline: latar transparan kecuali Fill diaktifkan.
+	root.style.setProperty('--qa-outline-fill',
+		design.outlineFill ? HexToRgba(design.outlineFillColor, design.outlineFillOpacity) : 'transparent');
+	// Latar konten: selalu dari Content Colour + Content Opacity (independen
+	// dari switch Embed). Switch Embed hanya mengatur desain embed-nya.
+	root.style.setProperty('--qa-content-bg', HexToRgba(design.embedColor, design.embedOpacity));
+	// Radius kartu konten (terpisah dari radius panel background).
+	root.style.setProperty('--qa-content-radius', design.contentRadius + 'px');
 
 	const header = document.getElementById('qaHeader');
 	if (header) header.classList.toggle('hidden', !design.showTitle);
 	qaPanel.classList.remove('card-none', 'card-outline');
 	if (design.card === 'none') qaPanel.classList.add('card-none');
 	else if (design.card === 'outline') qaPanel.classList.add('card-outline');
+	// Embed off -> sembunyikan stripe aksen kartu konten.
+	qaPanel.classList.toggle('no-embed', !design.embed);
 }
 
 // ── Elemen ───────────────────────────────────────────────────────────────────
