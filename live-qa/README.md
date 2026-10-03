@@ -1,84 +1,51 @@
 ## Requirements
 
 - **OBS Studio 30+** with the built-in **obs-websocket** enabled.
-- A TikTok live connection from **Geseki Bridge** — the widget reads the same
-  `gift` and `chat` events the alerts use, so no extra bridge is needed.
-
----
-
-## How it works
-
-A viewer types your **question prefix** (`!q` by default) followed by their
-question in chat. The question goes into a **queue** — nothing appears on
-stream yet.
-
-Open the **Queue** tab in the dashboard to see the list, then click a
-question to put it on screen. The overlay shows **one** question at a time and
-keeps it there until you pick another one or press **Hide**. Questions you have
-already shown stay in the list, marked `sudah`, so you can bring them back
-whenever you want.
-
-If you pick a **Ticket Gift** in the dashboard, a ticket becomes required: a
-viewer must send that gift first, and one gift grants exactly one question.
-Leave the gift empty (the default) and anyone can ask with just the prefix.
-
-> [!NOTE]
-> This widget does **not** use TikTok's built-in Q&A mode. That mode has to be
-> enabled by the streamer and its events are not guaranteed to arrive, so the
-> ticket flow is built entirely on `gift` and `chat` instead.
+- **Geseki Bridge** for the TikTok live connection — [download](https://github.com/sekisungkarak/geseki-bridge/releases).
 
 ---
 
 ## Installation
 
-Everything is configured from a **Dashboard** inside OBS. Add a **Browser**
-source to the scene you want the question in and use this URL:
+Everything is configured from the **Live Q&A** dock that Geseki Bridge adds to
+OBS. Open **Docks** in the menu bar and enable it.
 
-| Field | Value |
-|---|---|
-| URL | https://sekisungkarak.web.id/live-qa/ |
+![Enable the Live Q&A dock in OBS](docs/Assets/enable-dock.png)
 
-Then position the source in OBS as you like — the widget draws nothing until
-you show a question, so an empty source is normal.
+In the dock, open **OBS Connection**, fill **Server IP** and **Port** (default
+`4455`), plus the **Password** if you set one under **Tools → WebSocket Server
+Settings**, then press **Save**. Saving adds the widget to the active scene on
+its own — the overlay shows up on stream right away, with no Browser source to
+add by hand. The status dot turns green once the widget is talking to OBS.
 
----
-
-## Dashboard dock
-
-Add it via **Docks → Custom Browser Docks** with this URL:
-
-| Field | Value |
-|---|---|
-| URL | https://sekisungkarak.web.id/live-qa/dashboard/ |
-
-The dock has two tabs:
-
-- **Settings** — everything in the table below.
-- **Queue** — the question list. Click a question to show it, press
-  **Hide** to take it off screen, and use **Sample** to add a random lorem
-  ipsum question for testing without a real chat.
-  for testing without a real chat.
-
-The badge on the **Queue** tab shows how many questions are waiting.
+![OBS Connection settings in the dock](docs/Assets/obs-websocket.png)
 
 ---
 
-## Settings
+## Queue
 
-| Setting | Default | Description |
-|---|---|---|
-| Server IP / Port / Password | `127.0.0.1` / `4455` | OBS WebSocket, used by the dock. |
-| Bridge Host / Port | `127.0.0.1` / `47800` | Where Geseki Bridge listens. |
-| Ticket Gift | empty | Gift required before asking. The dropdown lists every TikTok gift with its icon, coin price and id, and is searchable. Empty = no ticket needed. |
-| Question Prefix | `!q` | Chat starting with this counts as a question. |
-| Show Avatar | on | Show the asker's profile picture. |
-| Show Ticket Hint | on | Show the hint line under the question card. |
-| Hint Text | `Send {gift}, then type {prefix} your question` | Used only when a ticket gift is set. `{gift}` and `{prefix}` are filled in. Without a gift the widget says `Type !q to ask a question`. |
+Viewers ask from chat; you manage the questions from the **Queue** tab.
 
-### About the gift list
+![The Queue tab in the dock](docs/Assets/queue.png)
 
-The dropdown reads `gifts.json`, a snapshot of TikTok's own gift catalogue
-(id, name, coin price, icon) stored next to `settings.json`. Matching is done by
-**id**, never by name, because TikTok localises gift names — Galaxy shows as
-**Galaksi** in Indonesian. Regenerate the snapshot with
-`_tools/make_gifts_json.py` when TikTok adds new gifts.
+Set the **Question Prefix** (`!q` by default) in the dock's **Questions**
+section. A chat message that starts with it becomes a question and is added to
+the queue — nothing appears on stream yet.
+
+Click a question in the queue to put it on screen; the overlay shows one question
+at a time. Use **Next** and **Previous** to step through the list, and **Hide**
+to take the question off screen.
+
+To test without a real chat, press **Sample** to add a random lorem ipsum
+question. The badge on the **Queue** tab counts how many questions are waiting,
+and a question you have already shown stays in the list tagged `shown`, so you
+can show it again.
+
+To require a gift before someone can ask, pick a **Ticket Gift**: the viewer must
+send that gift first, and each gift grants one question. Leave it empty and
+anyone can ask with just the prefix.
+
+> [!NOTE]
+> This widget does not use TikTok's built-in Q&A mode. That mode must be enabled
+> by the streamer and its events are not guaranteed to arrive, so the ticket flow
+> is built entirely on `gift` and `chat` instead.

@@ -8,15 +8,6 @@
   var T = C.T || function (s) { return s; };
   var boot = JSON.parse(document.getElementById('homeBoot').textContent);
 
-  // Per-widget glyphs for the placeholder thumbnail, keyed by catalog id.
-  // Falls back to a generic mark, so a new widget is never blank.
-  var GLYPH = {
-    'multi-poll': 'M3 13h4v9H3zM10 7h4v15h-4zM17 2h4v20h-4z',
-    'bubble-alerts': 'M12 2C6.5 2 2 5.86 2 10.62c0 2.7 1.45 5.1 3.7 6.68V22l4.1-2.3c.71.12 1.45.19 2.2.19 5.5 0 10-3.86 10-8.62S17.5 2 12 2z',
-    'group-chat-overlay': 'M9 2C4.58 2 1 4.98 1 8.65c0 1.98 1.05 3.76 2.7 4.98v3.3l3.2-1.79c.67.13 1.38.2 2.1.2 4.42 0 8-2.98 8-6.69S13.42 2 9 2z M17.4 8.02c3.2.62 5.6 3 5.6 5.85 0 1.67-.83 3.18-2.17 4.24V21l-2.7-1.5c-.57.1-1.16.15-1.77.15-3.1 0-5.78-1.42-7.06-3.5.42.04.85.06 1.29.06 5.1 0 9.2-3.5 9.2-7.86 0-.11 0-.22-.01-.33z',
-    _: 'M4 4h16v5H4zM4 11h16v9H4z'
-  };
-
   var PLAT_LOGO = {
     twitch: ['twitch/logo-twitch.svg', 19],
     youtube: ['youtube/logo-youtube.svg', 21],
@@ -79,10 +70,6 @@
       // --brand, sitting behind the body copy.
       '<span class="tile-blob" aria-hidden="true"></span>' +
       '<div class="thumb">' + art +
-        '<svg class="ghost" viewBox="0 0 24 24" fill="' + accent + '"><path d="' + (GLYPH[c.id] || GLYPH._) + '"></path></svg>' +
-        (c.eyebrow
-          ? '<span class="eyebrow-chip">' + C.esc(c.eyebrow) + '</span>'
-          : '') +
       '</div>' +
       // Platform mark leads the card; the name sits in the footer beside Docs.
       '<div class="tile-body">' +

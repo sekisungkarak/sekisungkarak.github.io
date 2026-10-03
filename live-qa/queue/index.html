@@ -12,7 +12,7 @@
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.9.1/fonts/remixicon.min.css">
 
 	<link rel="icon" type="image/png" href="../../shared/assets/images/avatar.png">
-	<link rel="stylesheet" href="queue.css?v=2">
+	<link rel="stylesheet" href="queue.css?v=4">
 </head>
 
 <body>
@@ -46,10 +46,18 @@
 		<div class="onair-head">
 			<span class="dot" aria-hidden="true"></span>
 			<span>On screen</span>
-			<button id="hideBtn" class="btn btn-ghost btn-sm" type="button">
-				<i class="ri-eye-off-line" aria-hidden="true"></i>
-				<span>Hide</span>
-			</button>
+			<div class="onair-nav">
+				<button id="prevOnairBtn" class="btn btn-ghost btn-sm" type="button" title="Previous question">
+					<i class="ri-skip-back-line" aria-hidden="true"></i>
+				</button>
+				<button id="nextOnairBtn" class="btn btn-ghost btn-sm" type="button" title="Next question">
+					<i class="ri-skip-forward-line" aria-hidden="true"></i>
+				</button>
+				<button id="hideBtn" class="btn btn-ghost btn-sm" type="button">
+					<i class="ri-eye-off-line" aria-hidden="true"></i>
+					<span>Hide</span>
+				</button>
+			</div>
 		</div>
 		<div id="onairBody" class="onair-body"></div>
 	</section>
@@ -81,7 +89,7 @@
 		</div>
 	</section>
 
-	<script src="queue.js?v=10"></script>
+	<script src="queue.js?v=11"></script>
 </body>
 
 </html>

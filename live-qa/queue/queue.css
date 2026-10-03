@@ -103,6 +103,12 @@ body {
 	font-size: 12px;
 }
 
+/* .scene-tag memakai display:inline-flex, yang MENGALAHKAN [hidden] bawaan
+   browser — tanpa aturan ini, hidden=true hanya menyisakan pill kosong. */
+.scene-tag[hidden] {
+	display: none;
+}
+
 .bar-actions {
 	display: flex;
 	align-items: center;
@@ -218,7 +224,11 @@ body {
 	100% { box-shadow: 0 0 0 0 rgba(226, 104, 107, 0); }
 }
 
-.onair-head .btn {
+/* Kontrol di kanan: prev / next / hide, satu grup. */
+.onair-head .onair-nav {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
 	margin-left: auto;
 }
 

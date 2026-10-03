@@ -18,7 +18,6 @@ const tabQueue = document.getElementById('tabQueue');
 const paneSettings = document.getElementById('paneSettings');
 const paneQueue = document.getElementById('paneQueue');
 const queueBadge = document.getElementById('queueBadge');
-const brandName = document.getElementById('brandName');
 
 // Identitas widget. Nama ini juga dipakai sebagai nama OBS source (sourceName)
 // dan judul di navbar.
@@ -32,8 +31,6 @@ const settingsDir = new URL('./', window.location.href).href;
 
 // Widget yang dikendalikan: index.html di root live-qa.
 const widgetURL = new URL('../index.html', window.location.href).href;
-
-brandName.textContent = WIDGET_NAME;
 
 dashFrame.src =
     settingsPageURL +

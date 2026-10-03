@@ -1,49 +1,35 @@
 ## Requirements
 
 - **OBS Studio 30+** with the built-in **obs-websocket** enabled.
-- A TikTok live connection and Now Playing, both from **Geseki Bridge** — one
-  WebSocket feeds live events and the current track, so no TikFinity, IndoFinity
-  or SMTC bridge is needed.
+- **Geseki Bridge** for the TikTok live connection and Now Playing — [download](https://github.com/sekisungkarak/geseki-bridge/releases).
 
 ---
 
 ## Installation
 
-Everything is configured from a **Controls Panel** that opens on top of the
-overlay itself, so you tune the alert while looking at it. No separate
-dashboard and no long URL. Add a **Browser** source to the scene you want the
-alert in and use this URL:
+Everything is configured from the **Dynamic Island Alert** dock that Geseki
+Bridge adds to OBS. Open **Docks** in the menu bar and enable it.
 
-| Field | Value |
-|---|---|
-| URL | https://sekisungkarak.web.id/dynamic-island-alert/ |
+![Enable the Dynamic Island Alert dock in OBS](docs/assets/enable-dock.png)
 
-Then select the source, click **Interact** and press **S**, or click the small
-gear that appears in the top-left corner while you move your mouse (it never
-shows on stream), to open the panel. On first run the **Connect OBS** dialog
-opens on its own: enter the **Port** (default `4455`) and **Password** from
-**Tools → WebSocket Server Settings**, then press **Connect**. The dot turns
-green once the overlay is talking to OBS. You can drag the panel by its title
-bar to move it anywhere, and double-click the title bar to send it back to the
-bottom-left corner.
+In the dock, fill the **OBS Connection** card: **Server IP** and **Port**
+(default `4455`), plus the **Password** if you set one under **Tools →
+WebSocket Server Settings**, then press **Save**. Saving adds the widget to the
+active scene on its own — the overlay shows up on stream right away, with no
+Browser source to add by hand. The status dot turns green once the widget is
+talking to OBS.
 
-![The Controls Panel, Alerts tab](docs/assets/install-panel.png)
-
-![Connect OBS, Port and Password](docs/assets/install-obs-connect.png)
-
-> [!WARNING]
-> **One widget per scene**: keep a single widget in each scene, and turn the
-> notification sound on for one source only, so the sounds do not clash.
+![OBS Connection settings in the dock](docs/assets/obs-websocket.png)
 
 ---
 
-## Alternative: the dashboard dock
+## Customization
 
-If you would rather configure everything in a dock inside OBS, the older
-dashboard still works and reads the same saved profiles as the panel, so you
-can switch between them at any time without losing anything. Add it via
-**Docks → Custom Browser Docks** with this URL:
+The **Controls Panel** opens on top of the overlay itself, so you tune the
+alert while looking at it. Select the source, click **Interact** and press
+**S**, or click the small gear that appears in the top-left corner while you
+move your mouse (it never shows on stream). You can drag the panel by its
+title bar to move it anywhere, and double-click the title bar to send it back
+to the bottom-left corner.
 
-| Field | Value |
-|---|---|
-| URL | https://sekisungkarak.web.id/dynamic-island-alert/dashboard/ |
+![The Controls Panel, Alerts tab](docs/assets/install-panel.png)

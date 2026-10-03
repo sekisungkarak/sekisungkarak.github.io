@@ -23,6 +23,8 @@ const PAGE_SIZE = 5;
 const clearBtn = document.getElementById('clearBtn');
 const testBtn = document.getElementById('testBtn');
 const hideBtn = document.getElementById('hideBtn');
+const prevOnairBtn = document.getElementById('prevOnairBtn');
+const nextOnairBtn = document.getElementById('nextOnairBtn');
 const onairBody = document.getElementById('onairBody');
 const queueList = document.getElementById('queueList');
 const queueCount = document.getElementById('queueCount');
@@ -146,6 +148,40 @@ function RenderOnAir() {
 	hideBtn.disabled = false;
 }
 
+/* Posisi pertanyaan yang sedang On screen di dalam antrean (-1 = tidak ada). */
+function OnairIndex() {
+	return state.questions.findIndex(function (q) { return q.id === state.currentId; });
+}
+
+/* Pindah satu langkah di antrean lalu tampilkan. Saat belum ada yang On screen,
+   Next mulai dari yang pertama dan Previous dari yang terakhir. Tidak memutar
+   (wrap): di ujung, tombolnya nonaktif. */
+function StepOnair(delta) {
+	const n = state.questions.length;
+	if (!n) return;
+	const i = OnairIndex();
+	let target;
+	if (i < 0) target = delta > 0 ? 0 : n - 1;
+	else {
+		target = i + delta;
+		if (target < 0 || target >= n) return;
+	}
+	Send({ type: 'qa_show', id: state.questions[target].id });
+}
+
+/* Aktif/nonaktif tombol navigasi sesuai posisi On screen. */
+function RenderOnairNav() {
+	const n = state.questions.length;
+	const i = OnairIndex();
+	if (i < 0) {
+		prevOnairBtn.disabled = n === 0;
+		nextOnairBtn.disabled = n === 0;
+	} else {
+		prevOnairBtn.disabled = i <= 0;
+		nextOnairBtn.disabled = i >= n - 1;
+	}
+}
+
 function BuildRow(q) {
 	const isOnAir = q.id === state.currentId;
 
@@ -245,6 +281,7 @@ function RenderQueue() {
 function Render() {
 	RenderScene();
 	RenderOnAir();
+	RenderOnairNav();
 	RenderQueue();
 	// Prefix ikut scene: scene lain bisa memakai prefix berbeda.
 	if (state.prefix) prefixHint.textContent = state.prefix;
@@ -282,6 +319,8 @@ if (bc) {
 /* ── Actions ────────────────────────────────────────────────────────────── */
 
 hideBtn.addEventListener('click', function () { Send({ type: 'qa_hide' }); });
+prevOnairBtn.addEventListener('click', function () { StepOnair(-1); });
+nextOnairBtn.addEventListener('click', function () { StepOnair(1); });
 
 /* Two-click confirmation, NOT window.confirm: the native modal dialog is not
    reliable inside the OBS CEF dock and can freeze the page. The first click

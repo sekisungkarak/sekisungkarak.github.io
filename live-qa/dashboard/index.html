@@ -22,9 +22,7 @@
 			flex-direction: column;
 		}
 
-		/* Navbar: brand widget di kiri, tab di sebelahnya. Nama widget dulu
-		   ada di header halaman Settings; sekarang pindah ke sini supaya
-		   header itu bisa dibuang di dalam dock. */
+		/* Navbar: tab Settings / Queue. */
 		#tabs {
 			display: flex;
 			align-items: center;
@@ -33,27 +31,6 @@
 			padding: 8px 10px;
 			border-bottom: 1px solid rgba(255, 255, 255, 0.09);
 			background: rgba(255, 255, 255, 0.02);
-		}
-
-		#brand {
-			display: flex;
-			align-items: center;
-			gap: 9px;
-			padding: 0 12px 0 4px;
-			margin-right: 6px;
-			border-right: 1px solid rgba(255, 255, 255, 0.09);
-			min-width: 0;
-		}
-
-		#brandName {
-			font-family: "Archivo Black", "Archivo", sans-serif;
-			font-size: 12.5px;
-			letter-spacing: 0.04em;
-			text-transform: uppercase;
-			color: #eae7ee;
-			white-space: nowrap;
-			overflow: hidden;
-			text-overflow: ellipsis;
 		}
 
 		#tabs button {
@@ -117,10 +94,6 @@
 
 <body>
 	<div id="tabs">
-		<div id="brand">
-			<span id="brandName">Live Q&amp;A</span>
-		</div>
-
 		<button id="tabSettings" type="button" class="is-active">
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 				<circle cx="12" cy="12" r="3"></circle>
@@ -145,7 +118,7 @@
 		<iframe id="dashFrame" allow="clipboard-write; clipboard-read"></iframe>
 	</div>
 
-	<script src="dashboard.js?v=15"></script>
+	<script src="dashboard.js?v=16"></script>
 </body>
 
 </html>
