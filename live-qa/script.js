@@ -242,6 +242,9 @@ const qaHint = document.getElementById('qaHint');
 // pengguna, sama seperti preferensi panel di dynamic-island-alert.
 const LAYOUT_MIN_SCALE = 0.5;
 const LAYOUT_MAX_SCALE = 2.0;
+// Skala bawaan widget overlay — sengaja sedikit di bawah 1 supaya tidak
+// terlalu besar di canvas. Bisa diubah lewat handle sudut di mode Layout.
+const LAYOUT_DEFAULT_SCALE = 0.8;
 const LAYOUT_KEYS = {
 	x: WIDGET_NS + 'layout-x',
 	y: WIDGET_NS + 'layout-y',
@@ -280,18 +283,20 @@ function ReadLayout() {
 	return {
 		x: Math.round(ReadLayoutNumber(LAYOUT_KEYS.x, 0)),
 		y: Math.round(ReadLayoutNumber(LAYOUT_KEYS.y, 0)),
-		scale: ClampLayoutScale(ReadLayoutNumber(LAYOUT_KEYS.scale, 1)),
+		scale: ClampLayoutScale(ReadLayoutNumber(LAYOUT_KEYS.scale, LAYOUT_DEFAULT_SCALE)),
 		rotation: ClampLayoutRotation(ReadLayoutNumber(LAYOUT_KEYS.rotation, 0)),
 		width: Math.max(0, Math.round(ReadLayoutNumber(LAYOUT_KEYS.width, 0))),
 		height: Math.max(0, Math.round(ReadLayoutNumber(LAYOUT_KEYS.height, 0)))
 	};
 }
 
-/* Offset sebagai MARGIN dari jangkar CSS (kiri-bawah), bukan left/top:
+/* Offset sebagai MARGIN dari jangkar CSS (TENGAH canvas), bukan left/top:
    mengubah posisi absolut merusak animasi panel. */
 function ApplyLayoutToPanel(st) {
 	qaPanel.style.marginLeft = st.x + 'px';
-	qaPanel.style.marginBottom = st.y + 'px';
+	qaPanel.style.marginTop = st.y + 'px';
+	// Pusat ditahan oleh properti `translate` di .qa-panel (style.css);
+	// transform di sini hanya skala + rotasi, jadi pusat tidak ikut bergeser.
 	qaPanel.style.transform = 'scale(' + st.scale + ') rotate(' + st.rotation + 'deg)';
 
 	// Ukuran eksplisit (fitur resize). 0 = kembali ke lebar/tinggi CSS.

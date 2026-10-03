@@ -20,11 +20,15 @@ html, body {
 	overflow: hidden;
 }
 
-/* Titik jangkar default: kiri-bawah. */
+/* Titik jangkar: TENGAH canvas (khusus Live Q&A). Offset layout disimpan
+   sebagai margin dari titik tengah, jadi widget selalu mulai di tengah.
+   Pusat dipasang lewat properti `translate` (bukan `transform`) supaya
+   animasi masuk/keluar yang memakai `scale` tidak menggeser pusatnya. */
 .qa-panel {
 	position: fixed;
-	left: 40px;
-	bottom: 40px;
+	left: 50%;
+	top: 50%;
+	translate: -50% -50%;
 	width: 520px;
 	max-width: calc(100vw - 80px);
 	display: flex;
@@ -40,7 +44,7 @@ html, body {
 	font-family: var(--qa-font, "Archivo", "Segoe UI", system-ui, sans-serif);
 	overflow: hidden;
 
-	transform-origin: bottom left;
+	transform-origin: center center;
 }
 
 /* Background style: none / solid / outline (grup Design > Background).
@@ -193,28 +197,30 @@ html, body {
 
 /* ── Animasi masuk/keluar (grup Design > Animation) ─────────────────────── */
 
+/* Catatan: `translate` di keyframe HARUS memuat -50% -50% (titik tengah panel).
+   Kalau tidak, animasi menimpa centering .qa-panel dan widget melompat. */
 @keyframes qa-in-pop  { from { opacity: 0; scale: 0.8; }  to { opacity: 1; scale: 1; } }
 @keyframes qa-in-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes qa-in-up   { from { opacity: 0; translate: 0 18px; }  to { opacity: 1; translate: 0 0; } }
-@keyframes qa-in-down { from { opacity: 0; translate: 0 -18px; } to { opacity: 1; translate: 0 0; } }
-@keyframes qa-in-left { from { opacity: 0; translate: -28px 0; } to { opacity: 1; translate: 0 0; } }
-@keyframes qa-in-right{ from { opacity: 0; translate: 28px 0; }  to { opacity: 1; translate: 0 0; } }
+@keyframes qa-in-up   { from { opacity: 0; translate: -50% calc(-50% + 18px); }  to { opacity: 1; translate: -50% -50%; } }
+@keyframes qa-in-down { from { opacity: 0; translate: -50% calc(-50% - 18px); } to { opacity: 1; translate: -50% -50%; } }
+@keyframes qa-in-left { from { opacity: 0; translate: calc(-50% - 28px) -50%; } to { opacity: 1; translate: -50% -50%; } }
+@keyframes qa-in-right{ from { opacity: 0; translate: calc(-50% + 28px) -50%; }  to { opacity: 1; translate: -50% -50%; } }
 @keyframes qa-in-zoom { from { opacity: 0; scale: 1.4; }  to { opacity: 1; scale: 1; } }
 @keyframes qa-in-flip { from { opacity: 0; rotate: y 90deg; } to { opacity: 1; rotate: y 0deg; } }
 @keyframes qa-in-blur { from { opacity: 0; filter: blur(10px); } to { opacity: 1; filter: blur(0); } }
-@keyframes qa-in-drop { from { opacity: 0; translate: 0 -44px; } to { opacity: 1; translate: 0 0; } }
+@keyframes qa-in-drop { from { opacity: 0; translate: -50% calc(-50% - 44px); } to { opacity: 1; translate: -50% -50%; } }
 @keyframes qa-in-spin { from { opacity: 0; rotate: -200deg; scale: 0.6; } to { opacity: 1; rotate: 0deg; scale: 1; } }
 
 @keyframes qa-out-pop  { from { opacity: 1; scale: 1; }  to { opacity: 0; scale: 0.8; } }
 @keyframes qa-out-fade { from { opacity: 1; } to { opacity: 0; } }
-@keyframes qa-out-up   { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 0 -18px; } }
-@keyframes qa-out-down { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 0 18px; } }
-@keyframes qa-out-left { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: -28px 0; } }
-@keyframes qa-out-right{ from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 28px 0; } }
+@keyframes qa-out-up   { from { opacity: 1; translate: -50% -50%; } to { opacity: 0; translate: -50% calc(-50% - 18px); } }
+@keyframes qa-out-down { from { opacity: 1; translate: -50% -50%; } to { opacity: 0; translate: -50% calc(-50% + 18px); } }
+@keyframes qa-out-left { from { opacity: 1; translate: -50% -50%; } to { opacity: 0; translate: calc(-50% - 28px) -50%; } }
+@keyframes qa-out-right{ from { opacity: 1; translate: -50% -50%; } to { opacity: 0; translate: calc(-50% + 28px) -50%; } }
 @keyframes qa-out-zoom { from { opacity: 1; scale: 1; }  to { opacity: 0; scale: 1.4; } }
 @keyframes qa-out-flip { from { opacity: 1; rotate: y 0deg; } to { opacity: 0; rotate: y 90deg; } }
 @keyframes qa-out-blur { from { opacity: 1; filter: blur(0); } to { opacity: 0; filter: blur(10px); } }
-@keyframes qa-out-drop { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 0 -44px; } }
+@keyframes qa-out-drop { from { opacity: 1; translate: -50% -50%; } to { opacity: 0; translate: -50% calc(-50% - 44px); } }
 @keyframes qa-out-spin { from { opacity: 1; rotate: 0deg; scale: 1; } to { opacity: 0; rotate: 200deg; scale: 0.6; } }
 
 /* ── Animasi highlight pada nama (grup Design > Text) ──────────────────── */

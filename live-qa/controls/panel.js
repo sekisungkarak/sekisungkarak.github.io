@@ -24,6 +24,8 @@
 
 	var LAYOUT_MIN_SCALE = 0.5;
 	var LAYOUT_MAX_SCALE = 2.0;
+	// Skala bawaan (sama dengan script.js) — sedikit di bawah 1.
+	var LAYOUT_DEFAULT_SCALE = 0.8;
 	var LAYOUT_SNAP = 8;
 	// Ukuran minimum supaya widget tidak bisa diciutkan sampai tak terlihat.
 	var LAYOUT_MIN_W = 120;
@@ -33,7 +35,7 @@
 	   di localStorage. Tanpa itu geser/ukuran/skala/rotasi hilang setiap overlay
 	   dimuat ulang. width/height = 0 berarti "ikuti CSS" (auto). */
 	var LAYOUT = window.GesekiQaLayout || null;
-	var layoutState = LAYOUT ? LAYOUT.get() : { x: 0, y: 0, scale: 1, rotation: 0, width: 0, height: 0 };
+	var layoutState = LAYOUT ? LAYOUT.get() : { x: 0, y: 0, scale: LAYOUT_DEFAULT_SCALE, rotation: 0, width: 0, height: 0 };
 
 	var layoutOn = false;
 
@@ -57,11 +59,13 @@
 
 	// ── Terapkan offset / ukuran / skala / rotasi ke panel ──────────────────
 
+	// Jangkar = TENGAH canvas (khusus Live Q&A). Offset disimpan sebagai margin
+	// dari titik tengah, jadi (0,0) = widget pas di tengah.
 	function ApplyOffset(x, y) {
 		layoutState.x = Math.round(x);
 		layoutState.y = Math.round(y);
 		qaPanel.style.marginLeft = layoutState.x + 'px';
-		qaPanel.style.marginBottom = layoutState.y + 'px';
+		qaPanel.style.marginTop = layoutState.y + 'px';
 	}
 
 	/* Ukuran eksplisit dari handle sisi. 0 = kembali ke lebar/tinggi CSS.
@@ -101,10 +105,11 @@
 		return d;
 	}
 
-	// transform-origin panel = "bottom left", jadi pivot-nya sudut kiri-bawah.
+	// transform-origin panel = TENGAH (lihat style.css), jadi pivot-nya juga tengah.
+	// transform-origin = TENGAH panel, jadi pivot skala/rotasi juga tengah.
 	function Pivot() {
 		var r = qaPanel.getBoundingClientRect();
-		return { x: r.left, y: r.bottom };
+		return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 	}
 
 	function ShowGuides(gx, gy) {
@@ -176,13 +181,11 @@
 		var w = d.startW, hgt = d.startH;
 		var ox = d.startX, oy = d.startY;
 
-		// Sisi kanan: lebar tumbuh, jangkar kiri tetap.
+		// Jangkar TENGAH: ukuran tumbuh/menyusut simetris dari titik tengah,
+		// jadi offset tidak perlu ikut bergeser.
 		if (d.handle.indexOf('e') !== -1) w = d.startW + ld.x;
-		// Sisi kiri: lebar tumbuh ke kiri -> panel ikut bergeser kiri.
-		if (d.handle.indexOf('w') !== -1) { w = d.startW - ld.x; ox = d.startX + ld.x; }
-		// Sisi bawah: tinggi tumbuh ke bawah -> margin bawah berkurang.
-		if (d.handle.indexOf('s') !== -1) { hgt = d.startH + ld.y; oy = d.startY - ld.y; }
-		// Sisi atas: tinggi tumbuh ke atas, jangkar bawah tetap.
+		if (d.handle.indexOf('w') !== -1) w = d.startW - ld.x;
+		if (d.handle.indexOf('s') !== -1) hgt = d.startH + ld.y;
 		if (d.handle.indexOf('n') !== -1) hgt = d.startH - ld.y;
 
 		ApplyOffset(ox, oy);
@@ -217,7 +220,7 @@
 		var vw = window.innerWidth, vh = window.innerHeight;
 		var cx = d.rect.left + dx + d.rect.width / 2;
 		var cy = d.rect.top + dy + d.rect.height / 2;
-		var nx = d.ox + dx, ny = d.oy - dy; // Y dibalik: jangkar bawah.
+		var nx = d.ox + dx, ny = d.oy + dy; // Jangkar tengah: Y tumbuh ke bawah.
 		var gx = null, gy = null;
 		if (Math.abs(cx - vw / 2) <= LAYOUT_SNAP) { nx += (vw / 2 - cx); gx = vw / 2; }
 		if (Math.abs(cy - vh / 2) <= LAYOUT_SNAP) { ny += (cy - vh / 2); gy = vh / 2; }
@@ -228,7 +231,7 @@
 	function ResetLayout() {
 		ApplyOffset(0, 0);
 		ApplySize(0, 0);
-		ApplyScale(1);
+		ApplyScale(LAYOUT_DEFAULT_SCALE);
 		ApplyRotation(0);
 		PersistLayout();
 	}
@@ -326,7 +329,7 @@
 		giOverlay.appendChild(giGuideV);
 		giOverlay.appendChild(giGuideH);
 		giOverlay.appendChild(giFrame);
-		giOverlay.appendChild(h('div', 'gi-hint', 'Layout — seret untuk pindah · sisi untuk ukuran · sudut untuk skala · titik atas untuk rotasi'));
+		giOverlay.appendChild(h('div', 'gi-hint', 'Layout mode — drag to move · sides to resize · corners to scale · top dot to rotate'));
 		document.body.appendChild(giOverlay);
 
 		// Terapkan layout tersimpan (widget sudah menerapkannya; mode Layout
@@ -350,7 +353,10 @@
 			if (giOverlay) giOverlay.classList.remove('is-on');
 			qaPanel.classList.remove('is-layout');
 		}
-		if (gear) gear.classList.toggle('is-active', layoutOn);
+		if (gear) {
+			gear.classList.toggle('is-active', layoutOn);
+			if (layoutOn) gear.classList.remove('is-available');
+		}
 	}
 
 	function Toggle() { SetLayoutMode(!layoutOn); }
@@ -363,6 +369,25 @@
 		gear.title = 'Layout (S)';
 		gear.addEventListener('click', Toggle);
 		document.body.appendChild(gear);
+
+		/* Muncul saat pointer bergerak, sembunyi setelah idle. Tidak pernah
+		   disembunyikan selagi kursor masih DI ATAS gear (kalau tidak, hover-
+		   state-nya kedip: hilang -> pointer tak lagi di atas -> muncul lagi). */
+		var gearTimer = null;
+		function HideGearSoon(ms) {
+			if (gearTimer) clearTimeout(gearTimer);
+			gearTimer = setTimeout(function () {
+				if (!layoutOn && !gear.matches(':hover')) gear.classList.remove('is-available');
+			}, ms);
+		}
+		document.addEventListener('pointermove', function () {
+			if (layoutOn) return;
+			gear.classList.add('is-available');
+			HideGearSoon(2500);
+		});
+		gear.addEventListener('mouseleave', function () {
+			if (!layoutOn) HideGearSoon(1200);
+		});
 	}
 
 	document.addEventListener('keydown', function (e) {
