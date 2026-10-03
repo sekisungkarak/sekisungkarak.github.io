@@ -1,102 +1,8 @@
 /* ============================================================================
-   Live Q&A — panel kontrol (layout saja) + bingkai mode Layout.
-   Port dari pola dynamic-island-alert: bingkai + 8 handle + knob rotasi.
-   Ditulis untuk CEF Chromium 127 (OBS 32.2.2) — tanpa properti CSS terbaru.
+   Live Q&A — mode Layout (tanpa panel kotak) + bingkai penyesuaian.
+   Port dari pola dynamic-island-alert: bingkai + 8 handle + knob rotasi, plus
+   ikon reset mengambang. Ditulis untuk CEF Chromium 127 (OBS 32.2.2).
    ========================================================================== */
-
-/* ── Panel ──────────────────────────────────────────────────────────────── */
-
-.cp-root {
-	position: fixed;
-	left: 24px;
-	top: 24px;
-	width: 340px;
-	z-index: 2147483000;
-
-	background: rgba(32, 30, 40, 0.96);
-	border: 1px solid rgba(255, 255, 255, 0.12);
-	border-radius: 12px;
-	box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-
-	color: #eae7ee;
-	font-family: "Archivo", "Segoe UI", system-ui, sans-serif;
-	font-size: 13px;
-
-	display: none;
-	overflow: hidden;
-}
-.cp-root.is-open { display: block; }
-
-.cp-titlebar {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	padding: 10px 12px;
-	background: rgba(255, 255, 255, 0.04);
-	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-	cursor: move;
-	user-select: none;
-}
-
-.cp-title {
-	flex: 1 1 auto;
-	font-weight: 700;
-	font-size: 12.5px;
-	letter-spacing: 0.02em;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-.cp-btn {
-	border: 1px solid rgba(255, 255, 255, 0.14);
-	background: rgba(255, 255, 255, 0.06);
-	color: #eae7ee;
-	border-radius: 6px;
-	padding: 4px 9px;
-	font-size: 11.5px;
-	font-family: inherit;
-	cursor: pointer;
-	line-height: 1.2;
-}
-.cp-btn:hover { background: rgba(255, 255, 255, 0.12); }
-
-.cp-collapse.is-active {
-	background: #d4a843;
-	border-color: #d4a843;
-	color: #1b1920;
-	font-weight: 700;
-}
-
-.cp-close {
-	padding: 4px 9px;
-	font-size: 15px;
-	line-height: 1;
-}
-
-.cp-body {
-	padding: 12px;
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-}
-
-.cp-note {
-	margin: 0;
-	font-size: 11.5px;
-	line-height: 1.45;
-	color: rgba(234, 231, 238, 0.62);
-}
-
-.cp-status {
-	font-size: 11.5px;
-	color: #d4a843;
-	min-height: 14px;
-}
-
-.cp-reset {
-	align-self: flex-start;
-}
 
 /* ── Gear kecil (hanya tampak saat mouse mendekat) ─────────────────────── */
 
@@ -120,7 +26,15 @@
 body:hover .cp-gear { opacity: 0.55; }
 .cp-gear:hover { opacity: 1; }
 
-/* ── Bingkai + handle + knob rotasi ────────────────────────────────────── */
+/* Mode Layout aktif: gear tetap terlihat sebagai penanda (klik lagi = keluar). */
+.cp-gear.is-active {
+	opacity: 1;
+	background: #d4a843;
+	border-color: #d4a843;
+	color: #1b1920;
+}
+
+/* ── Bingkai + handle + knob rotasi + ikon reset ───────────────────────── */
 
 .gi-overlay {
 	position: fixed;
@@ -189,30 +103,28 @@ body:hover .cp-gear { opacity: 0.55; }
 }
 .gi-frame.is-rotating .gi-rotate { cursor: grabbing; }
 
-/* Ikon reset di pojok kanan-atas bingkai (pengganti double-click). */
+/* Ikon reset mengambang — gaya sama seperti knob rotasi, di pojok kanan-atas. */
 .gi-reset {
 	position: absolute;
-	right: -10px;
-	top: -10px;
-	width: 24px;
-	height: 24px;
+	right: 0;
+	top: -30px;
+	width: 22px;
+	height: 22px;
+	margin: -11px -11px 0 0;
 	padding: 0;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	border-radius: 6px;
+	border-radius: 50%;
 	background: #d4a843;
 	border: 1.5px solid #1b1920;
 	color: #1b1920;
+	box-sizing: border-box;
 	pointer-events: auto;
 	cursor: pointer;
 }
 .gi-reset:hover { background: #e6bb5c; }
-.gi-reset svg {
-	width: 13px;
-	height: 13px;
-	display: block;
-}
+.gi-reset svg { width: 12px; height: 12px; display: block; }
 
 .gi-hint {
 	position: absolute;
