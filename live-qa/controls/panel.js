@@ -6,14 +6,15 @@
    di dashboard. Alasannya: panel menempel di overlay yang direkam, jadi
    semakin sedikit yang bisa salah klik saat live, semakin baik.
 
-   Cara buka: tekan S di jendela overlay (saat Interact), atau klik gear kecil
-   di sudut kiri-atas. Tombol Layout masuk/keluar mode Layout.
+   Cara buka: klik gear kecil di sudut kiri-atas (atau tekan S). Membukanya
+   LANGSUNG masuk mode Layout, jadi tidak ada langkah tambahan.
 
    Di mode Layout:
-     - seret badan widget  -> geser posisi
-     - seret 8 handle      -> ubah LEBAR / TINGGI widget
-     - seret knob atas     -> rotasi
-     - slider Scale        -> perbesar/perkecil keseluruhan (khusus Live Q&A)
+     - seret badan widget    -> geser posisi
+     - seret sisi (n/s/e/w)  -> ubah LEBAR / TINGGI widget
+     - seret sudut (4 pojok) -> skala widget (perbesar/perkecil keseluruhan)
+     - seret knob atas       -> rotasi
+     - ikon reset di pojok kanan-atas widget -> kembalikan semua ke bawaan
 
    Hasil geser/ukuran/skala/rotasi disimpan lewat window.GesekiQaLayout
    (script.js), jadi tidak hilang saat overlay dimuat ulang.
@@ -41,8 +42,8 @@
 	var panelOpen = false;
 	var layoutOn = false;
 
-	var root = null, btnCollapse = null, btnClose = null, statusEl = null, scaleRange = null, scaleOut = null;
-	var giOverlay = null, giFrame = null, giGuideV = null, giGuideH = null, giRotate = null;
+	var root = null, btnCollapse = null, btnClose = null, statusEl = null;
+	var giOverlay = null, giFrame = null, giGuideV = null, giGuideH = null, giRotate = null, giReset = null;
 	var layoutRaf = 0;
 	var frameDrag = null, handleDrag = null, rotateDrag = null;
 
@@ -89,8 +90,6 @@
 		var s = clamp(Math.round(sc / 0.05) * 0.05, LAYOUT_MIN_SCALE, LAYOUT_MAX_SCALE);
 		layoutState.scale = Math.round(s * 100) / 100;
 		qaPanel.style.transform = 'scale(' + layoutState.scale + ') rotate(' + (layoutState.rotation || 0) + 'deg)';
-		if (scaleRange) scaleRange.value = String(Math.round(layoutState.scale * 100));
-		if (scaleOut) scaleOut.textContent = Math.round(layoutState.scale * 100) + '%';
 		return layoutState.scale;
 	}
 
@@ -153,21 +152,32 @@
 
 	// ── Drag / resize / rotate ───────────────────────────────────────────────
 
-	/* Delta pointer diubah ke koordinat LOKAL panel (batalkan rotasi & skala)
-	   supaya handle mengikuti arah kursor walau widget sudah diputar/diperbesar. */
-	function LocalDelta(dx, dy) {
-		var rad = -(layoutState.rotation || 0) * Math.PI / 180;
-		var sc = layoutState.scale || 1;
+	/* Delta pointer diubah ke koordinat LOKAL panel (batalkan rotasi & skala
+	   awal) supaya handle sisi mengikuti arah kursor walau widget sudah
+	   diputar/diperbesar. */
+	function LocalDelta(d, dx, dy) {
+		var rad = -(d.startRot || 0) * Math.PI / 180;
+		var sc = d.startScale || 1;
 		return {
 			x: (dx * Math.cos(rad) - dy * Math.sin(rad)) / sc,
 			y: (dx * Math.sin(rad) + dy * Math.cos(rad)) / sc
 		};
 	}
 
-	function ResizeMove(e) {
+	function HandleMove(e) {
 		var d = handleDrag;
 		if (!d) return;
-		var ld = LocalDelta(e.clientX - d.px, e.clientY - d.py);
+
+		// Sudut (2 huruf: nw/ne/se/sw) -> skala: rasio jarak kursor dari pivot.
+		if (d.mode === 'scale') {
+			var ratio = dist({ x: e.clientX, y: e.clientY }, d.anchor) / d.startDist;
+			if (!isFinite(ratio) || ratio <= 0) return;
+			ApplyScale(d.startScale * ratio);
+			return;
+		}
+
+		// Sisi (1 huruf) -> lebar / tinggi.
+		var ld = LocalDelta(d, e.clientX - d.px, e.clientY - d.py);
 		var w = d.startW, hgt = d.startH;
 		var ox = d.startX, oy = d.startY;
 
@@ -205,7 +215,7 @@
 
 	function DocMove(e) {
 		if (rotateDrag) { RotateMove(e); return; }
-		if (handleDrag) { ResizeMove(e); return; }
+		if (handleDrag) { HandleMove(e); return; }
 		if (!frameDrag) return;
 		var d = frameDrag;
 		var dx = e.clientX - d.px, dy = e.clientY - d.py;
@@ -243,19 +253,23 @@
 			e.preventDefault();
 		});
 
-		giFrame.addEventListener('dblclick', function (e) {
-			if (e.target !== giFrame) return;
-			ResetLayout();
-		});
-
 		Array.prototype.forEach.call(giFrame.querySelectorAll('.gi-handle'), function (hn) {
 			hn.addEventListener('pointerdown', function (e) {
 				if (e.button !== 0) return;
-				// Ukuran dasar: pakai nilai eksplisit bila ada, kalau tidak ukuran
-				// yang sedang dirender (offsetWidth/Height = px layout, tanpa skala).
+				var pos = hn.dataset.h;
+				var anchor = Pivot();
+				var p = { x: e.clientX, y: e.clientY };
 				handleDrag = {
-					handle: hn.dataset.h,
+					handle: pos,
+					// Sudut (2 huruf) -> skala; sisi (1 huruf) -> ukuran.
+					mode: pos.length === 2 ? 'scale' : 'resize',
+					anchor: anchor,
 					px: e.clientX, py: e.clientY,
+					startScale: layoutState.scale,
+					startRot: layoutState.rotation || 0,
+					startDist: Math.max(1, dist(p, anchor)),
+					// Ukuran dasar: pakai nilai eksplisit bila ada, kalau tidak
+					// ukuran yang sedang dirender (offsetWidth/Height = px layout).
 					startW: layoutState.width > 0 ? layoutState.width : qaPanel.offsetWidth,
 					startH: layoutState.height > 0 ? layoutState.height : qaPanel.offsetHeight,
 					startX: layoutState.x,
@@ -301,10 +315,24 @@
 		giRotate = h('div', 'gi-rotate');
 		giRotate.title = 'Drag to rotate';
 		giFrame.appendChild(giRotate);
+
+		// Ikon reset di pojok kanan-atas widget (pengganti double-click).
+		giReset = h('button', 'gi-reset');
+		giReset.type = 'button';
+		giReset.title = 'Reset layout';
+		giReset.innerHTML =
+			'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ' +
+			'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+			'<polyline points="1 4 1 10 7 10"></polyline>' +
+			'<path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>';
+		giReset.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+		giReset.addEventListener('click', function (e) { e.stopPropagation(); ResetLayout(); });
+		giFrame.appendChild(giReset);
+
 		giOverlay.appendChild(giGuideV);
 		giOverlay.appendChild(giGuideH);
 		giOverlay.appendChild(giFrame);
-		giOverlay.appendChild(h('div', 'gi-hint', 'Layout — seret untuk pindah · handle sudut/sisi untuk ukuran · titik atas untuk rotasi'));
+		giOverlay.appendChild(h('div', 'gi-hint', 'Layout — seret untuk pindah · sisi untuk ukuran · sudut untuk skala · titik atas untuk rotasi'));
 		document.body.appendChild(giOverlay);
 
 		// Terapkan layout tersimpan (widget sudah menerapkannya; panel menulis
@@ -353,34 +381,14 @@
 
 		var body = h('div', 'cp-body');
 
-		// Slider skala keseluruhan (khusus Live Q&A — DIA tidak punya ini).
-		var scaleRow = h('div', 'cp-row');
-		var scaleLabel = h('span', 'cp-label', 'Scale');
-		scaleRange = document.createElement('input');
-		scaleRange.type = 'range';
-		scaleRange.className = 'cp-range';
-		scaleRange.min = String(Math.round(LAYOUT_MIN_SCALE * 100));
-		scaleRange.max = String(Math.round(LAYOUT_MAX_SCALE * 100));
-		scaleRange.step = '5';
-		scaleRange.value = String(Math.round((layoutState.scale || 1) * 100));
-		scaleOut = h('span', 'cp-value', Math.round((layoutState.scale || 1) * 100) + '%');
-		scaleRange.addEventListener('input', function () {
-			ApplyScale(Number(scaleRange.value) / 100);
-			PersistLayout();
-		});
-		scaleRow.appendChild(scaleLabel);
-		scaleRow.appendChild(scaleRange);
-		scaleRow.appendChild(scaleOut);
-
 		var btnReset = h('button', 'cp-btn cp-reset', 'Reset layout');
 		btnReset.title = 'Kembalikan posisi, ukuran, skala, dan rotasi ke bawaan';
 		btnReset.addEventListener('click', ResetLayout);
 
-		var note = h('p', 'cp-note', 'Seret widget untuk pindah, handle untuk ubah ukuran, titik atas untuk rotasi. Pengaturan lain ada di dashboard.');
+		var note = h('p', 'cp-note', 'Seret widget untuk pindah · sisi untuk ubah ukuran · sudut untuk skala · titik atas untuk rotasi. Pengaturan lain ada di dashboard.');
 
 		statusEl = h('div', 'cp-status');
 
-		body.appendChild(scaleRow);
 		body.appendChild(btnReset);
 		body.appendChild(note);
 		body.appendChild(statusEl);
@@ -429,16 +437,23 @@
 		SetLayoutMode(false);
 	}
 
+	// Buka = panel TAMPIL sekaligus mode Layout AKTIF (satu klik, tanpa langkah
+	// tambahan). Gear dan shortcut S memakai jalur ini.
+	function Open() {
+		OpenPanel();
+		SetLayoutMode(true);
+	}
+
 	function Toggle() {
-		if (panelOpen) Close(); else OpenPanel();
+		if (panelOpen) Close(); else Open();
 	}
 
 	// Gear kecil di sudut: hanya tampak saat mouse mendekat, tidak pernah
-	// ikut terekam karena opacity 0 saat idle.
+	// ikut terekam karena opacity 0 saat idle. Klik = langsung mode Layout.
 	function BuildGear() {
 		var gear = h('button', 'cp-gear', '\u2699');
 		gear.title = 'Kontrol (S)';
-		gear.addEventListener('click', Toggle);
+		gear.addEventListener('click', Open);
 		document.body.appendChild(gear);
 	}
 
@@ -459,11 +474,11 @@
 		toggle: function () { SetLayoutMode(!layoutOn); },
 		isOn: function () { return layoutOn; }
 	};
-	window.GesekiQaPanel = { open: OpenPanel, close: Close, toggle: Toggle };
+	window.GesekiQaPanel = { open: Open, close: Close, toggle: Toggle };
 
 	BuildGear();
 
 	// Dibuka otomatis hanya kalau URL meminta (?controls=1), sama seperti
 	// dynamic-island-alert.
-	if (new URLSearchParams(location.search).get('controls') === '1') OpenPanel();
+	if (new URLSearchParams(location.search).get('controls') === '1') Open();
 })();
