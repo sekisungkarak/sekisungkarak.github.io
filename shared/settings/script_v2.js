@@ -21,6 +21,9 @@ const showUnmuteIndicator = GetBooleanParam("showUnmuteIndicator", false);
 const isDashboardMode = urlParams.get('dashboard') === '1';
 if (isDashboardMode) {
     document.body.classList.add('dashboard-mode');
+    // Tandai <html> juga: scroll terjadi di elemen <html>, dan CSS butuh
+    // selector kelas di sana (tanpa :has(), agar aman di CEF OBS lama).
+    document.documentElement.classList.add('dashboard-mode');
 }
 
 // ── Tahan tampilan sampai WebAwesome terdefinisi ─────────────
@@ -847,6 +850,133 @@ if (loadObsButton && loadSceneModal) {
     // memilih/memuat/menghapus, bukan karena scene OBS berganti.
 }
 
+// ── Import / Export JSON profil tersimpan (pop up Load Saved Settings) ──────
+// Semua profil scene di localStorage digabung jadi satu berkas JSON, supaya
+// bisa di-backup atau dipindah ke PC lain. Import menulisnya kembali ke daftar
+// scene. Halaman ini statis, jadi Export memakai unduhan browser biasa.
+const profileExportBtn = document.getElementById('profileExportBtn');
+const profileImportBtn = document.getElementById('profileImportBtn');
+const profileImportFile = document.getElementById('profileImportFile');
+
+function CollectSavedProfiles() {
+    const out = {};
+    ListSavedScenes().forEach(({ scene }) => {
+        const raw = ReadSceneProfileRaw(scene);
+        if (!raw) return;
+        try { out[scene] = JSON.parse(raw); }
+        catch (e) { /* lewati entri rusak */ }
+    });
+    return out;
+}
+
+function DownloadJSONFile(text, name) {
+    try {
+        const blob = new Blob([text], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name || 'geseki-profiles.json';
+        a.click();
+        setTimeout(() => { URL.revokeObjectURL(a.href); }, 4000);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+function ExportProfiles() {
+    const profiles = CollectSavedProfiles();
+    const payload = {
+        app: 'sekisungkarak-profiles',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        profiles: profiles
+    };
+    const text = JSON.stringify(payload, null, 2);
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    const ok = DownloadJSONFile(text, 'geseki-profiles-' + stamp + '.json');
+    if (loadObsButton) {
+        SetFooterButtonState(loadObsButton,
+            ok ? `Exported ${Object.keys(profiles).length} profile(s)`
+               : 'Download blocked — copy from the file if prompted',
+            ok);
+    }
+}
+
+function ApplyImportedProfiles(text) {
+    let data;
+    try { data = JSON.parse(String(text || '')); }
+    catch (e) { throw new Error('Not valid JSON'); }
+
+    // Terima bentuk { profiles: {...} } maupun peta scene langsung.
+    const map = (data && data.profiles) ? data.profiles : data;
+    if (!map || typeof map !== 'object' || Array.isArray(map))
+        throw new Error('No profiles found in file');
+
+    const imported = [];
+    Object.keys(map).forEach((scene) => {
+        const entry = map[scene];
+        if (!entry || typeof entry !== 'object') return;
+        const settings = Array.isArray(entry.settings) ? entry.settings : null;
+        if (!settings) return;
+        try {
+            localStorage.setItem(SceneStorageKey(scene), JSON.stringify({
+                savedAt: entry.savedAt || Date.now(),
+                settings: settings
+            }));
+            imported.push(scene);
+        } catch (e) { /* lewati yang gagal */ }
+    });
+
+    if (!imported.length) throw new Error('Nothing to import');
+    return imported;
+}
+
+// Segarkan daftar scene SETELAH import, lalu langsung pilih profil hasil import
+// supaya dropdown tidak kosong dan tombol Load siap dipakai tanpa klik manual.
+// Bila scene OBS yang sedang aktif ikut ter-import, pilih scene itu; kalau tidak,
+// pilih profil pertama dari berkas.
+async function RefreshSceneListAfterImport(imported) {
+    const scenes = ListSavedScenes();
+    RenderSceneMenu(scenes);
+    if (sceneHintEl) {
+        sceneHintEl.textContent = scenes.length
+            ? ''
+            : 'No saved settings yet. Click Save in a scene first.';
+    }
+
+    const names = Array.isArray(imported) ? imported : [];
+    if (!names.length) return;
+
+    let pick = names[0];
+    try {
+        const current = await ObsGetCurrentSceneName();
+        if (current && names.includes(current)) pick = current;
+    } catch (e) { /* pakai pilihan pertama */ }
+    SetSelectedScene(pick);
+}
+
+if (profileExportBtn) profileExportBtn.addEventListener('click', ExportProfiles);
+
+if (profileImportBtn && profileImportFile) {
+    profileImportBtn.addEventListener('click', () => profileImportFile.click());
+    profileImportFile.addEventListener('change', () => {
+        const file = profileImportFile.files && profileImportFile.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async () => {
+            try {
+                const imported = ApplyImportedProfiles(reader.result);
+                await RefreshSceneListAfterImport(imported);
+                if (loadObsButton) SetFooterButtonState(loadObsButton, `Imported ${imported.length} profile(s)`, true);
+            } catch (err) {
+                if (loadObsButton) SetFooterButtonState(loadObsButton, 'Import failed: ' + err.message, false);
+            }
+            profileImportFile.value = '';
+        };
+        reader.readAsText(file);
+    });
+}
+
 // Pengaturan yang TIDAK boleh dihapus tombol Reset.
 // Koneksi OBS adalah konfigurasi aplikasi, bukan tampilan widget —
 // kalau ikut tereset, pengguna harus memasukkan ulang IP/password
@@ -1127,6 +1257,17 @@ function LoadJSON(settingsJson) {
                     // kategori) tidak diulang sebagai baris di body.
                     if (enableSetting && setting.id === enableId) return;
                     if (isDashboardMode && categoryEnableId && setting.id === categoryEnableId) return;
+
+                    // `heading`: pemisah sederhana di DALAM kartu grup (mis.
+                    // "Font", "Colour" di dalam Text) — bukan kartu baru dan
+                    // bukan kontrol. Tidak punya nilai, jadi tidak ikut disimpan.
+                    if (setting.type === 'heading') {
+                        const heading = document.createElement('div');
+                        heading.classList.add('config-heading');
+                        heading.textContent = setting.label || '';
+                        section.appendChild(heading);
+                        return;
+                    }
 
                     const configRow = document.createElement('div');
                     configRow.classList.add('config');
@@ -1435,6 +1576,55 @@ function BuildInput(setting) {
 
 
             inputElement._wrapWith = wrap;
+            break;
+        }
+
+        case 'chips': {
+            // Tombol kategori (multi-select). Nilainya ARRAY; kosong = tanpa
+            // syarat. Klik untuk menyalakan/mematikan satu kategori.
+            inputElement = document.createElement('div');
+            inputElement.className = 'chip-group';
+            const chipToArr = (v) => {
+                if (Array.isArray(v)) return v.map(x => String(x)).filter(Boolean);
+                const str = String(v ?? '').trim();
+                return str ? str.split(',').map(x => x.trim()).filter(Boolean) : [];
+            };
+            let chipValue = chipToArr(savedValue);
+            const chipEls = [];
+            const renderChips = () => {
+                chipEls.forEach(c => {
+                    const on = chipValue.indexOf(c.dataset.value) !== -1;
+                    c.classList.toggle('is-on', on);
+                    c.setAttribute('aria-pressed', on ? 'true' : 'false');
+                });
+            };
+            setting.options.forEach(option => {
+                const chip = document.createElement('button');
+                chip.type = 'button';
+                chip.className = 'chip';
+                chip.dataset.value = option.value;
+                chip.textContent = option.label;
+                chip.addEventListener('click', () => {
+                    const at = chipValue.indexOf(option.value);
+                    if (at === -1) chipValue.push(option.value);
+                    else chipValue.splice(at, 1);
+                    renderChips();
+                    inputElement.value = chipValue.slice();
+                    // 'wa-change' ada di daftar listener umum: nilai tersimpan,
+                    // showIf dievaluasi ulang, dan pratinjau ikut disegarkan.
+                    inputElement.dispatchEvent(new Event('wa-change'));
+                });
+                chipEls.push(chip);
+                inputElement.appendChild(chip);
+            });
+            inputElement.value = chipValue.slice();
+            // Dipakai jalur ganti scene / impor untuk memperbarui tampilan.
+            inputElement.__syncChips = (v) => {
+                chipValue = chipToArr(v);
+                renderChips();
+                inputElement.value = chipValue.slice();
+            };
+            renderChips();
             break;
         }
 
@@ -1781,7 +1971,13 @@ function ApplyShowIfVisibility() {
                 // showIfValue: bandingkan dengan .value (untuk select).
                 // Tanpa showIfValue: perilaku lama, checkbox memakai .checked.
                 if (currentSetting.showIfValue !== undefined) {
-                    if (String(parentElement.value) !== String(currentSetting.showIfValue)) {
+                    // Nilai kontrol bisa ARRAY (tipe 'chips'): berarti
+                    // "tampil bila daftar memuat nilai ini".
+                    const pv = parentElement.value;
+                    const matches = Array.isArray(pv)
+                        ? pv.map(String).indexOf(String(currentSetting.showIfValue)) !== -1
+                        : String(pv) === String(currentSetting.showIfValue);
+                    if (!matches) {
                         shouldShow = false;
                         break;
                     }
@@ -1911,6 +2107,10 @@ function SetControlValueFromMap(setting) {
     switch (setting.type) {
         case 'checkbox':
             el.checked = Boolean(value);
+            break;
+        case 'chips':
+            if (typeof el.__syncChips === 'function') el.__syncChips(value);
+            else el.value = value ?? '';
             break;
         case 'gift':
             // Dropdown kustom: .value saja tidak memperbarui ikon/teks.
@@ -2098,33 +2298,57 @@ function BuildWidgetURL(options = {}) {
 // ke URL yang dipakai browser source OBS.
     const previewOnly = options.previewOnly === true;
 
-    const settings = {};
+    // URL memuat HANYA nilai yang berbeda dari defaultValue (lihat IsAtDefault).
+// Form yang belum disentuh menghasilkan URL hampir kosong; tiap parameter
+// berarti ada perubahan nyata. Widget tetap punya fallback sendiri, jadi URL
+// tanpa parameter pun aman.
+    const parts = [];
 
     settingsData.settings.forEach(setting => {
         if (setting.type === 'button') return; // Skip buttons
+        if (setting.type === 'heading') return; // Skip headings (label saja)
+
+        // Setting yang tidak dibaca widget (mis. koneksi OBS) dikecualikan
+// lewat "includeInWidgetParams": false.
+        if (setting.includeInWidgetParams === false) return;
 
         const inputElement = document.getElementById(setting.id);
         if (!inputElement) return;
 
+        const paramName = setting.param || setting.id;
+        let value;
         if (setting.type === 'checkbox')
-            settings[setting.id] = inputElement.checked;
+            value = inputElement.checked;
         else
-            settings[setting.id] = inputElement.value;
+            value = inputElement.value;
+
+        if (setting.type === 'checkbox') {
+            // Hanya tulis bila berbeda dari bawaan field ini, sehingga switch
+// yang belum disentuh tidak menambah parameter.
+            if (Boolean(value) === Boolean(setting.defaultValue)) return;
+            parts.push(`${encodeURIComponent(paramName)}=${value ? 'true' : 'false'}`);
+            return;
+        }
+
+        if (value === '' || value === null || value === undefined) return;
+
+        // Nilai yang masih sama dengan defaultValue tidak memberi info apa pun
+// (widget sudah memakai bawaan itu), jadi tidak ditulis. "omitWhenDefault":
+// false memaksa sebuah field selalu ikut walau nilainya sama.
+        if (setting.omitWhenDefault !== false && IsAtDefault(setting, value)) return;
+
+        // Nilai array (tipe 'tags' / 'chips') digabung jadi satu string
+// berpemisah koma. Widget mem-parse-nya lagi saat startup.
+        const flat = Array.isArray(value) ? value.join(',') : value;
+        parts.push(`${encodeURIComponent(paramName)}=${encodeURIComponent(flat)}`);
     });
 
     // Penanda khusus PRATINJAU — bukan pengaturan widget. Ditambahkan di sini
 // (bukan settings.json) supaya tidak tampil sebagai opsi, tidak tersimpan,
 // dan tidak pernah ada di URL OBS.
-    if (previewOnly) settings.dragPreview = '1';
+    if (previewOnly) parts.push('dragPreview=1');
 
-    const paramString = Object.entries(settings)
-        .map(([key, value]) => {
-            // Nilai array (tipe 'tags' / multi-select) digabung jadi satu
-            // string berpemisah koma. Widget mem-parse-nya lagi saat startup.
-            const flat = Array.isArray(value) ? value.join(',') : value;
-            return `${encodeURIComponent(key)}=${encodeURIComponent(flat)}`;
-        })
-        .join('&');
+    const paramString = parts.join('&');
 
     let cleanWidgetURL = widgetURL || '../../dynamic-island-alert/';
 
@@ -2141,6 +2365,70 @@ function BuildWidgetURL(options = {}) {
     }
 
     return cleanWidgetURL + (paramString ? "?" + paramString : "");
+}
+
+// Bandingkan nilai form dengan defaultValue sebuah setting. Angka & warna
+// dinormalkan dulu supaya "18" == 18 dan "rgba(0,106,255,1)" ==
+// "rgb(0, 106, 255)" tidak dianggap sebagai perubahan.
+function IsAtDefault(setting, value) {
+    if (setting.defaultValue === undefined || setting.defaultValue === null) return false;
+    return NormalizeForCompare(setting, value) === NormalizeForCompare(setting, setting.defaultValue);
+}
+
+function NormalizeForCompare(setting, value) {
+    if (value === null || value === undefined) return '';
+    if (Array.isArray(value)) return value.map(v => String(v)).join(',');
+
+    if (setting.type === 'number' || setting.type === 'slider') {
+        const raw = String(value).trim();
+        if (raw === '') return '';
+        const num = Number(raw);
+        return Number.isNaN(num) ? raw : String(num);
+    }
+
+    if (setting.type === 'color') return NormalizeColor(value);
+
+    return String(value).trim();
+}
+
+// wa-color-picker menulis ulang nilai ("rgba(0,106,255,1)" -> "rgb(0, 106, 255)"),
+// jadi warna hanya bisa dibandingkan per kanal.
+function NormalizeColor(raw) {
+    const parsed = ParseColor(raw);
+    if (!parsed) return String(raw).trim().toLowerCase();
+    return [
+        Math.round(parsed[0]),
+        Math.round(parsed[1]),
+        Math.round(parsed[2]),
+        Math.round(parsed[3] * 100) / 100
+    ].join(',');
+}
+
+// -> [r, g, b, a] untuk rgb()/rgba()/#hex, atau null untuk format lain
+// (nama warna, hsl(), kanal persen); pemanggil lalu jatuh ke perbandingan teks.
+function ParseColor(raw) {
+    const value = String(raw).trim().toLowerCase();
+
+    const rgbMatch = value.match(/^rgba?\(([^)]*)\)$/);
+    if (rgbMatch) {
+        const parts = rgbMatch[1].split(/[\s,\/]+/).filter(Boolean).map(Number);
+        if (parts.length < 3 || parts.some(p => Number.isNaN(p))) return null;
+        return [parts[0], parts[1], parts[2], parts.length > 3 ? parts[3] : 1];
+    }
+
+    const hexMatch = value.match(/^#([0-9a-f]{3,8})$/);
+    if (hexMatch) {
+        let h = hexMatch[1];
+        if (h.length === 3 || h.length === 4) h = h.split('').map(c => c + c).join('');
+        if (h.length !== 6 && h.length !== 8) return null;
+        const r = parseInt(h.slice(0, 2), 16);
+        const g = parseInt(h.slice(2, 4), 16);
+        const b = parseInt(h.slice(4, 6), 16);
+        const a = h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1;
+        return [r, g, b, a];
+    }
+
+    return null;
 }
 
 function RefreshWidgetPreview(immediate = false, waitMs = null) {
@@ -2289,6 +2577,8 @@ function ImportSettings(urlString) {
                         next.addEventListener('wa-change', evt => { sync(); handleInput(evt); });
                     }
                 }
+                else if (typeof inputElement.__syncChips === 'function')
+                    inputElement.__syncChips(value);
                 else
                     inputElement.value = value;
 

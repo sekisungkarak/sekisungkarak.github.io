@@ -12,7 +12,7 @@
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.9.1/fonts/remixicon.min.css">
 
 	<link rel="icon" type="image/png" href="../../shared/assets/images/avatar.png">
-	<link rel="stylesheet" href="queue.css?v=4">
+	<link rel="stylesheet" href="queue.css?v=6">
 </head>
 
 <body>
@@ -29,6 +29,10 @@
 		</div>
 
 		<div class="bar-actions">
+			<button id="exportBtn" class="btn btn-ghost" type="button" title="Export every question (queue + history) as CSV">
+				<i class="ri-download-2-line" aria-hidden="true"></i>
+				<span>Export</span>
+			</button>
 			<button id="clearBtn" class="btn btn-ghost" type="button" title="Clear the whole queue">
 				<i class="ri-delete-bin-6-line" aria-hidden="true"></i>
 				<span>Queue</span>
@@ -89,7 +93,7 @@
 		</div>
 	</section>
 
-	<script src="queue.js?v=11"></script>
+	<script src="queue.js?v=13"></script>
 </body>
 
 </html>

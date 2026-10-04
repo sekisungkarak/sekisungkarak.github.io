@@ -20,6 +20,7 @@ const HELLO_TIMEOUT_MS = 1500;
 /* Baris antrean per halaman. */
 const PAGE_SIZE = 5;
 
+const exportBtn = document.getElementById('exportBtn');
 const clearBtn = document.getElementById('clearBtn');
 const testBtn = document.getElementById('testBtn');
 const hideBtn = document.getElementById('hideBtn');
@@ -44,6 +45,8 @@ let queuePage = 1;
 /* Last state reported by the widget. */
 let state = {
 	questions: [],
+	/* Arsip lengkap dari widget (semua pertanyaan pernah masuk) — sumber Export CSV. */
+	history: [],
 	currentId: null,
 	currentQuestion: null,
 	connected: false,
@@ -298,6 +301,7 @@ function OnState(next) {
 	if (next.active) sawActiveScene = true;
 	state = {
 		questions: Array.isArray(next.questions) ? next.questions : [],
+		history: Array.isArray(next.history) ? next.history : [],
 		currentId: next.currentId === undefined ? null : next.currentId,
 		currentQuestion: next.currentQuestion || null,
 		connected: Boolean(next.connected),
@@ -316,8 +320,66 @@ if (bc) {
 	};
 }
 
+/* ── Export CSV ─────────────────────────────────────────────────────────────
+   Mengunduh SEMUA pertanyaan yang pernah masuk (arsip dari widget), bukan hanya
+   yang masih di antrean. Widget statis tidak boleh menulis file sendiri, jadi
+   ini memakai unduhan browser biasa (satu klik). Di dalam OBS unduhan bisa
+   diblokir; kalau begitu, salin teksnya dari kotak yang muncul. */
+
+function CsvCell(v) {
+	const s = (v === null || v === undefined) ? '' : String(v);
+	// Kutip bila mengandung koma, kutip, atau baris baru (aturan CSV).
+	return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function FormatDateTime(ms) {
+	try { return new Date(ms).toLocaleString(); } catch (e) { return ''; }
+}
+
+function BuildCsv() {
+	// Gabung arsip + antrean berjalan, buang duplikat berdasarkan id, urut waktu.
+	const byId = new Map();
+	(state.history || []).forEach(function (q) { if (q && q.id) byId.set(q.id, q); });
+	(state.questions || []).forEach(function (q) { if (q && q.id && !byId.has(q.id)) byId.set(q.id, q); });
+	const rows = Array.from(byId.values()).sort(function (a, b) { return (a.at || 0) - (b.at || 0); });
+
+	const lines = ['Time,Name,Question,Status'];
+	rows.forEach(function (q) {
+		const status = q.id === state.currentId ? 'on screen' : (q.shown ? 'shown' : 'queued');
+		lines.push([
+			CsvCell(FormatDateTime(q.at)),
+			CsvCell(q.name),
+			CsvCell(q.text),
+			CsvCell(status)
+		].join(','));
+	});
+	// BOM supaya Excel membaca UTF-8 dengan benar.
+	return '\uFEFF' + lines.join('\r\n');
+}
+
+function DownloadCsv(text, name) {
+	try {
+		const blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
+		const a = document.createElement('a');
+		a.href = URL.createObjectURL(blob);
+		a.download = name || 'live-qa-questions.csv';
+		a.click();
+		setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+		return true;
+	} catch (e) {
+		return false;
+	}
+}
+
+function ExportCsv() {
+	const csv = BuildCsv();
+	const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+	DownloadCsv(csv, 'live-qa-questions-' + stamp + '.csv');
+}
+
 /* ── Actions ────────────────────────────────────────────────────────────── */
 
+if (exportBtn) exportBtn.addEventListener('click', ExportCsv);
 hideBtn.addEventListener('click', function () { Send({ type: 'qa_hide' }); });
 prevOnairBtn.addEventListener('click', function () { StepOnair(-1); });
 nextOnairBtn.addEventListener('click', function () { StepOnair(1); });

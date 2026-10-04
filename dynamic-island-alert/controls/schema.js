@@ -93,6 +93,7 @@ window.GESEKI_CONTROLS_SCHEMA = {
   },
   {
    "id": "obsAddress",
+   "includeInWidgetParams": false,
    "label": "Server IP",
    "type": "text",
    "defaultValue": "127.0.0.1",
@@ -100,6 +101,7 @@ window.GESEKI_CONTROLS_SCHEMA = {
   },
   {
    "id": "obsPort",
+   "includeInWidgetParams": false,
    "label": "Port",
    "type": "number",
    "defaultValue": 4455,
@@ -109,6 +111,7 @@ window.GESEKI_CONTROLS_SCHEMA = {
   },
   {
    "id": "obsPassword",
+   "includeInWidgetParams": false,
    "label": "Password",
    "type": "password",
    "defaultValue": "",
@@ -228,6 +231,7 @@ window.GESEKI_CONTROLS_SCHEMA = {
   },
   {
    "id": "testAlertType",
+   "includeInWidgetParams": false,
    "label": "Test Alert",
    "type": "select",
    "options": [
@@ -603,6 +607,7 @@ window.GESEKI_CONTROLS_SCHEMA = {
   },
   {
    "id": "firstChatterPermissions",
+   "omitWhenDefault": false,
    "label": "User Permissions",
    "description": "Only greet viewers with these roles. Leave empty to greet everyone.",
    "type": "tags",

@@ -82,6 +82,7 @@
     },
     {
       "id": "obsAddress",
+      "includeInWidgetParams": false,
       "label": "Server IP",
       "type": "text",
       "defaultValue": "127.0.0.1",
@@ -89,6 +90,7 @@
     },
     {
       "id": "obsPort",
+      "includeInWidgetParams": false,
       "label": "Port",
       "type": "number",
       "defaultValue": 4455,
@@ -98,6 +100,7 @@
     },
     {
       "id": "obsPassword",
+      "includeInWidgetParams": false,
       "label": "Password",
       "type": "password",
       "defaultValue": "",
@@ -217,6 +220,7 @@
     },
     {
       "id": "testAlertType",
+      "includeInWidgetParams": false,
       "label": "Test Alert",
       "type": "select",
       "options": [
@@ -592,6 +596,7 @@
     },
     {
       "id": "firstChatterPermissions",
+      "omitWhenDefault": false,
       "label": "User Permissions",
       "description": "Only greet viewers with these roles. Leave empty to greet everyone.",
       "type": "tags",

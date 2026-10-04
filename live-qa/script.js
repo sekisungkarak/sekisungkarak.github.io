@@ -123,12 +123,37 @@ const bridgePort = GetIntParam('bridgePort', 47800);
 // to whatever port the plugin is actually listening on.
 let BRIDGE_WS_URL = 'ws://' + bridgeHost + ':' + bridgePort + '/ws';
 
-/* Tiket: SATU gift dipilih lewat dropdown di dashboard dan disimpan sebagai
-   ID numerik — nama gift dilokalisasi TikTok (Galaxy -> Galaksi), jadi ID
-   adalah satu-satunya kunci yang stabil lintas bahasa dan region.
-   ID kosong = tiket OPSIONAL: penonton cukup mengetik prefix untuk bertanya. */
+/* Tiket: syarat untuk boleh bertanya, dipilih di dashboard sebagai SATU ATAU
+   LEBIH kategori (boleh kosong = siapa saja boleh). Penonton lolos bila
+   memenuhi SALAH SATU kondisi (OR). Gift & Likes butuh AKSI (kirim gift /
+   kirim like) untuk dapat tiket; Follower, Fan Club, Subscriber, dan Superfan
+   lolos bila statusnya aktif saat mengetik prefix. */
+const TICKET_CONDITIONS = ['gift', 'follower', 'likes', 'fanclub', 'subscriber', 'superfan'];
+/* Nilai datang sebagai array (profil scene) atau string berkoma (URL). */
+function ParseConditionList(raw) {
+	if (Array.isArray(raw)) raw = raw.join(',');
+	return String(raw ?? '').split(',').map(function (v) { return v.trim().toLowerCase(); })
+		.filter(function (v) { return TICKET_CONDITIONS.indexOf(v) !== -1; });
+}
+const ticketConditions = ParseConditionList(GetParam('ticketCondition', ''));
+const ticketHasGift = ticketConditions.indexOf('gift') !== -1;
+const ticketHasLikes = ticketConditions.indexOf('likes') !== -1;
+/* Syarat berbasis STATUS (bukan aksi). */
+const ticketStatusConditions = ticketConditions.filter(function (c) {
+	return c !== 'gift' && c !== 'likes';
+});
+/* Cara menggabungkan beberapa kondisi: 'all' = AND (harus memenuhi semua),
+   selain itu 'any' = OR (cukup salah satu). */
+const ticketMatchAll = String(GetParam('ticketMatch', 'any')).trim().toLowerCase() === 'all';
+
+/* Gift: SATU gift dipilih lewat dropdown dan disimpan sebagai ID numerik —
+   nama gift dilokalisasi TikTok (Galaxy -> Galaksi), jadi ID adalah
+   satu-satunya kunci yang stabil lintas bahasa dan region. */
 const ticketGiftId = String(GetParam('ticketGiftId', '')).trim();
-const ticketRequired = ticketGiftId !== '';
+/* Likes: jumlah like yang harus dikirim untuk mendapat satu tiket. */
+const ticketLikeCount = Math.max(1, GetIntParam('ticketLikeCount', 30));
+/* Syarat aktif? (dipakai Queue page & teks hint). */
+const ticketRequired = ticketConditions.length > 0;
 
 const questionPrefix = String(GetParam('questionPrefix', '!q')).trim();
 /* Panjang minimum pertanyaan tetap (dulu bisa diatur di dashboard). */
@@ -367,16 +392,83 @@ ApplyLayoutToPanel(ReadLayout());
 // TICKET STORE //
 //////////////////
 
-/* Satu tiket per user. Kuncinya userId; nilainya tidak dipakai lagi karena
-   tiket hangus begitu pertanyaan terkirim — jadi cukup Set. */
-const ticketHolders = new Set();
+/* Tiket hasil AKSI (gift / likes): per user, berisi AKSI mana yang sudah
+   dipenuhi. Dipisah supaya mode AND bisa menuntut gift DAN likes sekaligus;
+   tiket hangus begitu pertanyaan terkirim. */
+const ticketHolders = new Map();
+
+function AddActionTicket(key, action) {
+	if (!key) return;
+	let set = ticketHolders.get(key);
+	if (!set) { set = new Set(); ticketHolders.set(key, set); }
+	set.add(action);
+}
+
+/* Aksi yang diminta user ini, sesuai mode: 'all' = harus punya SEMUA,
+   'any' = cukup punya salah satu. Mengembalikan true bila lolos. */
+function HasActionTickets(key, actions, modeAll) {
+	if (!key || actions.length === 0) return false;
+	const set = ticketHolders.get(key);
+	if (!set) return false;
+	return modeAll
+		? actions.every(function (a) { return set.has(a); })
+		: actions.some(function (a) { return set.has(a); });
+}
+
+/* Akumulasi like per user menuju ticketLikeCount (syarat "Likes"). */
+const likeProgress = new Map();
+
+/* Superfan yang pernah terlihat di sesi ini. Payload TikTok tidak membawa
+   tanda superfan per-chat, jadi statusnya diingat dari event superFan/
+   superFanJoin lalu dipakai saat penonton mengetik prefix. */
+const superFanHolders = new Set();
+
+/* Keaktifan fan club. Geseki Bridge mengirim `fanClubActive` dari proto
+   TikTok (userFansClubStatus / isSleeping); nilai false eksplisit selalu
+   menang supaya member dorman (badge abu) tidak lolos. */
+function IsFanClubMember(data) {
+	if (!data) return false;
+	const user = data.user || {};
+	const active = data.fanClubActive !== undefined ? data.fanClubActive : user.fanClubActive;
+	if (active === false) return false;
+	return !!(data.fanClubBadge || data.fansClubInfo || data.fansClub
+		|| user.fanClubBadge || user.fansClubInfo || user.fansClub);
+}
 
 /* Cek apakah sebuah gift adalah gift tiket yang dipilih. Pencocokan HANYA
    lewat ID: nama gift berbeda-beda per bahasa dan region. */
 function IsTicketGift(data) {
-	if (!ticketRequired) return false;
 	const id = data.giftId === undefined || data.giftId === null ? '' : String(data.giftId).trim();
 	return id !== '' && id === ticketGiftId;
+}
+
+/* Peran user dari payload TikTok, untuk syarat berbasis STATUS (follower,
+   fan club, subscriber, superfan) yang dievaluasi saat chat masuk. */
+function UserPermissionFlags(data) {
+	const flags = { follower: false, fanclub: false, subscriber: false, superfan: false };
+	if (!data) return flags;
+	const user = data.user || {};
+	const badges = data.userBadges || user.userBadges || [];
+	if (Array.isArray(badges)) {
+		for (const b of badges) {
+			if (!b) continue;
+			const st = Number(b.badgeSceneType !== undefined ? b.badgeSceneType : b.sceneType);
+			if (st === 4) flags.subscriber = true;
+		}
+	}
+	const identity = data.userIdentity || user.userIdentity || {};
+	const followRole = Number(data.followRole !== undefined ? data.followRole : user.followRole);
+	flags.follower = (isFinite(followRole) && followRole >= 1)
+		|| !!data.isFollower || !!identity.isFollower;
+	flags.subscriber = flags.subscriber || !!data.isSubscriber || !!identity.isSubscriber;
+	flags.fanclub = IsFanClubMember(data);
+	flags.superfan = superFanHolders.has(UserKey(data));
+	return flags;
+}
+
+/* Apakah penonton memenuhi syarat berbasis status SAAT INI. */
+function HasRequiredStatus(data, condition) {
+	return UserPermissionFlags(data)[condition] === true;
 }
 
 /* Log id+nama setiap gift. Dropdown di dashboard sudah menampilkan id, tapi
@@ -404,6 +496,11 @@ function UserKey(data) {
    `shown` menandai sudah pernah tampil (badge di Queue page) — barisnya
    TETAP di daftar supaya streamer bisa menampilkannya lagi. */
 const questions = [];
+/* Arsip SEMUA pertanyaan yang pernah masuk, tidak pernah dibuang walau
+   dihapus atau di-Clear. Dipakai tombol Export CSV di halaman Queue supaya
+   riwayat tanya-jawab bisa diunduh (mis. dibuka lagi di Excel). */
+const questionHistory = [];
+const MAX_HISTORY = 500;
 /* Pertanyaan yang sedang tayang di overlay SCENE INI. Ikut disimpan bersama
    antrean scene (kunci per scene), jadi pindah scene menampilkan On screen
    milik scene itu sendiri — bukan membawa pertanyaan dari scene sebelumnya. */
@@ -413,9 +510,28 @@ let questionSeq = 0;
 /* Antrean disimpan PER SCENE, meniru Dynamic Island Alert: tiap scene punya
    daftar pertanyaannya sendiri. Nama scene datang dari `?profile=<scene>` yang
    ditempelkan dashboard ke URL tiap browser source, jadi scene "Gameplay" dan
-   "Just Chatting" tidak saling menimpa. Dibuka di browser biasa (tanpa
-   profile), kuncinya jatuh ke daftar bersama. */
-const QUEUE_KEY = WIDGET_NS + 'queue' + (profileName ? ':' + profileName : '');
+   "Just Chatting" tidak saling menimpa.
+
+   Kunci selalu PASTI: bila `?profile=` kosong (dibuka di browser biasa), dipakai
+   sentinel `_default` — bukan kunci bersama tanpa sufiks. Dulu kunci tanpa
+   sufiks itu terbagi semua instance sehingga dua source bisa saling menimpa;
+   sekarang tiap scene punya kuncinya sendiri, kosong atau tidak. Data lama di
+   kunci bersama dimigrasikan sekali ke `_default` supaya tidak hilang. */
+const PROFILE_SLOT = profileName || '_default';
+const QUEUE_KEY = WIDGET_NS + 'queue:' + PROFILE_SLOT;
+const HISTORY_KEY = WIDGET_NS + 'history:' + PROFILE_SLOT;
+
+/* Migrasi sekali jalan: antrean lama tanpa sufiks dipindah ke `_default`
+   (hanya berlaku untuk instance yang memang tanpa profil). */
+(function MigrateQueueKeys() {
+	if (profileName) return;
+	try {
+		const legacy = localStorage.getItem(WIDGET_NS + 'queue');
+		if (legacy && !localStorage.getItem(QUEUE_KEY)) {
+			localStorage.setItem(QUEUE_KEY, legacy);
+		}
+	} catch (e) { /* abaikan */ }
+})();
 
 function SaveQueue() {
 	try {
@@ -444,6 +560,23 @@ function LoadQueue() {
 			return isNaN(n) ? m : Math.max(m, n);
 		}, 0);
 		questionSeq = Math.max(isNaN(seq) ? 0 : seq, fromIds);
+	} catch (e) { /* abaikan */ }
+}
+
+function SaveHistory() {
+	try { localStorage.setItem(HISTORY_KEY, JSON.stringify(questionHistory)); }
+	catch (e) { /* abaikan */ }
+}
+
+function LoadHistory() {
+	try {
+		const raw = localStorage.getItem(HISTORY_KEY);
+		if (!raw) return;
+		const d = JSON.parse(raw);
+		if (Array.isArray(d)) {
+			questionHistory.length = 0;
+			d.forEach(function (q) { questionHistory.push(q); });
+		}
 	} catch (e) { /* abaikan */ }
 }
 
@@ -541,14 +674,16 @@ function RenderHint() {
 		return;
 	}
 
-	if (ticketRequired) {
+	if (ticketHasGift) {
 		// Nama gift tidak ikut tersimpan (hanya ID yang stabil), jadi teks
 		// bawaan memakai sebutan umum; streamer bebas mengubahnya.
 		qaHint.textContent = ticketHintText
 			.replaceAll('{gift}', 'the gift')
 			.replaceAll('{prefix}', questionPrefix);
+	} else if (ticketHasLikes) {
+		qaHint.textContent = 'Send ' + ticketLikeCount + ' likes, then type ' + questionPrefix + ' to ask a question';
 	} else {
-		// Tanpa syarat gift, teks tiket akan menyesatkan — pakai kalimat sendiri.
+		// Syarat berbasis status (atau tanpa syarat): cukup ketik prefix.
 		qaHint.textContent = 'Type ' + questionPrefix + ' to ask a question';
 	}
 	qaHint.classList.remove('hidden');
@@ -567,6 +702,11 @@ function AddQuestion(q) {
 		at: Date.now()
 	};
 	questions.push(item);
+
+	// Arsip: SEMUA pertanyaan yang pernah masuk ikut disimpan (untuk Export CSV).
+	questionHistory.push(item);
+	while (questionHistory.length > MAX_HISTORY) questionHistory.shift();
+	SaveHistory();
 
 	while (questions.length > MAX_QUEUE) {
 		let idx = 0;
@@ -621,6 +761,7 @@ function ClearQuestions() {
 
 function ClearTickets() {
 	ticketHolders.clear();
+	likeProgress.clear();
 	BroadcastState();
 }
 
@@ -630,16 +771,49 @@ function ClearTickets() {
 
 function HandleGift(data) {
 	LogGift(data);
+	if (!ticketHasGift) return;
 	if (!IsTicketGift(data)) return;
 	const key = UserKey(data);
 	if (!key) return;
-	ticketHolders.add(key);
+	AddActionTicket(key, 'gift');
 	BroadcastState();
 }
 
-/* Chat yang diawali prefix masuk antrean. Bila ada gift tiket, penanya WAJIB
-   memegang tiket dan tiket itu habis terpakai (satu pertanyaan per gift); bila
-   tidak ada gift tiket, siapa pun boleh bertanya. */
+/* Likes menumpuk menuju ticketLikeCount lalu memberi satu tiket. Nilai
+   direset setelah tiket diberikan supaya jumlah berikutnya dihitung ulang. */
+function HandleLike(data) {
+	if (!ticketHasLikes) return;
+	const key = UserKey(data);
+	if (!key) return;
+	const add = Math.max(0, Number(data.likeCount) || 0);
+	if (!add) return;
+	const total = (likeProgress.get(key) || 0) + add;
+	if (total >= ticketLikeCount) {
+		likeProgress.delete(key);
+		AddActionTicket(key, 'likes');
+	} else {
+		likeProgress.set(key, total);
+	}
+	BroadcastState();
+}
+
+/* Follow / subscribe / superfan tidak memberi tiket langsung: statusnya
+   dievaluasi saat chat masuk. Namun Superfan TIDAK ikut terkirim di payload
+   chat, jadi event superfan dicatat di sini agar chat berikutnya mengenali. */
+function HandleStatusEvent(event, data) {
+	if (event === 'superFan' || event === 'superFanJoin' || event === 'superFanBox') {
+		const key = UserKey(data);
+		if (key && !superFanHolders.has(key)) {
+			superFanHolders.add(key);
+			BroadcastState();
+		}
+	}
+}
+
+/* Chat yang diawali prefix masuk antrean. Bila ada syarat tiket, penanya
+   WAJIB memenuhi SALAH SATU kondisi (OR): AKSI (gift / likes) lewat
+   ticketHolders — tiket habis sekali pakai; STATUS (follower, fan club,
+   subscriber, superfan) dicek pada payload chat dan tidak dikonsumsi. */
 function HandleChat(data) {
 	const comment = String(data.comment || '').trim();
 	if (!comment) return;
@@ -647,8 +821,28 @@ function HandleChat(data) {
 
 	if (ticketRequired) {
 		const key = UserKey(data);
-		if (!key || !ticketHolders.has(key)) return;
-		ticketHolders.delete(key);
+		// Syarat AKSI yang dipilih (gift/likes) harus terpenuhi, mengikuti mode.
+		const actionConds = ticketConditions.filter(function (c) {
+			return c === 'gift' || c === 'likes';
+		});
+		const hasTicket = HasActionTickets(key, actionConds, ticketMatchAll);
+		const hasStatus = ticketStatusConditions.some(function (c) {
+			return HasRequiredStatus(data, c);
+		});
+		let passes;
+		if (ticketMatchAll) {
+			// AND: tiap kelompok yang dipilih harus terpenuhi.
+			const actionOk = actionConds.length === 0 || hasTicket;
+			const statusOk = ticketStatusConditions.length === 0
+				|| ticketStatusConditions.every(function (c) { return HasRequiredStatus(data, c); });
+			passes = actionOk && statusOk;
+		} else {
+			// OR: cukup salah satu (aksi atau status).
+			passes = hasTicket || hasStatus;
+		}
+		if (!passes) return;
+		// Tiket aksi terpakai begitu dipakai untuk lolos.
+		if (key && ticketHolders.has(key)) ticketHolders.delete(key);
 	}
 
 	const text = comment.slice(questionPrefix.length).trim();
@@ -669,6 +863,14 @@ function HandleTikTokEvent(event, data) {
 	switch (event) {
 		case 'gift':
 			HandleGift(data);
+			break;
+		case 'like':
+			HandleLike(data);
+			break;
+		case 'superFan':
+		case 'superFanJoin':
+		case 'superFanBox':
+			HandleStatusEvent(event, data);
 			break;
 		case 'chat':
 			HandleChat(data);
@@ -832,8 +1034,13 @@ function BroadcastState() {
 		connected: bridgeConnected,
 		ticketCount: ticketHolders.size,
 		ticketRequired: ticketRequired,
+		ticketCondition: ticketConditions.join(','),
 		prefix: questionPrefix,
 		questions: questions.map(function (q) {
+			return { id: q.id, name: q.name, avatar: q.avatar, text: q.text, shown: q.shown, at: q.at };
+		}),
+		// Arsip lengkap untuk tombol Export CSV di halaman Queue.
+		history: questionHistory.map(function (q) {
 			return { id: q.id, name: q.name, avatar: q.avatar, text: q.text, shown: q.shown, at: q.at };
 		})
 	});
@@ -982,6 +1189,7 @@ function Init() {
 	RenderHint();
 	// Muat antrean scene ini DULU (termasuk On screen scene ini), baru gambar.
 	LoadQueue();
+	LoadHistory();
 	RenderOverlay();
 	RegisterMessageHooks();
 

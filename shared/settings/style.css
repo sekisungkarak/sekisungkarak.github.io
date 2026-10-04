@@ -709,6 +709,33 @@ body.dashboard-mode #settings .header .header-actions wa-button.action-ok::part(
 
 /* ── Config rows ────────────────────────────────────────── */
 
+/* Pemisah sederhana DI DALAM kartu grup (tipe `heading`, mis. "Font",
+   "Colour" di dalam Text). Bukan kartu baru dan bukan kontrol — hanya label
+   kecil dengan garis atas tipis supaya sub-bagian mudah dipindai. Heading
+   pertama tidak perlu garis karena sudah di bawah judul kartu. */
+#settings .config-heading {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--c-content) 62%, transparent);
+    margin: 18px 0 6px 0;
+}
+
+/* Garis pemisah hanya untuk heading KEDUA dan seterusnya (yang didahului
+   heading lain). Heading pertama sudah di bawah judul kartu, tidak perlu
+   garis — dulu `:first-child` salah sasaran karena anak pertama kartu adalah
+   header slot=summary, bukan heading. */
+#settings .config-heading ~ .config-heading {
+    padding-top: 14px;
+    border-top: 1px solid color-mix(in srgb, var(--c-content) 12%, transparent);
+}
+
+body.dashboard-mode #settings .config-heading {
+    color: #8b8494;
+    border-top-color: rgba(255, 255, 255, 0.09);
+}
+
 #settings .config {
     display: flex;
     justify-content: space-between;
@@ -1203,6 +1230,53 @@ body.dashboard-mode #settings .header .header-actions wa-button.action-ok::part(
     margin-right: 10px;
 }
 
+/* ── Chip group — tombol kategori (single-select) ───────── */
+
+#settings .chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-start;
+    width: 100%;
+}
+
+#settings .config.full .chip-group {
+    margin-top: 8px;
+}
+
+#settings .chip {
+    padding: 6px 14px;
+    border-radius: 99em;
+    border: 1px solid color-mix(in srgb, var(--c-glass) 28%, transparent);
+    background-color: color-mix(in srgb, var(--c-glass) 10%, transparent);
+    background-image: var(--glass-sheen);
+    color: color-mix(in srgb, var(--c-content) 82%, transparent);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+#settings .chip:hover {
+    background-color: color-mix(in srgb, var(--c-glass) 22%, transparent);
+    color: #FFF;
+    transform: translateY(-1px);
+}
+
+#settings .chip.is-on {
+    background-color: color-mix(in srgb, var(--accent-color) 78%, transparent);
+    border-color: color-mix(in srgb, var(--accent-color) 90%, transparent);
+    color: #FFF;
+    box-shadow: 0 0 16px 0 color-mix(in srgb, var(--accent-color) 34%, transparent);
+}
+
+#settings .chip.is-on:hover {
+    background-color: color-mix(in srgb, var(--accent-color) 95%, transparent);
+}
+
 /* ── Buttons — kaca pill cembung, tekan = "menciup" ─────── */
 
 #settings wa-button::part(base) {
@@ -1401,6 +1475,47 @@ body.dashboard-mode #settings {
 
 body.dashboard-mode #settingsPanel {
     max-width: 100%;
+}
+
+/* ── Scrollbar di mode dashboard (dock OBS) ─────────────────────
+   Halaman settings menyembunyikan scrollbar html/body supaya tampilan
+   overlay & pratinjau bersih (lihat aturan di atas). Di dock OBS justru
+   scrollbar diperlukan: panel Design panjang dan tanpa batang ini tidak
+   ada penanda posisi. Dinyalakan kembali HANYA saat dashboard-mode;
+   halaman settings biasa dan overlay tidak terpengaruh.
+   Scroll di sini terjadi pada elemen <html>; script menambahkan kelas
+   'dashboard-mode' pada <html> juga, jadi selector html.dashboard-mode
+   langsung mengenai elemen yang men-scroll (aman di CEF lama). */
+html.dashboard-mode,
+body.dashboard-mode {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+
+html.dashboard-mode::-webkit-scrollbar,
+body.dashboard-mode::-webkit-scrollbar {
+    display: block;
+    width: 10px;
+    height: 10px;
+}
+
+html.dashboard-mode::-webkit-scrollbar-track,
+body.dashboard-mode::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+html.dashboard-mode::-webkit-scrollbar-thumb,
+body.dashboard-mode::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.26);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+html.dashboard-mode::-webkit-scrollbar-thumb:hover,
+body.dashboard-mode::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.44);
+    background-clip: content-box;
 }
 
 /* Layar loading DIPAKAI di mode dashboard — lebih baik ada penanda proses
@@ -2703,6 +2818,46 @@ body.skin-queue .sk-popup::part(body) {
 .modal.sk-popup .button::part(base),
 body.skin-queue .sk-popup .button::part(base) {
     border-radius: 9px;
+}
+
+/* Import / Export JSON profil di pop up Load Saved Settings: dua tombol
+   berdampingan, rata kiri. */
+.profile-io {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.profile-io .button::part(base) {
+    border-radius: 9px;
+}
+
+/* Input file asli = tombol "Choose file". Warnanya dipaksa GELAP supaya tidak
+   tampil putih bawaan browser (atribut `hidden` di markup tidak cukup — gaya
+   Web Awesome menimpanya, jadi dulu tombol putih itu ikut muncul). */
+.profile-io input[type="file"] {
+    color: var(--sk-text, var(--c-content, #eae7ee));
+    font: inherit;
+    font-size: 13px;
+}
+
+.profile-io input[type="file"]::file-selector-button {
+    appearance: none;
+    border: 1px solid var(--sk-line, rgba(255, 255, 255, 0.14));
+    background: var(--sk-softer, rgba(255, 255, 255, 0.06));
+    color: var(--sk-text, var(--c-content, #eae7ee));
+    border-radius: 9px;
+    padding: 6px 11px;
+    margin-right: 8px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+}
+
+.profile-io input[type="file"]::file-selector-button:hover {
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .sk-popup-head {
