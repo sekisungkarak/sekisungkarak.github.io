@@ -2590,11 +2590,13 @@ body.skin-queue .url-bar button {
     gap: 6px;
     position: static;
     isolation: auto;
-    width: auto;
-    height: auto;
+    /* Ikon-saja: kotak persegi, bukan pil lebar. Teks tombol sudah dihapus
+       (judulnya lewat tooltip), jadi paddingnya dibuat simetris. */
+    width: 30px;
+    height: 30px;
     min-width: 0;
     flex: 0 0 auto;
-    padding: 6px 12px;
+    padding: 0;
     border: 1px solid var(--sk-line);
     border-radius: 9px;
     background-color: var(--sk-soft);

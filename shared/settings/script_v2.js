@@ -478,8 +478,12 @@ function SetFooterButtonState(btn, text, ok) {
     const original = btn.dataset.baseLabel || btn.textContent;
 
     // Tulis HANYA ke span teks, supaya struktur tombol tidak berubah.
+    // Tombol header kini ikon-saja (tanpa span), jadi kalau span-nya tidak
+    // ada kita TIDAK menulis ke tombol: menulis ke btn akan menghapus <i>
+    // ikonnya. Statusnya sudah dilaporkan lewat toast di skin=queue.
     const textSpan = btn.querySelector('.btn-text');
-    const target = textSpan || btn;
+    if (!textSpan) return;
+    const target = textSpan;
 
     const icon = ok === true ? '<i class="ri-check-line"></i>'
         : ok === false ? '<i class="ri-close-line"></i>' : '';
