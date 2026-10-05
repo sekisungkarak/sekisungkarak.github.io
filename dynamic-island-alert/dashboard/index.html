@@ -14,10 +14,211 @@
 			height: 100%;
 			overflow: hidden;
 			background: #121114;
-
+			font-family: "Archivo", "Segoe UI", system-ui, sans-serif;
 		}
 
-		#dashFrame {
+		body {
+			display: flex;
+			flex-direction: column;
+		}
+
+		/* Navbar: pil status + tab Settings. Susunan dan gayanya sengaja sama
+		   dengan dashboard Live Q&A supaya halaman Settings seluruh widget
+		   terlihat seragam. */
+		#tabs {
+			display: flex;
+			align-items: center;
+			gap: 4px;
+			flex: 0 0 auto;
+			padding: 8px 10px;
+			border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+			background: rgba(255, 255, 255, 0.02);
+		}
+
+		#tabs button {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			padding: 7px 14px;
+			border: 1px solid transparent;
+			border-radius: 9px;
+			background: transparent;
+			color: rgba(234, 231, 238, 0.62);
+			font-family: inherit;
+			font-size: 12.5px;
+			cursor: pointer;
+			transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+		}
+
+		#tabs button:hover {
+			background: rgba(255, 255, 255, 0.06);
+			color: #eae7ee;
+		}
+
+		#tabs button.is-active {
+			background: rgba(212, 168, 67, 0.14);
+			border-color: rgba(212, 168, 67, 0.42);
+			color: #eae7ee;
+		}
+
+		#tabs svg {
+			width: 14px;
+			height: 14px;
+			flex: 0 0 auto;
+		}
+
+		/* Tombol Interact: didorong ke ujung kanan navbar. */
+		#tabInteract {
+			margin-left: auto;
+		}
+
+		/* ── Pil status TikTok (kiri navbar) ──────────────────────────────
+		     Avatar + @username + baris status, dengan titik warna di sudut
+		     avatar: kuning = menyambung, hijau = live, merah = error,
+		     abu = offline. */
+		#liveStatus {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			padding: 4px 10px 4px 4px;
+			border: 1px solid rgba(255, 255, 255, 0.09);
+			border-radius: 999px;
+			background: rgba(255, 255, 255, 0.03);
+			flex: 0 0 auto;
+			user-select: none;
+		}
+
+		#liveStatus .live-avatar {
+			position: relative;
+			width: 28px;
+			height: 28px;
+			flex: 0 0 auto;
+		}
+
+		/* Placeholder avatar: lingkaran abu dengan siluet orang (bukan foto). */
+		#liveStatus .live-avatar svg {
+			width: 100%;
+			height: 100%;
+			border-radius: 50%;
+			display: block;
+			background: rgba(255, 255, 255, 0.10);
+			color: rgba(234, 231, 238, 0.55);
+		}
+
+		/* Foto streamer. Disembunyikan lewat class, BUKAN atribut `hidden`:
+		   aturan `display` di sini mengalahkan `[hidden]` dari UA stylesheet,
+		   jadi `hidden` tidak akan berpengaruh dan foto kosong akan menutupi
+		   placeholder. */
+		#liveStatus .live-photo {
+			position: absolute;
+			inset: 0;
+			width: 100%;
+			height: 100%;
+			border-radius: 50%;
+			object-fit: cover;
+			display: none;
+		}
+
+		#liveStatus .live-photo.is-shown { display: block; }
+
+		/* Toast status: gaya sama dengan toast Settings (kiri bawah), jadi
+		   bahasanya konsisten di seluruh widget. */
+		.sk-toasts {
+			position: fixed;
+			left: 12px;
+			bottom: 12px;
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+			align-items: flex-start;
+			z-index: 60;
+			pointer-events: none;
+			max-width: min(360px, calc(100% - 24px));
+		}
+
+		.sk-toast {
+			padding: 7px 12px;
+			border: 1px solid rgba(255, 255, 255, 0.08);
+			border-left: 2px solid #4ecb8d;
+			border-radius: 4px;
+			background: #201e28;
+			color: #eae7ee;
+			font-size: 13px;
+			font-weight: 500;
+			box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+			max-width: 100%;
+			word-break: break-word;
+		}
+
+		.sk-toast.is-error { border-left-color: #e2686b; }
+		.sk-toast.is-offline { border-left-color: #8a8593; }
+
+		#liveStatus .live-dot {
+			position: absolute;
+			right: -1px;
+			bottom: -1px;
+			width: 10px;
+			height: 10px;
+			border-radius: 50%;
+			border: 2px solid #121114;
+			background: #8a8593;
+			transition: background-color 200ms ease;
+		}
+
+		#liveStatus .live-meta {
+			display: flex;
+			flex-direction: column;
+			line-height: 1.15;
+			min-width: 0;
+		}
+
+		#liveStatus .live-user {
+			font-size: 12px;
+			font-weight: 600;
+			color: #eae7ee;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			max-width: 160px;
+		}
+
+		#liveStatus .live-state {
+			font-size: 10.5px;
+			color: rgba(234, 231, 238, 0.55);
+			white-space: nowrap;
+		}
+
+		#liveStatus.is-connecting .live-dot { background: #d4a843; }
+		#liveStatus.is-live .live-dot { background: #4ecb8d; }
+		#liveStatus.is-error .live-dot { background: #e2686b; }
+		#liveStatus.is-offline .live-dot { background: #8a8593; }
+		#liveStatus.is-live .live-state { color: #4ecb8d; }
+
+		/* Pesan galat dari bridge lebih panjang dari label status biasa, jadi
+		   beri ruang dan warna sendiri agar tetap terbaca. */
+		#liveStatus .live-state.is-message {
+			font-size: 10px;
+			color: #e2686b;
+			white-space: normal;
+			max-width: 260px;
+		}
+
+		#tabInteract.is-busy {
+			opacity: 0.6;
+			pointer-events: none;
+		}
+
+		.pane {
+			flex: 1 1 auto;
+			min-height: 0;
+			display: none;
+		}
+
+		.pane.is-active {
+			display: block;
+		}
+
+		iframe {
 			width: 100%;
 			height: 100%;
 			border: 0;
@@ -27,8 +228,47 @@
 </head>
 
 <body>
-	<iframe id="dashFrame" allow="clipboard-write; clipboard-read"></iframe>
-	<script src="dashboard.js?v=21"></script>
+	<div id="tabs">
+		<div id="liveStatus" class="is-connecting" title="TikTok connection">
+			<span class="live-avatar">
+				<!-- Foto streamer dari bridge; placeholder SVG tetap ada
+				     sampai fotonya siap (atau kalau gagal dimuat). -->
+				<img id="liveAvatar" class="live-photo" alt="">
+				<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+					<circle cx="12" cy="8" r="4"></circle>
+					<path d="M4 21a8 8 0 0 1 16 0z"></path>
+				</svg>
+				<span class="live-dot"></span>
+			</span>
+			<span class="live-meta">
+				<span id="liveUser" class="live-user">@&#8212;</span>
+				<span id="liveState" class="live-state">Connecting&#8230;</span>
+			</span>
+		</div>
+
+		<button id="tabSettings" type="button" class="is-active">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<circle cx="12" cy="12" r="3"></circle>
+				<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+			</svg>
+			<span>Settings</span>
+		</button>
+
+		<button id="tabInteract" type="button" title="Open the OBS Interact dialog for this widget's browser source">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<path d="M15 3h6v6"></path>
+				<path d="M10 14 21 3"></path>
+				<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+			</svg>
+			<span>Interact</span>
+		</button>
+	</div>
+
+	<div id="paneSettings" class="pane is-active">
+		<iframe id="dashFrame" allow="clipboard-write; clipboard-read"></iframe>
+	</div>
+
+	<script src="dashboard.js?v=25"></script>
 </body>
 
 </html>

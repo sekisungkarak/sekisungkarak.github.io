@@ -10,7 +10,8 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "badge": "streamerbot"
   },
   "OBS Connection": {
-   "open": false,
+   "open": true,
+   "popup": true,
    "icon": "../../resources/icons/platforms/obs-logo.svg",
    "badge": "obs"
   },
@@ -80,7 +81,8 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "label": "Server IP",
    "type": "text",
    "defaultValue": "127.0.0.1",
-   "group": "Streamer.bot Connection"
+   "group": "Streamer.bot Connection",
+   "headerOnly": true
   },
   {
    "id": "port",
@@ -89,7 +91,8 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "defaultValue": 8080,
    "min": 1024,
    "max": 65535,
-   "group": "Streamer.bot Connection"
+   "group": "Streamer.bot Connection",
+   "headerOnly": true
   },
   {
    "id": "obsAddress",
