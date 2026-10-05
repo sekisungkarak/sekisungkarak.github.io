@@ -2489,6 +2489,61 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 	root.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
 	root.addEventListener('click', function (e) { e.stopPropagation(); });
 
+	/* ---- Keluar Layout + tutup panel saat jendela Interact OBS ditutup ----
+	   OBS meneruskan fokus jendela Interact ke halaman ini lewat
+	   obs_source_send_focus -> CEF SetFocus, yang memicu event DOM
+	   `blur`/`focus`. Jadi `blur` adalah sinyal DETERMINISTIK (bukan timer):
+	   begitu Interact kehilangan fokus atau ditutup, mode Layout dan panel
+	   ikut ditutup supaya bingkai/handle-nya tidak terekam di stream.
+	   Dua jaring pengaman menyusul: poll document.hasFocus() kalau event
+	   `blur` tertelan, dan timer idle kalau memang tidak ada input sama
+	   sekali. Semuanya hanya berlaku setelah halaman ini PERNAH fokus,
+	   supaya source latar tidak salah menutup panelnya sendiri. */
+	var INTERACT_EXIT_IDLE_MS = 30000;
+	var interactIdleTimer = null;
+	var interactHadFocus = false;
+
+	function ExitLayoutAndPanel() {
+		// Jangan tinggalkan drag yang belum selesai: posisi terakhir hilang
+		// kalau handle dilepas paksa oleh penutupan jendela.
+		if (typeof EndDrag === 'function') EndDrag();
+		if (layoutOn) SetLayoutMode(false);
+		if (isOpen) Close();
+	}
+
+	function ArmInteractIdle() {
+		if (interactIdleTimer) clearTimeout(interactIdleTimer);
+		interactIdleTimer = setTimeout(function () {
+			if (layoutOn || isOpen) ExitLayoutAndPanel();
+		}, INTERACT_EXIT_IDLE_MS);
+	}
+
+	/* Interact kehilangan fokus / ditutup -> keluar Layout + tutup panel.
+	   TIDAK dijaga `interactHadFocus`: kalau halaman tidak pernah menerima
+	   event `focus` (mis. panel dibuka lewat tombol S sebelum OBS sempat
+	   mengirim fokus), penjaga itu justru mematikan fiturnya. Fungsi
+	   tujuannya sudah keluar lebih awal saat tidak ada yang perlu ditutup. */
+	window.addEventListener('blur', ExitLayoutAndPanel);
+	window.addEventListener('focus', function () {
+		interactHadFocus = true;
+		ArmInteractIdle();
+	});
+
+	/* Lapis kedua: kalau event `blur` tertelan (mis. build OBS yang tidak
+	   meneruskan fokus), poll document.hasFocus(). Hanya aktif setelah
+	   halaman ini pernah fokus, jadi tidak ada false positive. */
+	setInterval(function () {
+		if (!layoutOn && !isOpen) return;
+		if (interactHadFocus && !document.hasFocus()) ExitLayoutAndPanel();
+	}, 1000);
+
+	/* Aktivitas apa pun menunda jaring pengaman idle. */
+	['pointermove', 'pointerdown', 'keydown', 'wheel'].forEach(function (ev) {
+		document.addEventListener(ev, function () {
+			if (layoutOn || isOpen) ArmInteractIdle();
+		}, { passive: true });
+	});
+
 	window.GesekiLayout = {
 		enter: LayoutEnter,
 		exit: LayoutExit,
