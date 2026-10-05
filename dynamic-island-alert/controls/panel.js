@@ -47,6 +47,8 @@
 		return 'geseki:' + (segs[segs.length - 1] || 'widget') + ':';
 	})();
 	var CHANNEL_NAME = WIDGET_NS + 'channel';
+	// Nama widget (folder) untuk awalan nama berkas Export.
+	var WIDGET_NAME = WIDGET_NS.slice('geseki:'.length, -1) || 'widget';
 	if (!CFG || !SCHEMA) {
 		console.warn('[Geseki][Controls] GesekiConfig / GESEKI_CONTROLS_SCHEMA missing, panel aborted.');
 		return;
@@ -2294,7 +2296,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			var blob = new Blob([text], { type: 'application/json' });
 			var a = document.createElement('a');
 			a.href = URL.createObjectURL(blob);
-			a.download = name || 'sekisungkarak.json';
+			a.download = name || (WIDGET_NAME + '.json');
 			a.click();
 			setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
 			SetStatus('File downloaded. If OBS blocks the download, copy the text from the box above.');
@@ -2312,6 +2314,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			settings: ReadForm()
 		};
 		var text = JSON.stringify(payload, null, 2);
+		var stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
 
 		// Di dalam OBS, unduhan file sering diblokir. Teksnya tetap ditampilkan
 		// supaya bisa disalin manual.
@@ -2323,7 +2326,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			confirmLabel: 'Save file',
 			cancelLabel: 'Close',
 			onConfirm: function () {
-				DownloadJSON(text, 'sekisungkarak-' + (CFG.active || 'default') + '.json');
+				DownloadJSON(text, WIDGET_NAME + '-' + (CFG.active || 'default') + '-' + stamp + '.json');
 			}
 		});
 	}

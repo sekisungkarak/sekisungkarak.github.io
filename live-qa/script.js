@@ -637,6 +637,26 @@ const PROFILE_SLOT = profileName || '_default';
 const QUEUE_KEY = WIDGET_NS + 'queue:' + PROFILE_SLOT;
 const HISTORY_KEY = WIDGET_NS + 'history:' + PROFILE_SLOT;
 
+/* ── Auto export per sesi live ─────────────────────────────────────────
+   Saat bridge melaporkan TikTok "connected" sesi live dimulai; begitu
+   statusnya keluar dari connected, sesi berakhir dan (kalau dinyalakan)
+   CSV pertanyaan sesi itu dikirim ke bridge -> folder Downloads.
+   Disimpan per scene, sama seperti antrean, supaya tiap scene punya
+   berkas sesinya sendiri. Sesi yang gagal terkirim disimpan sebagai
+   pending dan dicoba lagi saat live berikutnya. */
+const AUTOEXPORT_KEY = WIDGET_NS + 'autoexport';
+const SESSION_KEY = WIDGET_NS + 'session:' + PROFILE_SLOT;
+const SESSION_PENDING_KEY = WIDGET_NS + 'session-pending:' + PROFILE_SLOT;
+
+/* Tombol Export di halaman Queue mengirim nilai ini lewat BroadcastChannel. */
+function LoadAutoExport() {
+	try { return localStorage.getItem(AUTOEXPORT_KEY) === '1'; }
+	catch (e) { return false; }
+}
+let autoExportEnabled = LoadAutoExport();
+/* Waktu mulai sesi live berjalan, atau null kalau tidak live. */
+let sessionStartMs = null;
+
 /* Migrasi sekali jalan: antrean lama tanpa sufiks dipindah ke `_default`
    (hanya berlaku untuk instance yang memang tanpa profil). */
 (function MigrateQueueKeys() {
@@ -721,6 +741,162 @@ function LoadHistory() {
 		}
 	} catch (e) { /* abaikan */ }
 }
+
+// ── Sesi live: deteksi + auto export ────────────────────────────────────
+
+function LoadSession() {
+	try {
+		const raw = localStorage.getItem(SESSION_KEY);
+		if (!raw) return;
+		const ms = parseInt(raw, 10);
+		// Sesi lebih tua dari 24 jam dianggap basi (OBS mati lama).
+		if (isFinite(ms) && Date.now() - ms < 24 * 60 * 60 * 1000)
+			sessionStartMs = ms;
+		else
+			localStorage.removeItem(SESSION_KEY);
+	} catch (e) { /* abaikan */ }
+}
+
+function SaveSession() {
+	try {
+		if (sessionStartMs === null) localStorage.removeItem(SESSION_KEY);
+		else localStorage.setItem(SESSION_KEY, String(sessionStartMs));
+	} catch (e) { /* abaikan */ }
+}
+
+/* Satu sel CSV, mengikuti aturan kutip yang sama dengan halaman Queue. */
+function CsvCell(v) {
+	const t = (v === null || v === undefined) ? '' : String(v);
+	return /[",\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+}
+
+function FormatDateTime(ms) {
+	try { return new Date(ms).toLocaleString(); } catch (e) { return ''; }
+}
+
+/* Pertanyaan sesi ini (arsip sejak sesi mulai), diurutkan waktu. */
+function SessionRows(startMs) {
+	return (questionHistory || [])
+		.filter(function (q) {
+			return q && typeof q.at === 'number' && q.at >= startMs && !IsSampleQuestion(q);
+		})
+		.sort(function (a, b) { return (a.at || 0) - (b.at || 0); });
+}
+
+function BuildSessionCsv(startMs) {
+	const rows = SessionRows(startMs);
+	const lines = ['Time,Name,Question,Status'];
+	rows.forEach(function (q) {
+		lines.push([
+			CsvCell(FormatDateTime(q.at)),
+			CsvCell(q.name),
+			CsvCell(q.text),
+			CsvCell(q.shown ? 'shown' : 'queued')
+		].join(','));
+	});
+	return { csv: '\uFEFF' + lines.join('\r\n'), count: rows.length };
+}
+
+/* Stempel untuk nama berkas: YYYYMMDD-HHMMSS waktu lokal. */
+function FileStamp(ms) {
+	const d = new Date(ms);
+	function p(n) { return (n < 10 ? '0' : '') + n; }
+	return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' +
+		d.getHours() + p(d.getMinutes()) + p(d.getSeconds());
+}
+
+/* Kirim CSV ke bridge (tulis ke folder Downloads). true kalau tersimpan. */
+async function PostSessionCsv(csv, name) {
+	try {
+		const ctl = new AbortController();
+		const t = setTimeout(function () { ctl.abort(); }, 5000);
+		const r = await fetch('http://' + bridgeHost + ':47800/save?name=' + encodeURIComponent(name), {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/octet-stream' },
+			body: csv,
+			signal: ctl.signal
+		});
+		clearTimeout(t);
+		if (!r.ok) return false;
+		const d = await r.json();
+		return !!(d && d.ok);
+	} catch (e) {
+		return false;
+	}
+}
+
+/* Simpan sesi yang belum terkirim supaya dicoba lagi saat live berikutnya. */
+function StashPending(startMs) {
+	try {
+		const raw = localStorage.getItem(SESSION_PENDING_KEY);
+		const list = raw ? JSON.parse(raw) : [];
+		const arr = Array.isArray(list) ? list : [];
+		arr.push(startMs);
+		localStorage.setItem(SESSION_PENDING_KEY, JSON.stringify(arr.slice(-20)));
+	} catch (e) { /* abaikan */ }
+}
+
+function ReadPending() {
+	try {
+		const raw = localStorage.getItem(SESSION_PENDING_KEY);
+		const list = raw ? JSON.parse(raw) : [];
+		return Array.isArray(list) ? list : [];
+	} catch (e) { return []; }
+}
+
+function ClearPending() {
+	try { localStorage.removeItem(SESSION_PENDING_KEY); } catch (e) { /* abaikan */ }
+}
+
+/* Export sesi `startMs`. Hanya scene yang sedang tayang yang menulis, supaya
+   satu sesi tidak menghasilkan berkas dari tiap source scene. */
+async function ExportSession(startMs, endMs) {
+	if (startMs === null || startMs === undefined) return;
+	const built = BuildSessionCsv(startMs);
+	const name = 'live-qa-questions-' + FileStamp(startMs) + '-' + FileStamp(endMs || Date.now()) + '.csv';
+	const ok = await PostSessionCsv(built.csv, name);
+	if (!ok) StashPending(startMs);
+}
+
+/* Coba kirim sesi-sesi yang tertunda (bridge tadinya mati). */
+async function FlushPendingSessions() {
+	const pending = ReadPending();
+	if (!pending.length) return;
+	const left = [];
+	for (const startMs of pending) {
+		const built = BuildSessionCsv(startMs);
+		const name = 'live-qa-questions-' + FileStamp(startMs) + '-' + FileStamp(Date.now()) + '.csv';
+		const ok = await PostSessionCsv(built.csv, name);
+		if (!ok) left.push(startMs);
+	}
+	if (left.length) {
+		try { localStorage.setItem(SESSION_PENDING_KEY, JSON.stringify(left)); } catch (e) { /* abaikan */ }
+	} else {
+		ClearPending();
+	}
+}
+
+/* Transisi status TikTok dari bridge. state 'connected' = live berjalan. */
+function ApplyTikTokState(state) {
+	const wasLive = sessionStartMs !== null;
+	const isLive = (state === 'connected');
+	if (isLive && !wasLive) {
+		sessionStartMs = Date.now();
+		SaveSession();
+		// Bridge hidup lagi: coba kirim sesi yang sempat tertunda.
+		FlushPendingSessions();
+	} else if (!isLive && wasLive) {
+		const startMs = sessionStartMs;
+		sessionStartMs = null;
+		SaveSession();
+		// Hanya scene yang SEDANG TAYANG yang menulis berkasnya.
+		if (autoExportEnabled && activeState === true) {
+			ExportSession(startMs, Date.now());
+		}
+	}
+}
+
+LoadSession();
 
 function FindQuestion(id) {
 	for (let i = 0; i < questions.length; i++) {
@@ -1096,8 +1272,12 @@ async function bridgeConnection() {
 
 			if (data.type === 'tiktok') {
 				HandleTikTokEvent(data.event, data.data);
+			} else if (data.type === 'status') {
+				// Deteksi sesi live untuk auto export.
+				if (data.tiktok && typeof data.tiktok.state === 'string')
+					ApplyTikTokState(data.tiktok.state);
 			}
-			// hello / status / pong / tipe masa depan: diabaikan (protokol aditif).
+			// hello / pong / tipe masa depan: diabaikan (protokol aditif).
 		};
 
 		bridgeWebsocket.onclose = function () {
@@ -1268,6 +1448,10 @@ function HandleQueueMessage(d) {
 			break;
 		case 'qa_test':
 			AddTestQuestion();
+			break;
+		case 'qa_set_autoexport':
+			autoExportEnabled = !!d.enabled;
+			try { localStorage.setItem(AUTOEXPORT_KEY, autoExportEnabled ? '1' : '0'); } catch (e) { /* abaikan */ }
 			break;
 		case 'callFunction':
 			CallFunctionByName(d.fn, d.args);

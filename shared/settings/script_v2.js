@@ -869,12 +869,36 @@ function CollectSavedProfiles() {
     return out;
 }
 
+/* Simpan lewat bridge supaya berkas benar-benar sampai ke folder Downloads.
+   obs-browser tidak punya CEF download handler, jadi <a download> dengan blob
+   dibatalkan diam-diam di dalam OBS. Bridge yang menulis berkasnya.
+   Mengembalikan path lengkap kalau berhasil, atau null kalau bridge mati. */
+async function SaveViaBridge(text, name) {
+    try {
+        const ctl = new AbortController();
+        const t = setTimeout(() => ctl.abort(), 4000);
+        const r = await fetch('http://127.0.0.1:47800/save?name=' + encodeURIComponent(name || (keyPrefix + '-profiles.json')), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/octet-stream' },
+            body: text,
+            signal: ctl.signal
+        });
+        clearTimeout(t);
+        if (!r.ok) return null;
+        const d = await r.json();
+        return (d && d.ok && d.path) ? d.path : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+/* Unduhan blob biasa — cadangan saat bridge tidak tersedia. */
 function DownloadJSONFile(text, name) {
     try {
         const blob = new Blob([text], { type: 'application/json' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = name || 'geseki-profiles.json';
+        a.download = name || (keyPrefix + '-profiles.json');
         a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
@@ -902,7 +926,7 @@ const profileExportInfo = document.getElementById('profileExportInfo');
 const profileExportCopyBtn = document.getElementById('profileExportCopyBtn');
 const profileExportSaveBtn = document.getElementById('profileExportSaveBtn');
 
-let lastExportName = 'geseki-profiles.json';
+let lastExportName = keyPrefix + '-profiles.json';
 
 function ExportProfiles() {
     const profiles = CollectSavedProfiles();
@@ -915,7 +939,7 @@ function ExportProfiles() {
     const text = JSON.stringify(payload, null, 2);
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     const count = Object.keys(profiles).length;
-    lastExportName = 'geseki-profiles-' + stamp + '.json';
+    lastExportName = keyPrefix + '-profiles-' + stamp + '.json';
 
     if (profileExportText && profileExportDialog) {
         profileExportText.value = text;
@@ -930,13 +954,15 @@ function ExportProfiles() {
         return;
     }
 
-    // Cadangan bila pop up tidak ada di halaman ini.
-    const ok = DownloadJSONFile(text, lastExportName);
-    if (loadObsButton) {
-        SetFooterButtonState(loadObsButton,
-            ok ? `Exported ${count} profile(s)` : 'Download blocked — copy manually',
-            ok);
-    }
+    // Cadangan bila pop up tidak ada di halaman ini: bridge dulu, blob kedua.
+    SaveViaBridge(text, lastExportName).then((path) => {
+        const ok = path ? true : DownloadJSONFile(text, lastExportName);
+        if (loadObsButton) {
+            SetFooterButtonState(loadObsButton,
+                path ? `Exported ${count} profile(s)` : (ok ? 'Saved via browser download' : 'Download blocked — copy manually'),
+                ok);
+        }
+    });
 }
 
 /* Salin isi kotak export. Clipboard API dulu (butuh izin clipboard-write di
@@ -1035,7 +1061,19 @@ if (profileExportDialog) {
 
     if (profileExportSaveBtn) {
         profileExportSaveBtn.addEventListener('click', () => {
-            DownloadJSONFile(profileExportText ? profileExportText.value : '', lastExportName);
+            const text = profileExportText ? profileExportText.value : '';
+            SaveViaBridge(text, lastExportName).then((path) => {
+                if (path) {
+                    if (profileExportInfo) profileExportInfo.textContent = 'Saved to ' + path;
+                    return;
+                }
+                const ok = DownloadJSONFile(text, lastExportName);
+                if (profileExportInfo) {
+                    profileExportInfo.textContent = ok
+                        ? 'Bridge not running — saved through the browser download instead.'
+                        : 'Could not save the file — click Copy instead.';
+                }
+            });
         });
     }
 }

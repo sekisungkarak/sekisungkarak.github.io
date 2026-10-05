@@ -596,6 +596,26 @@ body {
 	gap: 8px;
 }
 
+/* Baris auto-export di pop up Export questions. */
+.export-auto {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12px;
+	line-height: 1.4;
+	color: var(--text-dim);
+	cursor: pointer;
+	user-select: none;
+}
+
+.export-auto input {
+	flex: 0 0 auto;
+	width: 15px;
+	height: 15px;
+	accent-color: var(--green, #4ecb8d);
+	cursor: pointer;
+}
+
 /* ── Scrollbar ──────────────────────────────────────────────────────────── */
 
 /* Kotak Export questions: batang gulir disamakan dengan daftar antrean

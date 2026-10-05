@@ -138,6 +138,155 @@ if (window.BroadcastChannel) {
     } catch (e) { /* abaikan */ }
 }
 
+// ── Pil status TikTok di navbar ─────────────────────────────────────────────
+// Bridge mengirim pesan 'status' dengan { tiktok: { state, username } }.
+// Dashboard membuka WebSocket sendiri supaya pil tetap hidup walau tab
+// Settings/Queue sedang tidak aktif.
+
+const liveStatus = document.getElementById('liveStatus');
+const liveUser = document.getElementById('liveUser');
+const liveState = document.getElementById('liveState');
+const liveAvatar = document.getElementById('liveAvatar');
+
+// Foto streamer terakhir yang ditampilkan, supaya URL yang sama tidak
+// dipasang ulang (dan tidak memicu muat ulang gambar).
+let liveAvatarUrl = '';
+// Toast hanya untuk PERUBAHAN status. Saat dashboard dimuat, bridge
+// mengirim keadaan saat ini (atau koneksinya gagal) — itu snapshot, bukan
+// perubahan. Jadi toast baru "diaktifkan" setelah status pertama selesai
+// diproses; sebelumnya semua pembaruan dianggap snapshot.
+let liveToastState = null;
+let liveToastsArmed = false;
+
+function SetLiveAvatar(url) {
+	if (!liveAvatar) return;
+	if (!url) {
+		// Belum ada foto: placeholder SVG yang tampil.
+		liveAvatar.classList.remove('is-shown');
+		liveAvatar.removeAttribute('src');
+		liveAvatarUrl = '';
+		return;
+	}
+	if (url === liveAvatarUrl) return;
+	liveAvatarUrl = url;
+	// Foto hanya menutupi placeholder setelah benar-benar termuat, jadi
+	// tidak pernah ada kotak kosong menggantikan placeholder.
+	liveAvatar.classList.remove('is-shown');
+	liveAvatar.onerror = function () {
+		// Foto gagal dimuat (mis. URL kedaluwarsa): kembali ke placeholder.
+		liveAvatar.classList.remove('is-shown');
+		liveAvatarUrl = '';
+	};
+	liveAvatar.onload = function () { liveAvatar.classList.add('is-shown'); };
+	liveAvatar.src = url;
+}
+
+/* Toast status: hanya perubahan yang berarti. 'connecting' dilewati karena
+   muncul lagi di setiap percobaan ulang, jadi akan jadi kebisingan. */
+function ShowLiveToast(state, message) {
+	if (state === 'connecting') return;
+	if (state === liveToastState) return;
+	liveToastState = state;
+
+	let box = document.getElementById('skToasts');
+	if (!box) {
+		box = document.createElement('div');
+		box.id = 'skToasts';
+		box.className = 'sk-toasts';
+		document.body.appendChild(box);
+	}
+
+	const t = document.createElement('div');
+	const cls = state === 'error' ? ' is-error'
+		: state === 'off' ? ' is-offline' : '';
+	t.className = 'sk-toast' + cls;
+	// Saat gagal, alasan dari bridge lebih berguna daripada kata "Error".
+	const label = LIVE_STATE_LABEL[state] || state;
+	t.textContent = (state === 'error' && message)
+		? 'TikTok: ' + message
+		: 'TikTok: ' + label;
+	box.appendChild(t);
+
+	while (box.children.length > 4) box.removeChild(box.firstChild);
+	setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 3400);
+}
+
+const LIVE_STATE_LABEL = {
+	connected: 'Live',
+	connecting: 'Connecting\u2026',
+	off: 'Offline',
+	error: 'Error'
+};
+
+/* `suppressToast` dipakai untuk status pertama: pil tetap diperbarui, tapi
+   tidak ada toast karena itu keadaan awal, bukan perubahan. */
+function SetLiveStatus(state, username, message, avatar, suppressToast) {
+	if (!liveStatus) return;
+	SetLiveAvatar(avatar);
+	if (!suppressToast) ShowLiveToast(state, message);
+	const s = LIVE_STATE_LABEL[state] ? state : 'off';
+	const cls = s === 'connected' ? 'is-live'
+		: s === 'connecting' ? 'is-connecting'
+		: s === 'error' ? 'is-error'
+		: 'is-offline';
+	liveStatus.classList.remove('is-connecting', 'is-live', 'is-offline', 'is-error');
+	liveStatus.classList.add(cls);
+	// Saat gagal, bridge menyertakan alasannya (mis. sign server lokal
+	// tidak tersedia). Pesan itu yang bisa ditindaklanjuti, jadi tampilkan
+	// apa adanya, bukan sekadar kata "Error".
+	const detail = (s === 'error' && message) ? message : '';
+	if (liveState) {
+		liveState.textContent = detail || LIVE_STATE_LABEL[s];
+		liveState.classList.toggle('is-message', !!detail);
+	}
+	if (liveUser) liveUser.textContent = username ? ('@' + username) : '@\u2014';
+	liveStatus.title = 'TikTok: ' + LIVE_STATE_LABEL[s] +
+		(username ? ' (@' + username + ')' : '') +
+		(detail ? ' \u2014 ' + detail : '');
+}
+
+let liveWs = null;
+
+function ConnectLiveStatus() {
+	try {
+		liveWs = new WebSocket('ws://127.0.0.1:47800/ws');
+		// Bridge mengirim status awal begitu tersambung, jadi tidak perlu
+		// meminta apa pun di sini.
+		liveWs.onmessage = (ev) => {
+			let d;
+			try { d = JSON.parse(ev.data); } catch (e) { return; }
+			if (d && d.type === 'status' && d.tiktok) {
+				// Status pertama setelah halaman dimuat = keadaan sekarang,
+				// bukan perubahan: perbarui pil tanpa toast.
+				const first = !liveToastsArmed;
+				liveToastsArmed = true;
+				SetLiveStatus(d.tiktok.state, d.tiktok.username, d.tiktok.message,
+					d.tiktok.avatar, first);
+			}
+		};
+		liveWs.onclose = () => {
+			liveWs = null;
+			// Bridge tidak terjangkau saat halaman dimuat: itu juga snapshot.
+			const first = !liveToastsArmed;
+			liveToastsArmed = true;
+			SetLiveStatus('off', '', '', '', first);
+			setTimeout(ConnectLiveStatus, 5000);
+		};
+		liveWs.onerror = () => {
+			if (liveWs && liveWs.readyState !== WebSocket.CLOSED) liveWs.close();
+		};
+	} catch (e) {
+		liveWs = null;
+		const first = !liveToastsArmed;
+		liveToastsArmed = true;
+		SetLiveStatus('off', '', '', '', first);
+		setTimeout(ConnectLiveStatus, 5000);
+	}
+}
+
+SetLiveStatus('connecting', '', '', '', true);
+ConnectLiveStatus();
+
 // ── Tab awal ────────────────────────────────────────────────────────────────
 // Settings adalah tab default. Iframe-nya sudah dimuat di atas; iframe Queue
 // baru dimuat saat tab-nya pertama kali dibuka.

@@ -13,6 +13,15 @@
    reports "widget offline" and the buttons simply send into the void.
    ========================================================================== */
 
+/* Nama widget (folder) untuk awalan nama berkas Export: halaman ini berada
+   di <widget>/queue/, jadi segmen sebelum 'queue' adalah nama widgetnya. */
+const WIDGET_NAME = (function () {
+	var segs = location.pathname.replace(/\/+$/, '').split('/').filter(Boolean);
+	if (segs.length && segs[segs.length - 1].indexOf('.') !== -1) segs.pop();
+	if (segs.length && segs[segs.length - 1] === 'queue') segs.pop();
+	return segs[segs.length - 1] || 'widget';
+})();
+
 const WIDGET_NS = 'geseki:live-qa:';
 const CHANNEL_NAME = WIDGET_NS + 'channel';
 /* How long to wait for a qa_state reply before calling it disconnected. */
@@ -23,6 +32,20 @@ const PAGE_SIZE = 5;
    Ditegakkan lagi di sini supaya CSV tetap benar walau source OBS dibiarkan
    hidup lebih dari sepekan tanpa reload. */
 const HISTORY_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+
+/* Auto export per sesi live: nilai disimpan di localStorage (dibagi dengan
+   widget, origin sama) dan disiarkan ke widget lewat BroadcastChannel. */
+const AUTOEXPORT_KEY = WIDGET_NS + 'autoexport';
+
+function LoadAutoExport() {
+	try { return localStorage.getItem(AUTOEXPORT_KEY) === '1'; }
+	catch (e) { return false; }
+}
+
+function SetAutoExport(on) {
+	try { localStorage.setItem(AUTOEXPORT_KEY, on ? '1' : '0'); } catch (e) { /* abaikan */ }
+	Send({ type: 'qa_set_autoexport', enabled: !!on });
+}
 
 const exportBtn = document.getElementById('exportBtn');
 const clearBtn = document.getElementById('clearBtn');
@@ -387,12 +410,37 @@ function BuildCsv() {
 	return '\uFEFF' + lines.join('\r\n');
 }
 
+/* Simpan lewat bridge supaya berkas benar-benar sampai ke folder Downloads.
+   Di dalam OBS, obs-browser tidak punya CEF download handler, jadi <a download>
+   dengan blob dibatalkan diam-diam. Bridge (plugin) yang menulis berkasnya.
+   Mengembalikan path lengkap kalau berhasil, atau null (bridge tidak jalan). */
+async function SaveViaBridge(text, name) {
+	try {
+		const ctl = new AbortController();
+		const t = setTimeout(function () { ctl.abort(); }, 4000);
+		const r = await fetch('http://127.0.0.1:47800/save?name=' + encodeURIComponent(name || (WIDGET_NAME + '-questions.csv')), {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/octet-stream' },
+			body: text,
+			signal: ctl.signal
+		});
+		clearTimeout(t);
+		if (!r.ok) return null;
+		const d = await r.json();
+		return (d && d.ok && d.path) ? d.path : null;
+	} catch (e) {
+		return null;
+	}
+}
+
+/* Unduhan blob biasa — cadangan saat bridge tidak tersedia (mis. halaman
+   dibuka di browser normal). Di dalam OBS ini sering dibatalkan diam-diam. */
 function DownloadCsv(text, name) {
 	try {
 		const blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
 		const a = document.createElement('a');
 		a.href = URL.createObjectURL(blob);
-		a.download = name || 'live-qa-questions.csv';
+		a.download = name || (WIDGET_NAME + '-questions.csv');
 		a.style.display = 'none';
 		document.body.appendChild(a);
 		a.click();
@@ -446,13 +494,25 @@ function ShowExportDialog(text, name) {
 
 	const msg = document.createElement('div');
 	msg.className = 'modal-msg';
-	msg.textContent = 'Click Copy to paste it into Excel, or Save file to download it. OBS shows no "Save As" dialog \u2014 the file is written straight to your Downloads folder.';
+	msg.textContent = 'Click Save file to write it into your Downloads folder (through the bridge), or Copy to paste it into Excel.';
 
 	const area = document.createElement('textarea');
 	area.className = 'export-text';
 	area.readOnly = true;
 	area.spellcheck = false;
 	area.value = text;
+
+	// Baris auto-export: tulis CSV sendiri tiap sesi live berakhir.
+	const autoRow = document.createElement('label');
+	autoRow.className = 'export-auto';
+	const autoBox = document.createElement('input');
+	autoBox.type = 'checkbox';
+	autoBox.checked = LoadAutoExport();
+	const autoText = document.createElement('span');
+	autoText.textContent = 'Auto export a CSV at the end of every live session';
+	autoRow.appendChild(autoBox);
+	autoRow.appendChild(autoText);
+	autoBox.addEventListener('change', function () { SetAutoExport(autoBox.checked); });
 
 	const row = document.createElement('div');
 	row.className = 'modal-row';
@@ -478,6 +538,7 @@ function ShowExportDialog(text, name) {
 	box.appendChild(title);
 	box.appendChild(msg);
 	box.appendChild(area);
+	box.appendChild(autoRow);
 	box.appendChild(row);
 	back.appendChild(box);
 	document.body.appendChild(back);
@@ -505,7 +566,20 @@ function ShowExportDialog(text, name) {
 		}
 	});
 
-	saveBtn.addEventListener('click', function () { DownloadCsv(text, name); });
+	saveBtn.addEventListener('click', function () {
+		const span = saveBtn.querySelector('span');
+		SaveViaBridge(text, name).then(function (path) {
+			if (path) {
+				msg.textContent = 'Saved to ' + path;
+				if (span) { span.textContent = 'Saved'; setTimeout(function () { span.textContent = 'Save file'; }, 2200); }
+				return;
+			}
+			const ok = DownloadCsv(text, name);
+			msg.textContent = ok
+				? 'Bridge not running \u2014 saved through the browser download instead.'
+				: 'Could not save the file \u2014 click Copy and paste it instead.';
+		});
+	});
 	closeBtn.addEventListener('click', CloseExportDialog);
 	back.addEventListener('click', function (e) { if (e.target === back) CloseExportDialog(); });
 	document.addEventListener('keydown', OnExportKey, true);
@@ -518,7 +592,7 @@ function ShowExportDialog(text, name) {
 function ExportCsv() {
 	const csv = BuildCsv();
 	const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-	ShowExportDialog(csv, 'live-qa-questions-' + stamp + '.csv');
+	ShowExportDialog(csv, WIDGET_NAME + '-questions-' + stamp + '.csv');
 }
 
 /* ── Actions ────────────────────────────────────────────────────────────── */
