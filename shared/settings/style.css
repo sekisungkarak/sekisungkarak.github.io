@@ -2623,6 +2623,39 @@ body.skin-queue .url-bar button:hover {
     box-shadow: none;
 }
 
+/* Tombol Save dibedakan dengan warna aksen, sama seperti tombol Save di
+   Control Panel DIA (cp-btn-primary): latar emas solid, ikon gelap. Aksi
+   utamanya jadi langsung terlihat di antara tiga tombol yang bentuknya sama. */
+body.skin-queue .url-bar button#saveObsButton {
+    background-color: #d4a843;
+    border-color: #d4a843;
+    color: #1a1712;
+}
+
+body.skin-queue .url-bar button#saveObsButton:hover {
+    background-color: #c99a35;
+    border-color: #c99a35;
+    color: #1a1712;
+}
+
+body.skin-queue .url-bar button#saveObsButton:active {
+    background-color: #bd8f2e;
+    border-color: #bd8f2e;
+    color: #1a1712;
+}
+
+/* Glyph ikon disket (ri-save-3-line) mengisi kotaknya lebih sedikit daripada
+   ikon folder/restart, jadi pada font-size yang sama ikon Save terlihat lebih
+   kecil. Dibesarkan sedikit supaya ketiganya tampak seimbang; targetnya sama
+   dengan ikon Control Panel DIA (16px). */
+body.skin-queue .url-bar button#saveObsButton > .btn-ico {
+    font-size: 1.33em;
+}
+
+/* Catatan: keadaan gagal (.obs-error) dan sukses (.copied) sudah diatur oleh
+   aturan generik di bawah, jadi warna aksen di atas otomatis tertimpa saat
+   Save gagal — tidak perlu aturan khusus di sini. */
+
 body.skin-queue .url-bar button:active {
     transform: none;
     box-shadow: none;
