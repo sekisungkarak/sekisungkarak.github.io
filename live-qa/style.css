@@ -134,6 +134,12 @@ html, body {
 	/* Latar konten (Design > Background: Content Colour + Content Opacity). */
 	background: var(--qa-content-bg, rgba(255, 255, 255, 0.05));
 	border-left: 3px solid var(--qa-hl, #d4a843);
+	/* Auto-margin atas/bawah: isi kartu ikut "flex" saat tinggi panel
+	   diubah (resize atas-bawah), bukan menumpuk di atas dengan ruang
+	   kosong menganga. Bila panel lebih pendek dari isi, margin jadi 0
+	   sehingga nama tetap terlihat (tidak terpotong di atas). */
+	margin-top: auto;
+	margin-bottom: auto;
 }
 
 /* Embed dimatikan: desain embed (stripe aksen) hilang; latar konten tetap. */

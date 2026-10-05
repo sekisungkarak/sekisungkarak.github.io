@@ -35,7 +35,7 @@ const widgetURL = new URL('../index.html', window.location.href).href;
 
 dashFrame.src =
     settingsPageURL +
-    '?v=37&settingsJson=' + encodeURIComponent(settingsDir + 'settings.json?v=33') +
+    '?v=38&settingsJson=' + encodeURIComponent(settingsDir + 'settings.json?v=33') +
     '&widgetURL=' + encodeURIComponent(widgetURL) +
     '&sourceName=' + encodeURIComponent(WIDGET_NAME) +
     '&sourceWidth=1080&sourceHeight=350&sourceAlign=center' +

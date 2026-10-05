@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="https://ka-f.webawesome.com/webawesome@3.10.0/styles/webawesome.css" />
     <script type="module" src="https://ka-f.webawesome.com/webawesome@3.10.0/webawesome.loader.js"></script>
 
-    <link rel="stylesheet" href="style.css?v=190">
+    <link rel="stylesheet" href="style.css?v=193">
     <link rel="icon" type="image/png" href="../../shared/assets/images/avatar.png">
 </head>
 
@@ -681,10 +681,10 @@
             <div class="info">Backup every saved profile as one JSON file, or restore it here.</div>
             <div class="profile-io">
                 <wa-button id="profileExportBtn" class="button" appearance="outlined" size="s">
-                    <i class="ri-download-2-line" slot="start"></i>Export JSON
+                    <i class="ri-download-2-line" slot="start"></i>Export
                 </wa-button>
                 <wa-button id="profileImportBtn" class="button" appearance="outlined" size="s">
-                    <i class="ri-upload-2-line" slot="start"></i>Import JSON
+                    <i class="ri-upload-2-line" slot="start"></i>Import
                 </wa-button>
                 <input id="profileImportFile" type="file" accept=".json,application/json">
             </div>
@@ -694,10 +694,36 @@
 
     </wa-dialog>
 
+    <!-- ── Export Saved Settings (JSON dalam kotak yang bisa disalin) ──────
+         OBS tidak menampilkan dialog "Save As" (obs-browser tanpa download
+         handler), jadi teks JSON SELALU ditampilkan di sini supaya bisa
+         disalin manual; tombol Save file tetap mencoba unduhan biasa. -->
+    <wa-dialog id="modalExportProfiles" class="modal centered sk-popup" without-header>
+
+        <div class="sk-popup-head">
+            <span class="sk-popup-title">Export Saved Settings</span>
+            <button type="button" class="sk-popup-close" title="Close" aria-label="Close"><i class="ri-close-line" aria-hidden="true"></i></button>
+        </div>
+
+        <div class="sk-popup-group">
+            <div id="profileExportInfo" class="info">Click Copy to paste the JSON elsewhere, or Save file to download it.</div>
+            <textarea id="profileExportText" class="profile-export-text" readonly spellcheck="false" rows="10"></textarea>
+            <div class="profile-io">
+                <wa-button id="profileExportCopyBtn" class="button" appearance="outlined" size="s">
+                    <i class="ri-file-copy-line" slot="start"></i>Copy
+                </wa-button>
+                <wa-button id="profileExportSaveBtn" class="button" appearance="outlined" size="s">
+                    <i class="ri-download-2-line" slot="start"></i>Save file
+                </wa-button>
+            </div>
+        </div>
+
+    </wa-dialog>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/node-vibrant/3.1.6/vibrant.min.js"></script>
     <script src="https://unpkg.com/@streamerbot/client/dist/streamerbot-client.js"></script>
-    <script src="obs_source.js?v=18"></script>
-    <script src="script_v2.js?v=201"></script>
+    <script src="obs_source.js?v=19"></script>
+    <script src="script_v2.js?v=203"></script>
 </body>
 
 </html>

@@ -619,6 +619,10 @@
         {
           "value": "subscriber",
           "label": "Subscriber"
+        },
+        {
+          "value": "superfan",
+          "label": "Superfans"
         }
       ],
       "group": "First Chatter",

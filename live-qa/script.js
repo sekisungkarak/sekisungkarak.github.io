@@ -44,6 +44,18 @@ const WIDGET_ROOT = SCRIPT_SRC
 	: new URL('./', window.location.href).href;
 const SAMPLE_AVATAR = new URL('../resources/sekisungkarak_avatar.jpeg', WIDGET_ROOT).href;
 
+/* Pertanyaan SAMPLE (tombol Sample) TIDAK boleh ikut arsip maupun Export CSV.
+   Dikenali dari dua tanda, supaya sample lama — yang tersimpan sebelum ada
+   penanda `sample` — tetap tertangkap:
+     1. penanda `sample: true` (sample baru), atau
+     2. avatar sample (nama berkasnya khas milik widget ini).
+   Avatar chat TikTok asli selalu berasal dari tiktokcdn, jadi tidak bentrok. */
+function IsSampleQuestion(q) {
+	if (!q) return false;
+	if (q.sample === true) return true;
+	return /sekisungkarak_avatar\.jpe?g/i.test(String(q.avatar || ''));
+}
+
 const WIDGET_NS = 'geseki:live-qa:';
 const CHANNEL_NAME = WIDGET_NS + 'channel';
 const SCENE_PREFIX = WIDGET_NS + 'scene-';
@@ -289,12 +301,27 @@ const LAYOUT_MAX_SCALE = 2.0;
 // Skala bawaan widget overlay — sengaja sedikit di bawah 1 supaya tidak
 // terlalu besar di canvas. Bisa diubah lewat handle sudut di mode Layout.
 const LAYOUT_DEFAULT_SCALE = 0.8;
-const LAYOUT_KEYS = {
+/* Bentuk widget (geser / ukuran / skala / rotasi) disimpan PER SCENE, sama
+   seperti profil settings scene: satu scene = satu kunci `layout:<scene>`.
+   Dulu kuncinya GLOBAL, sehingga mengatur bentuk di scene "Live" ikut
+   mengubah scene lain — sekarang tiap scene mandiri.
+
+   Kunci ini SENGAJA terpisah dari profil settings: Reset dan Save di
+   dashboard hanya menyentuh `live-qa-settings` dan
+   `geseki:live-qa:scene-<scene>`, jadi bentuk pilihan pengguna tidak pernah
+   ikut tereset. */
+const LAYOUT_SLOT = profileName || '_default';
+const LAYOUT_KEY = WIDGET_NS + 'layout:' + LAYOUT_SLOT;
+
+/* Kunci LAMA (global, sebelum per-scene). Dibaca sebagai cadangan lalu disalin
+   ke slot scene yang memuatnya, supaya bentuk yang sudah disetel tidak hilang
+   setelah pembaruan ini. Tidak dihapus: scene baru tetap mewarisi bentuk
+   terakhir pengguna, lalu boleh menyimpang sendiri. */
+const LAYOUT_LEGACY_KEYS = {
 	x: WIDGET_NS + 'layout-x',
 	y: WIDGET_NS + 'layout-y',
 	scale: WIDGET_NS + 'layout-scale',
 	rotation: WIDGET_NS + 'layout-rotation',
-	// Ukuran eksplisit dari fitur resize di panel. 0 = biarkan CSS (auto).
 	width: WIDGET_NS + 'layout-width',
 	height: WIDGET_NS + 'layout-height'
 };
@@ -323,15 +350,46 @@ function ClampLayoutRotation(v) {
 	return Math.round(r);
 }
 
+/* Angka dari nilai apa pun; bukan angka -> fallback. */
+function NumOr(v, fallback) {
+	const n = Number(v);
+	return isFinite(n) ? n : fallback;
+}
+
+/* Baca bentuk scene ini. Urutan: kunci per-scene -> kunci GLOBAL lama (sekali,
+   lalu disalin ke slot scene ini) -> bawaan. */
 function ReadLayout() {
-	return {
-		x: Math.round(ReadLayoutNumber(LAYOUT_KEYS.x, 0)),
-		y: Math.round(ReadLayoutNumber(LAYOUT_KEYS.y, 0)),
-		scale: ClampLayoutScale(ReadLayoutNumber(LAYOUT_KEYS.scale, LAYOUT_DEFAULT_SCALE)),
-		rotation: ClampLayoutRotation(ReadLayoutNumber(LAYOUT_KEYS.rotation, 0)),
-		width: Math.max(0, Math.round(ReadLayoutNumber(LAYOUT_KEYS.width, 0))),
-		height: Math.max(0, Math.round(ReadLayoutNumber(LAYOUT_KEYS.height, 0)))
+	let d = null;
+	try {
+		const raw = localStorage.getItem(LAYOUT_KEY);
+		if (raw) d = JSON.parse(raw);
+	} catch (e) { d = null; }
+
+	let usedLegacy = false;
+	if (!d || typeof d !== 'object') {
+		const legacy = {};
+		let any = false;
+		Object.keys(LAYOUT_LEGACY_KEYS).forEach(function (k) {
+			const v = ReadLayoutNumber(LAYOUT_LEGACY_KEYS[k], null);
+			if (v !== null) { legacy[k] = v; any = true; }
+		});
+		d = any ? legacy : {};
+		usedLegacy = any;
+	}
+
+	const st = {
+		x: Math.round(NumOr(d.x, 0)),
+		y: Math.round(NumOr(d.y, 0)),
+		scale: ClampLayoutScale(NumOr(d.scale, LAYOUT_DEFAULT_SCALE)),
+		rotation: ClampLayoutRotation(NumOr(d.rotation, 0)),
+		width: Math.max(0, Math.round(NumOr(d.width, 0))),
+		height: Math.max(0, Math.round(NumOr(d.height, 0)))
 	};
+
+	// Bentuk berasal dari kunci lama: simpan sebagai milik scene ini supaya
+	// scene ini mandiri dan bentuk lama tidak hilang.
+	if (usedLegacy) SaveLayout(st);
+	return st;
 }
 
 /* Offset sebagai MARGIN dari jangkar CSS (TENGAH canvas), bukan left/top:
@@ -357,14 +415,13 @@ function ApplyLayoutToPanel(st) {
 	else qaPanel.style.removeProperty('height');
 }
 
+/* Simpan bentuk scene ini (satu kunci JSON per scene). */
 function SaveLayout(st) {
 	try {
-		localStorage.setItem(LAYOUT_KEYS.x, String(st.x));
-		localStorage.setItem(LAYOUT_KEYS.y, String(st.y));
-		localStorage.setItem(LAYOUT_KEYS.scale, String(st.scale));
-		localStorage.setItem(LAYOUT_KEYS.rotation, String(st.rotation));
-		localStorage.setItem(LAYOUT_KEYS.width, String(st.width));
-		localStorage.setItem(LAYOUT_KEYS.height, String(st.height));
+		localStorage.setItem(LAYOUT_KEY, JSON.stringify({
+			x: st.x, y: st.y, scale: st.scale, rotation: st.rotation,
+			width: st.width, height: st.height
+		}));
 	} catch (e) { /* abaikan */ }
 }
 
@@ -423,16 +480,43 @@ const likeProgress = new Map();
    superFanJoin lalu dipakai saat penonton mengetik prefix. */
 const superFanHolders = new Set();
 
+/* Warna badge fan club: OREN = masih member aktif, ABU = keanggotaan dorman
+   (TikTok meng-abu-kan badge dan membekukan hak setelah 7 hari tanpa poin).
+   Warna dikirim sebagai #AARRGGBB atau rgba(); warna tanpa rona (selisih
+   channel nyaris nol) dianggap abu. Warna kosong -> bukan abu, supaya sumber
+   yang tidak mengirim warna tidak membuang member asli. Sama seperti DIA. */
+function BadgeColorIsGrey(raw) {
+	const s = String(raw == null ? '' : raw).trim();
+	if (!s) return false;
+	let r, g, b;
+	const m = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(s);
+	if (m) {
+		r = Number(m[1]); g = Number(m[2]); b = Number(m[3]);
+	} else {
+		const h = s.replace(/^#/, '');
+		if (/^[0-9a-f]{8}$/i.test(h)) {
+			r = parseInt(h.slice(2, 4), 16); g = parseInt(h.slice(4, 6), 16); b = parseInt(h.slice(6, 8), 16);
+		} else if (/^[0-9a-f]{6}$/i.test(h)) {
+			r = parseInt(h.slice(0, 2), 16); g = parseInt(h.slice(2, 4), 16); b = parseInt(h.slice(4, 6), 16);
+		} else {
+			return false;
+		}
+	}
+	const max = Math.max(r, g, b);
+	const min = Math.min(r, g, b);
+	return (max - min) < 24;
+}
+
 /* Keaktifan fan club. Geseki Bridge mengirim `fanClubActive` dari proto
-   TikTok (userFansClubStatus / isSleeping); nilai false eksplisit selalu
-   menang supaya member dorman (badge abu) tidak lolos. */
-function IsFanClubMember(data) {
-	if (!data) return false;
-	const user = data.user || {};
-	const active = data.fanClubActive !== undefined ? data.fanClubActive : user.fanClubActive;
-	if (active === false) return false;
-	return !!(data.fanClubBadge || data.fansClubInfo || data.fansClub
-		|| user.fanClubBadge || user.fansClubInfo || user.fansClub);
+   TikTok (userFansClubStatus / isSleeping); sumber tanpa field itu mengandalkan
+   warna badge. `false` eksplisit selalu menang. Sama seperti DIA. */
+function FanClubIsActive(data, color) {
+	const user = (data && data.user) || {};
+	const explicit = data && data.fanClubActive !== undefined
+		? data.fanClubActive
+		: user.fanClubActive;
+	if (explicit === false) return false;
+	return !BadgeColorIsGrey(color);
 }
 
 /* Cek apakah sebuah gift adalah gift tiket yang dipilih. Pencocokan HANYA
@@ -448,20 +532,45 @@ function UserPermissionFlags(data) {
 	const flags = { follower: false, fanclub: false, subscriber: false, superfan: false };
 	if (!data) return flags;
 	const user = data.user || {};
+
+	/* Fan club dideteksi dari BADGE-nya, sama seperti DIA: TikFinity menandainya
+	   badgeSceneType 10, Geseki Bridge mengisi scene itu dari artwork badge
+	   (fans_badge_icon), jadi kedua sumber mengirim bentuk yang sama. Nama
+	   berkas dicek juga sebagai jaring pengaman bila scene tidak diisi.
+	   Badge ABU (dorman) TIDAK dihitung. */
 	const badges = data.userBadges || user.userBadges || [];
+	let fanBadgeGrey = false;
 	if (Array.isArray(badges)) {
 		for (const b of badges) {
 			if (!b) continue;
 			const st = Number(b.badgeSceneType !== undefined ? b.badgeSceneType : b.sceneType);
+			const url = String(b.image || b.imageUrl || b.url || '');
 			if (st === 4) flags.subscriber = true;
+			const isFanBadge = st === 10 || url.indexOf('fans_badge_icon') !== -1;
+			if (isFanBadge) {
+				if (FanClubIsActive(data, b.color)) flags.fanclub = true;
+				else fanBadgeGrey = true;
+			}
 		}
 	}
+
 	const identity = data.userIdentity || user.userIdentity || {};
 	const followRole = Number(data.followRole !== undefined ? data.followRole : user.followRole);
 	flags.follower = (isFinite(followRole) && followRole >= 1)
-		|| !!data.isFollower || !!identity.isFollower;
-	flags.subscriber = flags.subscriber || !!data.isSubscriber || !!identity.isSubscriber;
-	flags.fanclub = IsFanClubMember(data);
+		|| !!data.isFollower || !!identity.isFollowerOfAnchor || !!identity.isFollower;
+	flags.subscriber = flags.subscriber || !!data.isSubscriber
+		|| !!identity.isSubscriberOfAnchor || !!identity.isSubscriber;
+
+	/* Jalur tanpa warna badge (bridge mengirim fanClubBadge + fanClubActive):
+	   pakai sinyal keanggotaan, tapi jangan menyalakan kembali badge yang abu. */
+	const clubSignal = !!(data.fanClubBadge || data.fansClub || data.fansClubInfo
+		|| user.fanClubBadge || user.fansClub || user.fansClubInfo);
+	if (!FanClubIsActive(data, null)) {
+		flags.fanclub = false;
+	} else if (!fanBadgeGrey && clubSignal) {
+		flags.fanclub = true;
+	}
+
 	flags.superfan = superFanHolders.has(UserKey(data));
 	return flags;
 }
@@ -496,11 +605,18 @@ function UserKey(data) {
    `shown` menandai sudah pernah tampil (badge di Queue page) — barisnya
    TETAP di daftar supaya streamer bisa menampilkannya lagi. */
 const questions = [];
-/* Arsip SEMUA pertanyaan yang pernah masuk, tidak pernah dibuang walau
-   dihapus atau di-Clear. Dipakai tombol Export CSV di halaman Queue supaya
-   riwayat tanya-jawab bisa diunduh (mis. dibuka lagi di Excel). */
+/* Arsip pertanyaan yang pernah masuk, dipakai tombol Export CSV di halaman
+   Queue supaya riwayat tanya-jawab bisa diunduh (mis. dibuka lagi di Excel).
+   Entri tetap disimpan walau dihapus atau di-Clear dari antrean.
+
+   Retensi: hanya 7 HARI TERAKHIR — entri lebih tua dibuang otomatis. Selain
+   itu ada batas aman JUMLAH entri: localStorage cuma ~5 MB dan kegagalan
+   simpan ditelan diam-diam, jadi seminggu stream ramai bisa membuat arsip
+   berhenti tersimpan tanpa peringatan. Batas ini menjaga itu, dan hanya
+   menyisakan entri terbaru. */
 const questionHistory = [];
-const MAX_HISTORY = 500;
+const HISTORY_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+const MAX_HISTORY = 3000;
 /* Pertanyaan yang sedang tayang di overlay SCENE INI. Ikut disimpan bersama
    antrean scene (kunci per scene), jadi pindah scene menampilkan On screen
    milik scene itu sendiri — bukan membawa pertanyaan dari scene sebelumnya. */
@@ -563,6 +679,23 @@ function LoadQueue() {
 	} catch (e) { /* abaikan */ }
 }
 
+/* Buang arsip di luar jendela retensi (7 hari), lalu rapikan bila melewati
+   batas aman jumlah. Kembalikan true bila ada yang dibuang supaya pemanggil
+   bisa menyimpan hasilnya. Entri tanpa `at` dipertahankan (tidak bisa
+   ditanggalkan), tetapi tetap ikut hitungan batas jumlah. */
+function PruneHistory() {
+	const cutoff = Date.now() - HISTORY_RETENTION_MS;
+	const before = questionHistory.length;
+	for (let i = questionHistory.length - 1; i >= 0; i--) {
+		const at = questionHistory[i] && questionHistory[i].at;
+		if (typeof at === 'number' && at < cutoff) questionHistory.splice(i, 1);
+	}
+	if (questionHistory.length > MAX_HISTORY) {
+		questionHistory.splice(0, questionHistory.length - MAX_HISTORY);
+	}
+	return questionHistory.length !== before;
+}
+
 function SaveHistory() {
 	try { localStorage.setItem(HISTORY_KEY, JSON.stringify(questionHistory)); }
 	catch (e) { /* abaikan */ }
@@ -575,7 +708,16 @@ function LoadHistory() {
 		const d = JSON.parse(raw);
 		if (Array.isArray(d)) {
 			questionHistory.length = 0;
-			d.forEach(function (q) { questionHistory.push(q); });
+			// Sample lama (sebelum ada penanda) dibuang sekali di sini supaya
+			// arsip yang tersimpan pun bersih, bukan cuma hasil CSV-nya.
+			let dropped = false;
+			d.forEach(function (q) {
+				if (IsSampleQuestion(q)) { dropped = true; return; }
+				questionHistory.push(q);
+			});
+			// Buang entri di luar jendela retensi 7 hari (dan rapikan kuota).
+			if (PruneHistory()) dropped = true;
+			if (dropped) SaveHistory();
 		}
 	} catch (e) { /* abaikan */ }
 }
@@ -690,8 +832,11 @@ function RenderHint() {
 }
 
 /* Tambah pertanyaan ke antrean. TIDAK menampilkannya: overlay hanya berubah
-   saat streamer memilih dari Queue page. */
-function AddQuestion(q) {
+   saat streamer memilih dari Queue page.
+
+   skipHistory=true dipakai pertanyaan SAMPLE: masuk antrean seperti biasa,
+   tetapi TIDAK ikut arsip, supaya Export CSV tetap berisi chat sungguhan. */
+function AddQuestion(q, skipHistory) {
 	questionSeq += 1;
 	const item = {
 		id: 'q' + questionSeq,
@@ -699,14 +844,20 @@ function AddQuestion(q) {
 		avatar: q.avatar,
 		text: q.text,
 		shown: false,
-		at: Date.now()
+		at: Date.now(),
+		// Penanda pertanyaan SAMPLE: tampil di antrean, tetapi disaring dari
+		// arsip dan dari Export CSV supaya tidak mengotori data sungguhan.
+		sample: skipHistory === true
 	};
 	questions.push(item);
 
 	// Arsip: SEMUA pertanyaan yang pernah masuk ikut disimpan (untuk Export CSV).
-	questionHistory.push(item);
-	while (questionHistory.length > MAX_HISTORY) questionHistory.shift();
-	SaveHistory();
+	// Pertanyaan sample dikecualikan agar tidak mengotori arsip.
+	if (!skipHistory) {
+		questionHistory.push(item);
+		PruneHistory();
+		SaveHistory();
+	}
 
 	while (questions.length > MAX_QUEUE) {
 		let idx = 0;
@@ -998,9 +1149,34 @@ let activeState = null;
 // ── Status aktif dari obs-browser ───────────────────────────────────────
 // 'active' = source ada di scene yang SEDANG TAYANG (bukan sekadar tampil di
 // preview Studio Mode). Dipakai HANYA menandai scene mana yang ditampilkan
-// halaman Queue; semua source tetap memproses chat. Saat scene ini masuk
-// program view, siarkan SEKARANG supaya halaman Queue langsung menampilkan
-// antrean scene yang sedang tayang (termasuk On screen scene itu).
+// halaman Queue; semua source tetap memproses chat.
+//
+// Dua jalur, karena jalur event saja tidak cukup:
+//   1. 'obsSceneChanged' — obs-browser menyiarkannya ke SEMUA browser source,
+//      membawa NAMA scene program, dan TIDAK butuh izin. Nama itu dibandingkan
+//      dengan scene milik source ini (?profile=<scene>). Ini yang membuat
+//      halaman Queue langsung tahu scene mana yang tayang begitu scene pindah.
+//   2. getCurrentScene() — sekali saat halaman dimuat, untuk mengisi status
+//      AWAL. Event 'obsSourceActiveChanged' hanya menyala saat status BERUBAH,
+//      jadi source yang sudah aktif sejak halaman dimuat tidak pernah
+//      menerimanya; tanpa pengisian awal status tetap kosong sampai scene
+//      diganti ("harus pindah scene dulu"). Butuh control level ReadUser pada
+//      browser source — dashboard menyetelnya saat Save.
+function ApplyProgramScene(name) {
+	// Tanpa ?profile=<scene> scene source ini tidak diketahui; serahkan ke
+	// event aktif biasa (perilaku lama).
+	if (!profileName || typeof name !== 'string' || !name) return;
+	activeState = (name === profileName);
+	// Siarkan selalu: saat scene ini tayang, Queue menampilkannya; saat scene
+	// lain tayang, Queue menyerahkannya ke source scene itu.
+	BroadcastState();
+}
+
+window.addEventListener('obsSceneChanged', function (e) {
+	if (!e || !e.detail) return;
+	ApplyProgramScene(e.detail.name);
+});
+
 window.addEventListener('obsSourceActiveChanged', function (e) {
 	if (!e || !e.detail) return;
 	activeState = !!e.detail.active;
@@ -1014,6 +1190,15 @@ if (typeof window !== 'undefined' && window.obsstudio) {
 		activeState = !!active;
 		if (activeState) BroadcastState();
 	};
+
+	// Isi status awal sekali saat dimuat (lihat catatan di atas).
+	if (typeof window.obsstudio.getCurrentScene === 'function') {
+		try {
+			window.obsstudio.getCurrentScene(function (scene) {
+				if (scene && scene.name) ApplyProgramScene(scene.name);
+			});
+		} catch (err) { /* control level belum cukup — abaikan */ }
+	}
 }
 
 /* Keadaan yang dibutuhkan Queue page. Dikirim setiap kali berubah, dan saat
@@ -1037,11 +1222,11 @@ function BroadcastState() {
 		ticketCondition: ticketConditions.join(','),
 		prefix: questionPrefix,
 		questions: questions.map(function (q) {
-			return { id: q.id, name: q.name, avatar: q.avatar, text: q.text, shown: q.shown, at: q.at };
+			return { id: q.id, name: q.name, avatar: q.avatar, text: q.text, shown: q.shown, at: q.at, sample: q.sample === true };
 		}),
 		// Arsip lengkap untuk tombol Export CSV di halaman Queue.
 		history: questionHistory.map(function (q) {
-			return { id: q.id, name: q.name, avatar: q.avatar, text: q.text, shown: q.shown, at: q.at };
+			return { id: q.id, name: q.name, avatar: q.avatar, text: q.text, shown: q.shown, at: q.at, sample: q.sample === true };
 		})
 	});
 }
@@ -1155,7 +1340,7 @@ function AddTestQuestion() {
 		name: 'Sekisungkarak',
 		avatar: SAMPLE_AVATAR,
 		text: RandomSampleText()
-	});
+	}, /* skipHistory */ true);
 }
 
 window.testQuestion = AddTestQuestion;

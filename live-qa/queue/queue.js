@@ -19,6 +19,10 @@ const CHANNEL_NAME = WIDGET_NS + 'channel';
 const HELLO_TIMEOUT_MS = 1500;
 /* Baris antrean per halaman. */
 const PAGE_SIZE = 5;
+/* Export hanya memuat 7 HARI TERAKHIR, sama dengan retensi arsip di widget.
+   Ditegakkan lagi di sini supaya CSV tetap benar walau source OBS dibiarkan
+   hidup lebih dari sepekan tanpa reload. */
+const HISTORY_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 const exportBtn = document.getElementById('exportBtn');
 const clearBtn = document.getElementById('clearBtn');
@@ -27,6 +31,7 @@ const hideBtn = document.getElementById('hideBtn');
 const prevOnairBtn = document.getElementById('prevOnairBtn');
 const nextOnairBtn = document.getElementById('nextOnairBtn');
 const onairBody = document.getElementById('onairBody');
+const onairSection = document.getElementById('onairSection');
 const queueList = document.getElementById('queueList');
 const queueCount = document.getElementById('queueCount');
 const emptyState = document.getElementById('emptyState');
@@ -122,6 +127,8 @@ function RenderOnAir() {
 
 	// On screen milik scene ini: selalu ada di daftar scene ini juga.
 	const q = state.currentQuestion || state.questions.find(function (x) { return x.id === state.currentId; }) || null;
+	// Status "On screen" hijau hanya saat benar-benar ada pertanyaan tayang.
+	if (onairSection) onairSection.classList.toggle('is-live', !!q);
 	if (!q) {
 		const none = document.createElement('p');
 		none.className = 'onair-none';
@@ -158,7 +165,9 @@ function OnairIndex() {
 
 /* Pindah satu langkah di antrean lalu tampilkan. Saat belum ada yang On screen,
    Next mulai dari yang pertama dan Previous dari yang terakhir. Tidak memutar
-   (wrap): di ujung, tombolnya nonaktif. */
+   (wrap): di ujung, tombolnya nonaktif.
+   Daftar Queue ikut melompat ke halaman tempat pertanyaan tujuan berada, supaya
+   barisnya langsung terlihat (bukan tetap di halaman yang sedang dibuka). */
 function StepOnair(delta) {
 	const n = state.questions.length;
 	if (!n) return;
@@ -170,6 +179,9 @@ function StepOnair(delta) {
 		if (target < 0 || target >= n) return;
 	}
 	Send({ type: 'qa_show', id: state.questions[target].id });
+	// Lompat ke halaman yang memuat baris tujuan (index berbasis 0 -> halaman 1).
+	queuePage = Math.floor(target / PAGE_SIZE) + 1;
+	RenderQueue();
 }
 
 /* Aktif/nonaktif tombol navigasi sesuai posisi On screen. */
@@ -321,10 +333,14 @@ if (bc) {
 }
 
 /* ── Export CSV ─────────────────────────────────────────────────────────────
-   Mengunduh SEMUA pertanyaan yang pernah masuk (arsip dari widget), bukan hanya
-   yang masih di antrean. Widget statis tidak boleh menulis file sendiri, jadi
-   ini memakai unduhan browser biasa (satu klik). Di dalam OBS unduhan bisa
-   diblokir; kalau begitu, salin teksnya dari kotak yang muncul. */
+   Semua pertanyaan (arsip widget + antrean berjalan) dijadikan satu CSV.
+
+   Kenapa ada kotak teks, bukan cuma unduhan: OBS memakai CEF tanpa UI unduhan
+   (obs-browser tidak punya download handler), jadi tidak ada dialog "Save As"
+   dan klik Export bisa terlihat seperti tidak terjadi apa-apa — padahal file
+   kadang tersimpan diam-diam di folder Downloads, kadang dibuang. Karena itu
+   teksnya SELALU ditampilkan di kotak yang bisa dipilih (tombol Copy atau
+   Ctrl+C), dan tombol "Save file" tetap mencoba unduhan biasa di browser. */
 
 function CsvCell(v) {
 	const s = (v === null || v === undefined) ? '' : String(v);
@@ -336,12 +352,26 @@ function FormatDateTime(ms) {
 	try { return new Date(ms).toLocaleString(); } catch (e) { return ''; }
 }
 
+/* Pertanyaan sample tidak ikut Export: dikenali dari penanda `sample` atau
+   dari avatar sample (menangkap sample lama yang belum ber-penanda). */
+function IsSample(q) {
+	if (!q) return false;
+	if (q.sample === true) return true;
+	return /sekisungkarak_avatar\.jpe?g/i.test(String(q.avatar || ''));
+}
+
 function BuildCsv() {
 	// Gabung arsip + antrean berjalan, buang duplikat berdasarkan id, urut waktu.
+	// Pertanyaan sample (tombol Sample) tidak ikut CSV: hanya untuk menguji
+	// tampilan, bukan chat sungguhan. Disaring dari ANTREAN maupun ARSIP,
+	// dan tetap tertangkap walau sample itu tersimpan sebelum ada penanda.
 	const byId = new Map();
-	(state.history || []).forEach(function (q) { if (q && q.id) byId.set(q.id, q); });
-	(state.questions || []).forEach(function (q) { if (q && q.id && !byId.has(q.id)) byId.set(q.id, q); });
-	const rows = Array.from(byId.values()).sort(function (a, b) { return (a.at || 0) - (b.at || 0); });
+	(state.history || []).forEach(function (q) { if (q && q.id && !IsSample(q)) byId.set(q.id, q); });
+	(state.questions || []).forEach(function (q) { if (q && q.id && !IsSample(q) && !byId.has(q.id)) byId.set(q.id, q); });
+	const cutoff = Date.now() - HISTORY_RETENTION_MS;
+	const rows = Array.from(byId.values())
+		.filter(function (q) { return typeof q.at !== 'number' || q.at >= cutoff; })
+		.sort(function (a, b) { return (a.at || 0) - (b.at || 0); });
 
 	const lines = ['Time,Name,Question,Status'];
 	rows.forEach(function (q) {
@@ -363,7 +393,10 @@ function DownloadCsv(text, name) {
 		const a = document.createElement('a');
 		a.href = URL.createObjectURL(blob);
 		a.download = name || 'live-qa-questions.csv';
+		a.style.display = 'none';
+		document.body.appendChild(a);
 		a.click();
+		document.body.removeChild(a);
 		setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
 		return true;
 	} catch (e) {
@@ -371,10 +404,121 @@ function DownloadCsv(text, name) {
 	}
 }
 
+/* Export dialog: shows the CSV so it can always be copied by hand, with a
+   "Save file" button for a normal browser. Built with DOM APIs (no innerHTML
+   for data), so a question containing markup can never break the page. */
+let exportDialog = null;
+
+function OnExportKey(e) {
+	if (e.key === 'Escape') {
+		e.stopPropagation();
+		CloseExportDialog();
+	}
+}
+
+function CloseExportDialog() {
+	if (!exportDialog) return;
+	if (exportDialog.parentNode) exportDialog.parentNode.removeChild(exportDialog);
+	document.removeEventListener('keydown', OnExportKey, true);
+	exportDialog = null;
+}
+
+/* execCommand('copy') masih dipakai sebagai cadangan: di CEF lama Clipboard
+   API bisa tidak tersedia, dan execCommand jalan selama ada gestur klik. */
+function LegacyCopy(area) {
+	area.focus();
+	area.select();
+	try { return document.execCommand('copy'); } catch (e) { return false; }
+}
+
+function ShowExportDialog(text, name) {
+	CloseExportDialog();
+
+	const back = document.createElement('div');
+	back.className = 'modal-back';
+
+	const box = document.createElement('div');
+	box.className = 'modal';
+
+	const title = document.createElement('div');
+	title.className = 'modal-title';
+	title.textContent = 'Export questions';
+
+	const msg = document.createElement('div');
+	msg.className = 'modal-msg';
+	msg.textContent = 'Click Copy to paste it into Excel, or Save file to download it. OBS shows no "Save As" dialog \u2014 the file is written straight to your Downloads folder.';
+
+	const area = document.createElement('textarea');
+	area.className = 'export-text';
+	area.readOnly = true;
+	area.spellcheck = false;
+	area.value = text;
+
+	const row = document.createElement('div');
+	row.className = 'modal-row';
+
+	const copyBtn = document.createElement('button');
+	copyBtn.type = 'button';
+	copyBtn.className = 'btn';
+	copyBtn.innerHTML = '<i class="ri-file-copy-line" aria-hidden="true"></i><span>Copy</span>';
+
+	const saveBtn = document.createElement('button');
+	saveBtn.type = 'button';
+	saveBtn.className = 'btn';
+	saveBtn.innerHTML = '<i class="ri-download-2-line" aria-hidden="true"></i><span>Save file</span>';
+
+	const closeBtn = document.createElement('button');
+	closeBtn.type = 'button';
+	closeBtn.className = 'btn';
+	closeBtn.textContent = 'Close';
+
+	row.appendChild(copyBtn);
+	row.appendChild(saveBtn);
+	row.appendChild(closeBtn);
+	box.appendChild(title);
+	box.appendChild(msg);
+	box.appendChild(area);
+	box.appendChild(row);
+	back.appendChild(box);
+	document.body.appendChild(back);
+	back.classList.add('is-open');
+
+	copyBtn.addEventListener('click', function () {
+		area.focus();
+		area.select();
+
+		const span = copyBtn.querySelector('span');
+		function Mark(ok) {
+			if (!span) return;
+			span.textContent = ok ? 'Copied' : 'Press Ctrl+C';
+			setTimeout(function () { span.textContent = 'Copy'; }, 1800);
+		}
+		// Clipboard API dulu (butuh izin clipboard-write di iframe), lalu
+		// execCommand sebagai cadangan untuk CEF lama.
+		if (navigator.clipboard && navigator.clipboard.writeText) {
+			navigator.clipboard.writeText(text).then(
+				function () { Mark(true); },
+				function () { Mark(LegacyCopy(area)); }
+			);
+		} else {
+			Mark(LegacyCopy(area));
+		}
+	});
+
+	saveBtn.addEventListener('click', function () { DownloadCsv(text, name); });
+	closeBtn.addEventListener('click', CloseExportDialog);
+	back.addEventListener('click', function (e) { if (e.target === back) CloseExportDialog(); });
+	document.addEventListener('keydown', OnExportKey, true);
+
+	exportDialog = back;
+	area.focus();
+	area.select();
+}
+
 function ExportCsv() {
 	const csv = BuildCsv();
 	const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-	DownloadCsv(csv, 'live-qa-questions-' + stamp + '.csv');
+	ShowExportDialog(csv, 'live-qa-questions-' + stamp + '.csv');
 }
 
 /* ── Actions ────────────────────────────────────────────────────────────── */

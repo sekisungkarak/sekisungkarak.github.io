@@ -612,7 +612,7 @@ function FanClubIsActive(tiktokData, color) {
 }
 
 function UserPermissionFlags(tiktokData) {
-	const flags = { follower: false, fanclub: false, moderator: false, subscriber: false };
+	const flags = { follower: false, fanclub: false, moderator: false, subscriber: false, superfan: false };
 	if (!tiktokData) return flags;
 	const user = tiktokData.user || {};
 
@@ -656,6 +656,10 @@ function UserPermissionFlags(tiktokData) {
 	} else if (!fanBadgeGrey && clubSignal) {
 		flags.fanclub = true;
 	}
+
+	// Superfan tidak ikut terkirim di payload chat, jadi keanggotaannya
+	// diingat dari event superFan/superFanJoin/superFanBox (TrackSuperFan).
+	flags.superfan = superFanHolders.has(UserKey(tiktokData));
 	return flags;
 }
 
@@ -3890,9 +3894,54 @@ function SaveFirstChatters() {
 const firstChatters = new Set();
 LoadFirstChatters();
 
+// Superfan juga tidak dibawa di payload chat: keanggotaannya diingat dari
+// event superFan/superFanJoin/superFanBox, lalu dipakai oleh 'User Permissions'
+// First Chatter. Disimpan lintas reload seperti riwayat first chatter, dan
+// ikut dibersihkan oleh Reset.
+const SF_STORAGE_KEY = WIDGET_NS + 'super-fans';
+const superFanHolders = new Set();
+
+function LoadSuperFans() {
+	try {
+		const raw = localStorage.getItem(SF_STORAGE_KEY);
+		if (!raw) return;
+		const arr = JSON.parse(raw);
+		if (Array.isArray(arr)) arr.forEach(k => superFanHolders.add(String(k)));
+	} catch (e) { /* abaikan: storage penuh / nonaktif */ }
+}
+
+function SaveSuperFans() {
+	try {
+		localStorage.setItem(SF_STORAGE_KEY, JSON.stringify([...superFanHolders]));
+	} catch (e) { /* abaikan */ }
+}
+
+// Kunci identitas user, sama seperti live-qa: id dulu, nama sebagai cadangan.
+function UserKey(data) {
+	const id = data && data.userId;
+	if (id === undefined || id === null || id === '') {
+		return String((data && (data.uniqueId || data.nickname)) || '');
+	}
+	return String(id);
+}
+
+// Dicatat sebelum gerbang enable mana pun supaya filter peran tetap benar
+// walau alert Super Fan-nya dimatikan.
+function TrackSuperFan(event, data) {
+	if (event !== 'superFan' && event !== 'superFanJoin' && event !== 'superFanBox') return;
+	const key = UserKey(data);
+	if (!key || superFanHolders.has(key)) return;
+	superFanHolders.add(key);
+	SaveSuperFans();
+}
+
+LoadSuperFans();
+
 function ResetFirstChatter() {
 	firstChatters.clear();
 	try { localStorage.removeItem(FC_STORAGE_KEY); } catch (e) { /* abaikan */ }
+	superFanHolders.clear();
+	try { localStorage.removeItem(SF_STORAGE_KEY); } catch (e) { /* abaikan */ }
 	console.log('[Geseki] First Time Chatter history telah direset.');
 }
 window.ResetFirstChatter = ResetFirstChatter;
@@ -3914,6 +3963,9 @@ window.addEventListener('message', (event) => {
 
 function handleTikTokEvent(event, tiktokData, source) {
 	if (!tiktokData) return;
+	// Catat superfan sebelum gerbang enable apa pun: 'User Permissions'
+	// First Chatter membacanya dan harus tetap benar walau alert-nya mati.
+	TrackSuperFan(event, tiktokData);
 	// Master switch: alert TikTok dimatikan dari dashboard.
 	if (!enableTikTokAlerts) return;
 

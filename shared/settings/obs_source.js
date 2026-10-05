@@ -373,6 +373,11 @@ async function ObsSyncBrowserSource(widgetUrl) {
                 width: OBS_SOURCE_WIDTH,
                 height: OBS_SOURCE_HEIGHT,
                 reroute_audio: false,
+                // ReadUser (2): izinkan widget memanggil getCurrentScene() untuk
+                // tahu scene program saat halaman dimuat (status awal). Tanpa ini
+                // control level bawaan (ReadObs) menolaknya dan status scene
+                // kosong sampai scene diganti.
+                webpage_control_level: 2,
                 // Semua source widget aktif bersamaan: JANGAN matikan source
                 // saat scene-nya tidak tayang. Tanpa ini, source di scene lain
                 // berhenti memproses chat sampai scene-nya dibuka lagi.
@@ -396,6 +401,8 @@ async function ObsSyncBrowserSource(widgetUrl) {
             height: OBS_SOURCE_HEIGHT,
             reroute_audio: false,
             is_local_file: false,
+            // ReadUser (2): lihat catatan pada SetInputSettings di atas.
+            webpage_control_level: 2,
             // Semua source widget aktif bersamaan: biarkan hidup walau
             // scene-nya tidak sedang tayang (lihat catatan di atas).
             shutdown: false,

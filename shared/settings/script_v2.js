@@ -875,13 +875,34 @@ function DownloadJSONFile(text, name) {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = name || 'geseki-profiles.json';
+        a.style.display = 'none';
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         setTimeout(() => { URL.revokeObjectURL(a.href); }, 4000);
         return true;
     } catch (e) {
         return false;
     }
 }
+
+/* Pop up Export Saved Settings: teks JSON selalu ditampilkan di kotak yang
+   bisa disalin. OBS memakai CEF tanpa UI unduhan (obs-browser tidak punya
+   download handler), jadi klik Export bisa terlihat gagal tanpa pesan apa
+   pun — kadang berkas tersimpan diam-diam di folder Downloads, kadang
+   dibuang. Dengan kotak ini, hasilnya selalu bisa diambil (Copy / Ctrl+C),
+   dan tombol Save file tetap mencoba unduhan biasa untuk dipakai di browser.
+
+   Dialog-nya wa-dialog TERSENDIRI (bukan overlay biasa) karena wa-dialog
+   memakai <dialog> native di top layer: overlay dengan z-index apa pun akan
+   tampil DI BAWAH pop up Load Saved Settings. */
+const profileExportDialog = document.getElementById('modalExportProfiles');
+const profileExportText = document.getElementById('profileExportText');
+const profileExportInfo = document.getElementById('profileExportInfo');
+const profileExportCopyBtn = document.getElementById('profileExportCopyBtn');
+const profileExportSaveBtn = document.getElementById('profileExportSaveBtn');
+
+let lastExportName = 'geseki-profiles.json';
 
 function ExportProfiles() {
     const profiles = CollectSavedProfiles();
@@ -893,13 +914,49 @@ function ExportProfiles() {
     };
     const text = JSON.stringify(payload, null, 2);
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-    const ok = DownloadJSONFile(text, 'geseki-profiles-' + stamp + '.json');
+    const count = Object.keys(profiles).length;
+    lastExportName = 'geseki-profiles-' + stamp + '.json';
+
+    if (profileExportText && profileExportDialog) {
+        profileExportText.value = text;
+        if (profileExportInfo) {
+            profileExportInfo.textContent = count
+                ? `Exported ${count} profile(s). Click Copy to paste the JSON elsewhere, or Save file to download it.`
+                : 'No saved settings yet — nothing to export.';
+        }
+        profileExportDialog.open = true;
+        profileExportText.focus();
+        profileExportText.select();
+        return;
+    }
+
+    // Cadangan bila pop up tidak ada di halaman ini.
+    const ok = DownloadJSONFile(text, lastExportName);
     if (loadObsButton) {
         SetFooterButtonState(loadObsButton,
-            ok ? `Exported ${Object.keys(profiles).length} profile(s)`
-               : 'Download blocked — copy from the file if prompted',
+            ok ? `Exported ${count} profile(s)` : 'Download blocked — copy manually',
             ok);
     }
+}
+
+/* Salin isi kotak export. Clipboard API dulu (butuh izin clipboard-write di
+   iframe dashboard), lalu execCommand sebagai cadangan untuk CEF lama. Tidak
+   memakai window.prompt: dialog bawaan itu tidak dirender di dalam OBS. */
+function CopyExportText() {
+    const text = profileExportText ? profileExportText.value : '';
+
+    function legacy() {
+        if (!profileExportText) return false;
+        profileExportText.focus();
+        profileExportText.select();
+        try { profileExportText.setSelectionRange(0, text.length); } catch (e) { /* abaikan */ }
+        try { return document.execCommand('copy'); } catch (e) { return false; }
+    }
+
+    if (navigator.clipboard && window.isSecureContext !== false) {
+        return navigator.clipboard.writeText(text).then(() => true, () => legacy());
+    }
+    return Promise.resolve(legacy());
 }
 
 function ApplyImportedProfiles(text) {
@@ -957,6 +1014,32 @@ async function RefreshSceneListAfterImport(imported) {
 
 if (profileExportBtn) profileExportBtn.addEventListener('click', ExportProfiles);
 
+// Wiring pop up Export Saved Settings.
+if (profileExportDialog) {
+    const exportClose = profileExportDialog.querySelector('.sk-popup-close');
+    if (exportClose) exportClose.addEventListener('click', () => profileExportDialog.open = false);
+
+    if (profileExportCopyBtn) {
+        profileExportCopyBtn.addEventListener('click', async () => {
+            let ok = false;
+            try { ok = await CopyExportText(); } catch (e) { ok = false; }
+            if (profileExportInfo) {
+                const original = profileExportInfo.textContent;
+                profileExportInfo.textContent = ok
+                    ? 'Copied to clipboard.'
+                    : 'Could not copy automatically — select the text and press Ctrl+C.';
+                setTimeout(() => { profileExportInfo.textContent = original; }, 2200);
+            }
+        });
+    }
+
+    if (profileExportSaveBtn) {
+        profileExportSaveBtn.addEventListener('click', () => {
+            DownloadJSONFile(profileExportText ? profileExportText.value : '', lastExportName);
+        });
+    }
+}
+
 if (profileImportBtn && profileImportFile) {
     profileImportBtn.addEventListener('click', () => profileImportFile.click());
     profileImportFile.addEventListener('change', () => {
@@ -983,6 +1066,25 @@ if (profileImportBtn && profileImportFile) {
 // setiap kali reset, lalu Save gagal tanpa sebab yang jelas.
 const RESET_PRESERVE_IDS = ['obsAddress', 'obsPort', 'obsPassword'];
 
+// Bentuk bawaan widget (posisi/ukuran/skala/rotasi). HARUS sama dengan
+// LAYOUT_DEFAULT_SCALE di live-qa/script.js dan live-qa/controls/panel.js,
+// supaya Reset menghasilkan bentuk yang identik dengan ikon reset mengambang.
+const LAYOUT_RESET_DEFAULTS = { x: 0, y: 0, scale: 0.8, rotation: 0, width: 0, height: 0 };
+
+// Bentuk widget disimpan TERPISAH dari `live-qa-settings`, per scene
+// (`geseki:<widget>:layout:<scene>`), jadi menghapus settings saja tidak
+// mengembalikan bentuk. Reset menulis bentuk bawaan ke slot scene yang
+// sedang dipilih — scene lain tidak tersentuh — lalu menyuruh semua source
+// widget memuat ulang supaya bentuk baru langsung terpakai (tanpa Save).
+// Ditulis eksplisit (bukan removeItem) supaya kunci GLOBAL lama tidak
+// ter-migrasi ulang dan mengembalikan bentuk yang baru saja direset.
+function ResetLayoutForScene(sceneName) {
+    const slot = sceneName || '_default';
+    try {
+        localStorage.setItem(WIDGET_NS + 'layout:' + slot, JSON.stringify(LAYOUT_RESET_DEFAULTS));
+    } catch (e) { /* abaikan */ }
+}
+
 function DoResetSettings() {
     // Simpan dulu nilai yang ingin dipertahankan...
     const preserved = {};
@@ -998,6 +1100,12 @@ function DoResetSettings() {
     try {
         localStorage.setItem(WIDGET_NS + 'preserve', JSON.stringify(preserved));
     } catch (e) { /* abaikan */ }
+
+    // Kembalikan bentuk widget scene ini ke bawaan, lalu muat ulang semua
+    // source supaya langsung terlihat (broadcast dikirim sebelum halaman
+    // ini reload oleh LoadDefaultSettings).
+    ResetLayoutForScene(selectedScene);
+    ReloadAllWidgetSources();
 
     LoadDefaultSettings();
 }

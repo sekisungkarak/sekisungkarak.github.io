@@ -349,9 +349,11 @@
 			giOverlay.classList.add('is-on');
 			qaPanel.classList.add('is-layout');
 			if (!layoutRaf) layoutRaf = requestAnimationFrame(Tick);
+			ArmIdleExit();
 		} else {
 			if (giOverlay) giOverlay.classList.remove('is-on');
 			qaPanel.classList.remove('is-layout');
+			if (layoutIdleTimer) { clearTimeout(layoutIdleTimer); layoutIdleTimer = null; }
 		}
 		if (gear) {
 			gear.classList.toggle('is-active', layoutOn);
@@ -360,6 +362,63 @@
 	}
 
 	function Toggle() { SetLayoutMode(!layoutOn); }
+
+	/* Keluar mode Layout otomatis saat jendela Interact OBS ditutup.
+	   OBS meneruskan fokus jendela Interact ke halaman ini lewat
+	   obs_source_send_focus -> CEF SetFocus, yang memicu event DOM
+	   `blur`/`focus`. Jadi `blur` adalah sinyal DETERMINISTIK (bukan
+	   timer): begitu Interact kehilangan fokus atau ditutup, mode Layout
+	   langsung ditutup supaya guide-nya tidak ikut terekam di stream.
+	   Timer idle cuma jaring pengaman kalau `blur` tidak datang (mis.
+	   build OBS lain): tanpa input sama sekali selama LAYOUT_IDLE_EXIT_MS
+	   -> keluar juga. Tiap gerak mouse/ketikan mengulang timer itu. */
+	var LAYOUT_IDLE_EXIT_MS = 30000;
+	var layoutIdleTimer = null;
+
+	function ArmIdleExit() {
+		if (layoutIdleTimer) clearTimeout(layoutIdleTimer);
+		layoutIdleTimer = setTimeout(function () {
+			if (layoutOn) ExitLayoutAuto();
+		}, LAYOUT_IDLE_EXIT_MS);
+	}
+
+	/* Keluar mode Layout tanpa aksi pengguna. Simpan dulu bila sedang
+	   drag supaya posisi terakhir tidak hilang saat jendela ditutup. */
+	function ExitLayoutAuto() {
+		if (!layoutOn) return;
+		EndDrag();
+		SetLayoutMode(false);
+	}
+
+	function OnLayoutActivity() {
+		if (layoutOn) ArmIdleExit();
+	}
+
+	/* Fokus halaman. OBS mengirim blur lewat CEF SetFocus(false) saat
+	   jendela Interact kehilangan fokus/ditutup. `hadFocus` mencegah
+	   polling keluar sendiri di konteks yang memang tidak pernah fokus
+	   (mis. source latar): poll hanya berlaku setelah halaman ini benar-
+	   benar pernah fokus, jadi tidak ada false positive. */
+	var hadFocus = false;
+	var layoutFocusPoll = null;
+
+	// Interact OBS kehilangan fokus / ditutup -> keluar mode Layout.
+	window.addEventListener('blur', ExitLayoutAuto);
+	window.addEventListener('focus', function () { hadFocus = true; });
+
+	/* Lapis kedua: kalau event `blur` tertelan (mis. build OBS yang tidak
+	   meneruskan fokus), poll `document.hasFocus()` menutup mode Layout
+	   saat jendela Interact sudah tidak fokus lagi. Hanya aktif kalau
+	   halaman ini PERNAH fokus, supaya tidak salah keluar. */
+	layoutFocusPoll = setInterval(function () {
+		if (!layoutOn) { hadFocus = false; return; }
+		if (hadFocus && !document.hasFocus()) ExitLayoutAuto();
+	}, 1000);
+
+	// Aktivitas apa pun menunda jaring pengaman idle.
+	['pointermove', 'pointerdown', 'keydown', 'wheel'].forEach(function (ev) {
+		document.addEventListener(ev, OnLayoutActivity, { passive: true });
+	});
 
 	// Gear kecil di sudut: hanya tampak saat mouse mendekat, tidak pernah
 	// ikut terekam karena opacity 0 saat idle. Klik = masuk mode Layout;

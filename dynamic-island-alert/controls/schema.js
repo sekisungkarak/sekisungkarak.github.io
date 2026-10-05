@@ -630,6 +630,10 @@ window.GESEKI_CONTROLS_SCHEMA = {
     {
      "value": "subscriber",
      "label": "Subscriber"
+    },
+    {
+     "value": "superfan",
+     "label": "Superfans"
     }
    ],
    "group": "First Chatter",
