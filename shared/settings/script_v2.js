@@ -1153,10 +1153,12 @@ function DoResetSettings() {
 }
 
 /* Konfirmasi dua klik, sama seperti tombol hapus antrean di halaman Queue:
-   klik pertama mengubah tombol jadi "Sure?", klik kedua (dalam 3 detik)
-   menjalankan reset. Tidak memakai <wa-dialog> (berat untuk sekadar
-   konfirmasi) dan tidak memakai confirm() bawaan browser yang bisa
-   membekukan halaman di dock CEF OBS. */
+   klik pertama menandai tombol sebagai "armed" (ikon peringatan + merah),
+   klik kedua (dalam 3 detik) menjalankan reset. Tidak memakai <wa-dialog>
+   (berat untuk sekadar konfirmasi) dan tidak memakai confirm() bawaan
+   browser yang bisa membekukan halaman di dock CEF OBS.
+   Tombolnya ikon-saja, jadi keadaan armed ditandai lewat ikon + warna,
+   bukan teks: tidak ada label yang perlu dibaca. */
 function ArmConfirmTwice(btn, action) {
     const original = btn.innerHTML;
     let armed = false;
@@ -1166,11 +1168,16 @@ function ArmConfirmTwice(btn, action) {
         if (!armed) {
             armed = true;
             btn.classList.add('is-armed');
-            btn.innerHTML = '<i class="ri-alert-line" aria-hidden="true"></i><span>Sure?</span>';
+            btn.innerHTML = '<i class="ri-alert-line" aria-hidden="true"></i>';
+            // Ikon-saja: tooltip yang menjelaskan langkah kedua, karena tidak
+            // ada lagi teks konfirmasi di tombolnya.
+            btn.dataset.prevTitle = btn.getAttribute('title') || '';
+            btn.setAttribute('title', 'Click again to confirm');
             timer = setTimeout(() => {
                 armed = false;
                 btn.classList.remove('is-armed');
                 btn.innerHTML = original;
+                btn.setAttribute('title', btn.dataset.prevTitle || 'Reset');
             }, 3000);
             return;
         }
@@ -1178,6 +1185,7 @@ function ArmConfirmTwice(btn, action) {
         armed = false;
         btn.classList.remove('is-armed');
         btn.innerHTML = original;
+        btn.setAttribute('title', btn.dataset.prevTitle || 'Reset');
         action();
     });
 }

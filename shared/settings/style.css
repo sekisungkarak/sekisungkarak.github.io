@@ -2413,7 +2413,8 @@ body.dashboard-mode #settings footer .url-bar button.obs-error {
 
 /* Dashboard DIA saja (bukan skin-queue): tombol Reset saat menunggu klik
    konfirmasi kedua memakai latar SOLID, bukan transparan — di dock gelap
-   latar 16% nyaris tak terlihat sehingga status "Sure?" terbaca ambigu. */
+   latar 16% nyaris tak terlihat sehingga keadaan "menunggu konfirmasi"
+   terbaca ambigu. */
 body.dashboard-mode:not(.skin-queue) .url-bar button.is-armed {
     background-color: #7a2b2b !important;
     border-color: #a34245 !important;
