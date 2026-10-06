@@ -165,7 +165,7 @@ body {
 	font-weight: 500;
 	color: #d8d8d8;
 	line-height: 1.25;
-	margin-top: 1px;
+	margin-top: 3px;
 }
 
 /* Emote inline di subtext/teks alert: PNG TikTok maupun emoji dari shortcode.
@@ -203,7 +203,10 @@ body {
 	gap: 4px;
 	flex-shrink: 0;
 	margin-left: 6px;      /* jarak dari ujung kanan username */
-	font-size: var(--island-font-size, 13px);   /* em badge = ukuran username */
+	/* 0.8x dari font username: badge sedikit lebih kecil supaya tidak
+	   bersaing dengan teks username, tapi pill/ikon/label tetap
+	   diskalakan dari satu nilai. */
+	font-size: calc(var(--island-font-size, 13px) * 0.8);
 }
 #islandBadges .island-badge {
 	display: inline-flex;
