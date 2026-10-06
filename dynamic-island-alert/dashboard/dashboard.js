@@ -31,7 +31,7 @@ const widgetURL = new URL('../index.html', window.location.href).href;
 
 dashFrame.src =
     settingsPageURL +
-    '?v=42&settingsJson=' + encodeURIComponent(settingsDir + 'settings.json?v=18') +
+    '?v=45&settingsJson=' + encodeURIComponent(settingsDir + 'settings.json?v=18') +
     '&widgetURL=' + encodeURIComponent(widgetURL) +
     // sourceName sengaja TIDAK dikirim: default-nya "Dynamic Island Alert",
     // yang memang nama source widget ini. Mengirimnya eksplisit tidak

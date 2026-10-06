@@ -869,3 +869,25 @@ body {
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
+
+/* ── Pengaman bentuk dari chat pemirsa ────────────────────────────────
+   Karakter tak terlihat (zero-width, bidi, kontrol) sudah dibuang di JS
+   (SanitizeVisibleText). Di sini lapis kedua: teks alert tidak boleh
+   MELEBARKAN pill melewati batasnya. Hanya soal kliping — ukuran font,
+   padding, dan tinggi pill tidak diubah. */
+#dynamicIsland.alert-active #islandContent {
+	overflow: hidden;
+	min-width: 0;
+}
+
+#dynamicIsland.alert-active #islandTitleRow {
+	overflow: hidden;
+	min-width: 0;
+}
+
+#dynamicIsland.alert-active #islandText,
+#dynamicIsland.alert-active #islandSubtext {
+	min-width: 0;
+	max-width: 100%;
+	overflow: hidden;
+}

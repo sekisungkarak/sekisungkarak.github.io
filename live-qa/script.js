@@ -1012,13 +1012,45 @@ function RenderHint() {
 
    skipHistory=true dipakai pertanyaan SAMPLE: masuk antrean seperti biasa,
    tetapi TIDAK ikut arsip, supaya Export CSV tetap berisi chat sungguhan. */
+// Karakter TAK TERLIHAT yang bisa merusak bentuk overlay. Teks datang dari
+// pemirsa, jadi harus dianggap tidak tepercaya:
+//   - kontrol C0/C1 (termasuk baris baru & tab) -> memecah tata letak
+//   - zero-width (U+200B, U+2060, U+FEFF)      -> teks tampak kosong
+//   - bidi (U+200E/200F, U+202A-202E, U+2066-2069) -> MEMBALIK arah seluruh
+//     teks, sehingga isi kartu kacau tanpa terlihat sebabnya
+//   - U+00AD (soft hyphen) dan U+180E
+// ZWJ (U+200D) dan ZWNJ (U+200C) SENGAJA tidak dibuang: keduanya bagian sah
+// dari emoji majemuk dan penulisan beberapa bahasa.
+function SanitizeVisibleText(raw) {
+	let s = String(raw == null ? '' : raw);
+	let out = '';
+	for (const ch of s) {
+		const c = ch.codePointAt(0);
+		// Baris baru / tab jadi spasi supaya kata tidak menempel.
+		if (c === 9 || c === 10 || c === 13) { out += ' '; continue; }
+		// Kontrol C0/C1.
+		if (c <= 0x1F || (c >= 0x7F && c <= 0x9F)) continue;
+		if (c === 0xAD || c === 0x180E) continue;
+		if (c === 0x200B || c === 0x200E || c === 0x200F) continue;
+		if (c >= 0x202A && c <= 0x202E) continue;
+		if (c >= 0x2060 && c <= 0x2064) continue;
+		if (c >= 0x2066 && c <= 0x2069) continue;
+		if (c === 0xFEFF) continue;
+		out += ch;
+	}
+	// Rapatkan spasi ganda sisa pembuangan karakter.
+	return out.split('  ').join(' ').trim();
+}
+
 function AddQuestion(q, skipHistory) {
 	questionSeq += 1;
+	// Satu pintu masuk untuk semua teks dari pemirsa: bersihkan di sini supaya
+	// antrean, overlay, arsip, dan Export CSV semuanya memakai teks yang sama.
 	const item = {
 		id: 'q' + questionSeq,
-		name: q.name,
+		name: SanitizeVisibleText(q.name),
 		avatar: q.avatar,
-		text: q.text,
+		text: SanitizeVisibleText(q.text),
 		shown: false,
 		at: Date.now(),
 		// Penanda pertanyaan SAMPLE: tampil di antrean, tetapi disaring dari

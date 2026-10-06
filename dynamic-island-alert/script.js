@@ -1029,6 +1029,10 @@ const EMOTES = {
 // menggantikan SATU karakter placeholder di dalam komentar, bukan rentang
 // start/end seperti Twitch. Karena itu penyisipan harus memakai indeks itu.
 function RenderChatMessageHtml(rawMessage, emotes) {
+	// CATATAN: teks di sini TIDAK disanitasi. `emote.placeInComment` mengacu
+	// pada pesan mentah, jadi menghapus karakter lebih dulu akan menggeser
+	// indeks dan emote mendarat di posisi salah. Sanitasi dilakukan per
+	// segmen teks di RenderChatTextHtml, yang tidak menyentuh indeks.
 	const text = String(rawMessage == null ? '' : rawMessage);
 	const list = Array.isArray(emotes) ? emotes.filter(Boolean).slice() : [];
 	if (list.length === 0) return RenderChatTextHtml(text);
@@ -1063,7 +1067,47 @@ function EmoteImageUrl(emote) {
 
 // Segmen teks biasa tetap bisa memuat shortcode yang DIKETIK, mis. "[laugh]".
 // Setiap potongan di-escape; hanya shortcode yang dikenal yang jadi <img>.
+// Karakter TAK TERLIHAT yang bisa merusak bentuk overlay. Chat datang dari
+// pemirsa, jadi harus dianggap tidak tepercaya:
+//   - kontrol C0/C1 (termasuk baris baru & tab) -> memecah tata letak
+//   - zero-width (U+200B, U+2060, U+FEFF)      -> teks tampak kosong
+//   - bidi (U+200E/200F, U+202A-202E, U+2066-2069) -> MEMBALIK arah seluruh
+//     teks, sehingga isi pill kacau tanpa terlihat sebabnya
+//   - U+00AD (soft hyphen), U+180E, U+2061-2064
+// ZWJ (U+200D) dan ZWNJ (U+200C) SENGAJA tidak dibuang: keduanya bagian sah
+// dari emoji majemuk (mis. 👨‍👩‍👧) dan penulisan beberapa bahasa.
+// Karakter TAK TERLIHAT yang bisa merusak bentuk overlay. Chat datang dari
+// pemirsa, jadi harus dianggap tidak tepercaya:
+//   - kontrol C0/C1 (termasuk baris baru & tab) -> memecah tata letak
+//   - zero-width (U+200B, U+2060, U+FEFF)      -> teks tampak kosong
+//   - bidi (U+200E/200F, U+202A-202E, U+2066-2069) -> MEMBALIK arah seluruh
+//     teks, sehingga isi pill kacau tanpa terlihat sebabnya
+//   - U+00AD (soft hyphen) dan U+180E
+// ZWJ (U+200D) dan ZWNJ (U+200C) SENGAJA tidak dibuang: keduanya bagian sah
+// dari emoji majemuk dan penulisan beberapa bahasa.
+function SanitizeVisibleText(raw) {
+	let s = String(raw == null ? '' : raw);
+	let out = '';
+	for (const ch of s) {
+		const c = ch.codePointAt(0);
+		// Baris baru / tab jadi spasi supaya kata tidak menempel.
+		if (c === 9 || c === 10 || c === 13) { out += ' '; continue; }
+		// Kontrol C0/C1.
+		if (c <= 0x1F || (c >= 0x7F && c <= 0x9F)) continue;
+		if (c === 0xAD || c === 0x180E) continue;
+		if (c === 0x200B || c === 0x200E || c === 0x200F) continue;
+		if (c >= 0x202A && c <= 0x202E) continue;
+		if (c >= 0x2060 && c <= 0x2064) continue;
+		if (c >= 0x2066 && c <= 0x2069) continue;
+		if (c === 0xFEFF) continue;
+		out += ch;
+	}
+	// Rapatkan spasi ganda sisa pembuangan karakter.
+	return out.split('  ').join(' ').trim();
+}
+
 function RenderChatTextHtml(segment) {
+	segment = SanitizeVisibleText(segment);
 	let html = '';
 	let cursor = 0;
 	const pattern = /\[[a-z0-9_]+\]/gi;
@@ -4184,7 +4228,7 @@ function handleTikTokEvent(event, tiktokData, source) {
 	// Master switch: alert TikTok dimatikan dari dashboard.
 	if (!enableTikTokAlerts) return;
 
-	const userName = tiktokData.nickname || tiktokData.uniqueId || 'Someone';
+	const userName = SanitizeVisibleText(tiktokData.nickname || tiktokData.uniqueId || 'Someone');
 	// Username dibatasi 15 karakter. Dipotong per GRAPHEME (bukan code unit)
 	// supaya nickname ber-emoji tidak terbelah jadi karakter rusak.
 	const displayUser = TruncateGraphemes(userName, 15);

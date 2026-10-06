@@ -330,7 +330,7 @@ function EnsureSettingsPopup() {
     closeBtn.setAttribute('aria-label', 'Close');
     closeBtn.innerHTML = '<i class="ri-close-line" aria-hidden="true"></i>';
     closeBtn.addEventListener('click', function () {
-        settingsPopupDialog.open = false;
+        CloseSettingsPopup();
     });
 
     head.appendChild(settingsPopupTitle);
@@ -342,11 +342,57 @@ function EnsureSettingsPopup() {
     settingsPopupDialog.appendChild(head);
     settingsPopupDialog.appendChild(settingsPopupBody);
 
+    // Kartu yang sudah dibangun sebelumnya dipasang kembali: saat ditutup
+    // dialognya dibuang dari DOM, tetapi elemen kartunya dipertahankan.
+    Object.keys(settingsPopupSections).forEach(function (name) {
+        settingsPopupBody.appendChild(settingsPopupSections[name]);
+    });
+
+    // Esc dan klik latar menutup dialog. Ditangani sendiri, bukan lewat
+    // `light-dismiss`, karena jalur tutup bawaan komponen tidak berfungsi —
+    // lihat penjelasan di CloseSettingsPopup().
+    settingsPopupDialog.addEventListener('click', function (e) {
+        if (e.target === settingsPopupDialog) CloseSettingsPopup();
+    });
+    settingsPopupDialog.addEventListener('wa-hide', NotifyPopupClosed);
+
     // Ditaruh DI DALAM #settings supaya aturan kartu `#settings wa-details…`
     // tetap berlaku; dialog tertutup tidak memakan ruang flex.
     const host = document.getElementById('settings') || document.body;
     host.appendChild(settingsPopupDialog);
 }
+
+/* Menutup popup settings.
+   wa-dialog (Web Awesome 3.10) TIDAK bisa ditutup lewat `open = false`:
+   handleOpenChange()-nya bereaksi dengan `this.open = true` lalu memanggil
+   show() lagi, sehingga dialog langsung terbuka kembali — inilah sebabnya
+   popup dulu tak pernah mau hilang dan selalu muncul lagi.
+   Cara yang terbukti menutup permanen adalah melepas dialog dari DOM, sama
+   seperti modal panel kontrol DIA. Elemen kartunya disimpan di
+   settingsPopupSections supaya bisa dipasang lagi saat dibuka berikutnya. */
+function CloseSettingsPopup() {
+    if (!settingsPopupDialog) return;
+    const dlg = settingsPopupDialog;
+    try { if (dlg.requestClose) dlg.requestClose(dlg.dialog); } catch (e) { /* abaikan */ }
+    if (dlg.parentNode) dlg.parentNode.removeChild(dlg);
+    // Kunci scroll dilepas manual: requestClose() menggantung menunggu animasi
+    // 'hide' yang tidak terdefinisi, jadi bagian unlock-nya tak pernah jalan.
+    document.documentElement.style.removeProperty('overflow');
+    document.body.style.removeProperty('overflow');
+    settingsPopupDialog = null;
+    settingsPopupBody = null;
+    settingsPopupTitle = null;
+    NotifyPopupClosed();
+}
+
+// Esc menutup popup. Dipasang SEKALI di sini (bukan di dalam
+// EnsureSettingsPopup) supaya tidak menumpuk listener tiap popup dibuka.
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && settingsPopupDialog) {
+        e.preventDefault();
+        CloseSettingsPopup();
+    }
+});
 
 /* Asal popup: 'queue' bila dipicu pil Bridge di halaman Queue. Dipakai
    untuk mengembalikan tab dashboard setelah popup ditutup. */
@@ -363,11 +409,92 @@ function NotifyPopupClosed() {
     try { if (bc) bc.postMessage({ type: 'settings_popup_closed' }); } catch (e) {}
 }
 
+// ── Preferensi bersama panel kontrol ────────────────────────────────
+// Kunci localStorage SAMA dengan yang dipakai panel kontrol DIA
+// (`geseki:<widget>:controls:prefs`), supaya "sudah pernah connect" hanya
+// dihitung sekali untuk satu widget. Tanpa ini halaman Settings akan
+// memunculkan popup lagi walau user sudah mengisi form di panel.
+function ReadControlsPref(key) {
+    try {
+        const raw = localStorage.getItem(WIDGET_NS + 'controls:prefs');
+        const prefs = raw ? JSON.parse(raw) : {};
+        return prefs[key];
+    } catch (e) { return undefined; }
+}
+
+function WriteControlsPref(key, value) {
+    try {
+        const raw = localStorage.getItem(WIDGET_NS + 'controls:prefs');
+        const prefs = raw ? JSON.parse(raw) : {};
+        prefs[key] = value;
+        localStorage.setItem(WIDGET_NS + 'controls:prefs', JSON.stringify(prefs));
+    } catch (e) { /* localStorage penuh/diblokir: abaikan */ }
+}
+
+// Uji koneksi OBS yang sesungguhnya: buka WebSocket sebentar lalu tutup.
+// Dipakai untuk memutuskan apakah popup saran koneksi perlu muncul, jadi
+// keputusannya berdasar keadaan NYATA, bukan sekadar "pernah dibuka".
+function ProbeObsConnection() {
+    return new Promise(function (resolve) {
+        let cfg;
+        try {
+            cfg = (typeof GetObsConfig === 'function')
+                ? GetObsConfig()
+                : { address: '127.0.0.1', port: 4455, password: '' };
+        } catch (e) {
+            resolve(false);
+            return;
+        }
+        let sock;
+        let settled = false;
+        const done = function (ok) {
+            if (settled) return;
+            settled = true;
+            try { if (sock) { sock.onopen = sock.onerror = sock.onclose = null; sock.close(); } } catch (e) {}
+            resolve(ok);
+        };
+        try {
+            sock = new WebSocket('ws://' + cfg.address + ':' + cfg.port);
+        } catch (e) {
+            resolve(false);
+            return;
+        }
+        const timer = setTimeout(function () { done(false); }, 3000);
+        sock.onopen = function () { clearTimeout(timer); done(true); };
+        sock.onerror = function () { clearTimeout(timer); done(false); };
+        sock.onclose = function () { clearTimeout(timer); };
+    });
+}
+
+// Sarankan mengisi koneksi OBS saat halaman Settings dibuka, HANYA bila OBS
+// benar-benar belum terkoneksi. Begitu koneksi nyata berhasil, penandanya
+// disimpan sehingga popup tidak muncul lagi walau halaman di-reload.
+// Popupnya TIDAK wajib: X, backdrop, dan Esc boleh menutupnya tanpa connect.
+function MaybeSuggestObsConnection() {
+    if (ReadControlsPref('obsAutoConnect') === '1') return;
+    if (!settingsPopupSections['OBS Connection']) return;
+    // Jeda 260 ms sama dengan panel kontrol DIA: kartu Settings selesai ditata
+    // dulu sebelum dialog muncul, supaya tidak berkedip.
+    setTimeout(function () {
+        // Popup lain (mis. dipicu Queue) sudah terbuka: jangan tumpuk.
+        if (settingsPopupDialog && settingsPopupDialog.open) return;
+        ProbeObsConnection().then(function (connected) {
+            // OBS hidup: catat supaya tidak ditanya lagi, dan jangan munculkan
+            // popup. Kalau memang belum terkoneksi, barulah disarankan.
+            if (connected) {
+                WriteControlsPref('obsAutoConnect', '1');
+                return;
+            }
+            if (settingsPopupDialog && settingsPopupDialog.open) return;
+            window.__openSettingsPopup('OBS Connection');
+        });
+    }, 260);
+}
+
 window.__openSettingsPopup = function (groupName, source) {
     if (!settingsPopupSections[groupName]) return false;
     EnsureSettingsPopup();
     settingsPopupSource = source || null;
-    settingsPopupDialog.addEventListener('wa-hide', NotifyPopupClosed);
     // Hanya kartu yang diminta yang tampil.
     Object.keys(settingsPopupSections).forEach(function (name) {
         settingsPopupSections[name].style.display =
@@ -570,6 +697,10 @@ if (saveObsButton) {
                 // Tandai profil ini sebagai pilihan aktif.
                 SetSelectedScene(result.sceneName);
             }
+
+            // Save hanya berhasil bila koneksi OBS hidup: tandai supaya popup
+            // saran koneksi tidak muncul lagi di kunjungan berikutnya.
+            WriteControlsPref('obsAutoConnect', '1');
 
             // Setting sudah tersimpan & source OBS sudah diperbarui: suruh semua
             // source widget di semua scene memuat ulang dirinya (background).
@@ -1548,6 +1679,9 @@ function LoadJSON(settingsJson) {
 
             ApplyShowIfVisibility();
             InitConnectionBadges();
+            // Semua kartu popup sudah dibangun di atas; sekarang aman menyarankan
+            // koneksi OBS bila user belum pernah mengisinya.
+            MaybeSuggestObsConnection();
             InitSceneAutoFollow();
             RefreshWidgetPreview();
             SaveSettingsToStorage();
@@ -3364,6 +3498,9 @@ function InitOBSBadge() {
             // hidup. Tidak perlu autentikasi untuk sekadar cek status.
             clearTimeout(timer);
             setConnected(true);
+            // OBS terbukti hidup: tandai supaya popup saran koneksi tidak
+            // muncul lagi di reload berikutnya.
+            WriteControlsPref('obsAutoConnect', '1');
             try { probe.close(); } catch (e) {}
         };
         probe.onerror = () => {
