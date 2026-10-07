@@ -231,9 +231,8 @@ function SetLiveStatus(state, username, message, avatar, suppressToast) {
 		: 'is-offline';
 	liveStatus.classList.remove('is-connecting', 'is-live', 'is-offline', 'is-error');
 	liveStatus.classList.add(cls);
-	// Saat gagal, bridge menyertakan alasannya (mis. sign server lokal
-	// tidak tersedia). Pesan itu yang bisa ditindaklanjuti, jadi tampilkan
-	// apa adanya, bukan sekadar kata "Error".
+	// Saat gagal, bridge menyertakan alasannya. Pesan itu yang bisa
+	// ditindaklanjuti, jadi tampilkan apa adanya, bukan sekadar kata "Error".
 	const detail = (s === 'error' && message) ? message : '';
 	if (liveState) {
 		liveState.textContent = detail || LIVE_STATE_LABEL[s];
