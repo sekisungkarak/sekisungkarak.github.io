@@ -298,6 +298,15 @@ body {
 	overflow-wrap: anywhere;
 }
 
+/* Emote inline di dalam teks: PNG TikTok maupun emoji dari shortcode. Tinggi
+   mengikuti font baris supaya duduk sejajar dengan teks di sebelahnya. */
+.emote {
+	height: 1.2em;
+	width: auto;
+	vertical-align: -0.2em;
+	margin: 0 1px;
+}
+
 /* ── Queue ──────────────────────────────────────────────────────────────── */
 
 .queue {

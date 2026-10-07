@@ -193,6 +193,15 @@ html, body {
 	text-shadow: var(--qa-shadow, 0 2px 6px rgba(0, 0, 0, 0.6));
 }
 
+/* Emote inline di dalam teks: PNG TikTok maupun emoji dari shortcode. Tinggi
+   mengikuti font baris supaya duduk sejajar dengan teks di sebelahnya. */
+.emote {
+	height: 1.2em;
+	width: auto;
+	vertical-align: -0.2em;
+	margin: 0 1px;
+}
+
 /* ── Hint tiket ─────────────────────────────────────────────────────────── */
 
 .qa-hint {

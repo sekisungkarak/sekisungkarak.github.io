@@ -172,7 +172,9 @@ function RenderOnAir() {
 	name.textContent = q.name;
 	const text = document.createElement('span');
 	text.className = 'text';
-	text.textContent = q.text;
+	// innerHTML: teks di-escape di dalam renderer, emote jadi <img class="emote">.
+	text.innerHTML = RenderChatMessageHtml(q.text, q.emotes);
+	text.title = GesekiCsvText(q.text, q.emotes);
 	body.appendChild(name);
 	body.appendChild(text);
 	card.appendChild(body);
@@ -253,7 +255,9 @@ function BuildRow(q) {
 
 	const text = document.createElement('span');
 	text.className = 'text';
-	text.textContent = q.text;
+	// innerHTML: teks di-escape di dalam renderer, emote jadi <img class="emote">.
+	text.innerHTML = RenderChatMessageHtml(q.text, q.emotes);
+	text.title = GesekiCsvText(q.text, q.emotes);
 
 	body.appendChild(top);
 	body.appendChild(text);
@@ -402,7 +406,7 @@ function BuildCsv() {
 		lines.push([
 			CsvCell(FormatDateTime(q.at)),
 			CsvCell(q.name),
-			CsvCell(q.text),
+			CsvCell(GesekiCsvText(q.text, q.emotes)),
 			CsvCell(status)
 		].join(','));
 	});
