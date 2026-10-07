@@ -244,48 +244,6 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "group": "General"
   },
   {
-   "id": "testAlertType",
-   "includeInWidgetParams": false,
-   "label": "Test Alert",
-   "type": "select",
-   "options": [
-    {
-     "value": "all",
-     "label": "Test All"
-    },
-    {
-     "value": "follow",
-     "label": "Test Follow"
-    },
-    {
-     "value": "subscribe",
-     "label": "Test Subscribe"
-    },
-    {
-     "value": "superFan",
-     "label": "Test Super Fans"
-    },
-    {
-     "value": "share",
-     "label": "Test Share"
-    },
-    {
-     "value": "gift",
-     "label": "Test Gift"
-    },
-    {
-     "value": "firstChatter",
-     "label": "Test First Chatter"
-    },
-    {
-     "value": "nowPlaying",
-     "label": "Test Now Playing"
-    }
-   ],
-   "defaultValue": "",
-   "group": "General"
-  },
-  {
    "id": "widgetStyle",
    "label": "Widget Style",
    "type": "select",
@@ -678,7 +636,6 @@ window.GESEKI_CONTROLS_SCHEMA = {
   "adaptiveStrength": 50,
   "enableSound": true,
   "enableBadgeIcon": true,
-  "testAlertType": "",
   "widgetStyle": "solid",
   "solidBgOpacity": 100,
   "font": "",

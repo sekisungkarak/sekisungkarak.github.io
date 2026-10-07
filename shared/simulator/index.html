@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Simulator</title>
+	<link rel="stylesheet" href="./simulator.css?v=6">
+</head>
+
+<body>
+	<div class="sim">
+		<div class="sim-head">
+			<span class="sim-title">
+				<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"></path></svg>
+				<span>Simulator</span>
+			</span>
+			<span class="sim-widget" id="simWidget"></span>
+			<button class="sim-x" id="simClose" type="button" title="Close" aria-label="Close">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+			</button>
+		</div>
+
+		<nav class="sim-tabs" id="simTabs">
+			<button class="sim-tab is-active" type="button" data-tab="quick">
+				<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"></path></svg><span>Quick</span>
+			</button>
+			<button class="sim-tab" type="button" data-tab="likes">
+				<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7-4.35-9.5-8.5C.8 9.6 2.3 6 5.7 6c2 0 3.2 1.1 4.3 2.6C11.1 7.1 12.3 6 14.3 6c3.4 0 4.9 3.6 3.2 6.5C19 16.65 12 21 12 21z"></path></svg><span>Total Likes</span>
+			</button>
+			<button class="sim-tab" type="button" data-tab="comment">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span>Comment</span>
+			</button>
+			<button class="sim-tab" type="button" data-tab="gift">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="8" width="18" height="13" rx="2"></rect><path d="M12 8v13M3 12h18"></path><path d="M12 8s-1.5-4-4-2.5S10 8 12 8s4 1 4-1.5S12 8 12 8z"></path></svg><span>Gift</span>
+			</button>
+			<button class="sim-tab" type="button" data-tab="superfans">
+				<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"></path></svg><span>Super Fans</span>
+			</button>
+		</nav>
+
+		<div class="sim-body">
+			<!-- Quick -->
+			<section class="sim-panel is-active" data-panel="quick">
+				<div class="sim-h">Quick <span class="sim-badge instant">Instant</span></div>
+				<p class="sim-desc">These events fire instantly — no extra settings, just click.</p>
+				<div class="sim-grid">
+					<button class="sim-btn" type="button" data-quick="follow" data-label="Follow">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v6M22 11h-6"></path></svg><span>Send Follow</span>
+					</button>
+					<button class="sim-btn" type="button" data-quick="subscribe" data-label="Subscribe">
+						<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"></path></svg><span>Send Subscribe</span>
+					</button>
+					<button class="sim-btn" type="button" data-quick="share" data-label="Share">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"></path></svg><span>Send Share</span>
+					</button>
+					<button class="sim-btn" type="button" data-quick="nowPlaying" data-label="Now Playing">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg><span>Play Now Playing</span>
+					</button>
+				</div>
+			</section>
+
+			<!-- Total Likes -->
+			<section class="sim-panel" data-panel="likes">
+				<div class="sim-h">Total Likes <span class="sim-badge need">Needs input</span></div>
+				<p class="sim-desc">Add likes to test like counters / ticket thresholds. Widgets without like support ignore it.</p>
+				<div class="sim-likes">
+					<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7-4.35-9.5-8.5C.8 9.6 2.3 6 5.7 6c2 0 3.2 1.1 4.3 2.6C11.1 7.1 12.3 6 14.3 6c3.4 0 4.9 3.6 3.2 6.5C19 16.65 12 21 12 21z"></path></svg>
+					<div>
+						<div class="sim-label">Current total likes</div>
+						<div class="big" id="likeTotal">0</div>
+					</div>
+				</div>
+				<div class="sim-row">
+					<div class="sim-field">
+						<label class="sim-label" for="likeInput">How many likes to add?</label>
+						<input class="sim-input" id="likeInput" type="number" min="1" step="1" value="100">
+					</div>
+					<button class="sim-btn" type="button" id="addLikes">+ Add Likes</button>
+					<button class="sim-btn ghost" type="button" id="resetLikes">Reset to 0</button>
+				</div>
+			</section>
+
+			<!-- Comment -->
+			<section class="sim-panel" data-panel="comment">
+				<div class="sim-h">Comment <span class="sim-badge need">Needs input</span></div>
+				<p class="sim-desc">Send a test comment with the text and sender role you choose.</p>
+				<div class="sim-field">
+					<label class="sim-label" for="commentText">Comment Text</label>
+					<input class="sim-input" id="commentText" type="text" placeholder="Write a comment...">
+				</div>
+				<div class="sim-row">
+					<div class="sim-field">
+						<label class="sim-label" for="commentRole">Sender Role</label>
+						<select class="sim-select" id="commentRole">
+							<option value="none">Not Following</option>
+							<option value="follower">Follower</option>
+							<option value="subscriber">Subscriber</option>
+							<option value="fanclub">Fan Club</option>
+							<option value="superfan">Super Fan</option>
+						</select>
+					</div>
+					<button class="sim-btn" type="button" id="sendComment">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span>Send Comment</span>
+					</button>
+				</div>
+			</section>
+
+			<!-- Gift -->
+			<section class="sim-panel" data-panel="gift">
+				<div class="sim-h">Gift <span class="sim-badge need">Needs input</span></div>
+				<p class="sim-desc">Pick a gift and combo count, then send.</p>
+				<div class="sim-gifts-wrap">
+					<label class="sim-label" for="giftSearch">Select Gift</label>
+					<div class="sim-search">
+						<input class="sim-input" id="giftSearch" type="text" placeholder="Search gifts...">
+						<button class="sim-search-clear" id="giftClear" type="button" title="Clear" aria-label="Clear">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+						</button>
+					</div>
+					<div class="sim-gifts" id="giftList"></div>
+				</div>
+				<div class="sim-row" style="margin-top:12px;">
+					<div class="sim-field">
+						<label class="sim-label" for="giftCombo">Combo Count</label>
+						<input class="sim-input" id="giftCombo" type="number" min="1" step="1" value="1">
+					</div>
+					<button class="sim-btn" type="button" id="sendGift">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="8" width="18" height="13" rx="2"></rect><path d="M12 8v13M3 12h18"></path></svg><span>Send Gift</span>
+					</button>
+				</div>
+			</section>
+
+			<!-- Super Fans -->
+			<section class="sim-panel" data-panel="superfans">
+				<div class="sim-h">Super Fans <span class="sim-badge instant">Instant</span></div>
+				<p class="sim-desc">Send a Super Fan event. Box uses the diamond count below.</p>
+				<div class="sim-field" style="max-width:200px;">
+					<label class="sim-label" for="boxCount">Box diamonds</label>
+					<input class="sim-input" id="boxCount" type="number" min="1" step="1" value="1">
+				</div>
+				<div class="sim-grid">
+					<button class="sim-btn" type="button" data-fan="superFan" data-label="Super Fan">
+						<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"></path></svg><span>Send Super Fan</span>
+					</button>
+					<button class="sim-btn" type="button" data-fan="superFanJoin" data-label="Super Fan joined">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v6M22 11h-6"></path></svg><span>Super Fan Joined</span>
+					</button>
+					<button class="sim-btn" type="button" data-fan="superFanBox" data-label="Super Fan Box">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="8" width="18" height="13" rx="2"></rect><path d="M12 8v13M3 12h18"></path></svg><span>Super Fan Box</span>
+					</button>
+				</div>
+			</section>
+		</div>
+	</div>
+
+	<div class="sim-toast" id="simToast"></div>
+	<script src="./simulator.js?v=4"></script>
+</body>
+
+</html>

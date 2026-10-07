@@ -2052,26 +2052,35 @@ function BuildInput(setting) {
                 if (gifts || loading) return;
                 loading = true;
                 note.textContent = 'Loading gifts...';
-                // gifts.json sejajar dengan settings.json (buang query string).
+                // Daftar gift BERSAMA untuk semua widget: shared/gifts/gifts.json.
+                // Fallback ke lokasi lama (sejajar settings.json) supaya widget
+                // yang belum pindah tetap bekerja.
+                const sharedGifts = new URL('../gifts/gifts.json', location.href).href;
                 const base = String(settingsJson || '').split('?')[0];
-                const url = base.replace(/[^/]*$/, '') + 'gifts.json';
-                fetch(url)
-                    .then(r => r.json())
-                    .then(doc => {
-                        gifts = Array.isArray(doc) ? doc : (doc.gifts || []);
+                const legacyGifts = base.replace(/[^/]*$/, '') + 'gifts.json';
+                const urls = [sharedGifts, legacyGifts];
+                const TryLoad = (i) => {
+                    if (i >= urls.length) {
                         loading = false;
-                        RenderList(search.value);
-                        // Nama + ikon untuk nilai tersimpan baru diketahui sekarang.
-                        if (current) {
-                            const hit = gifts.find(g => String(g.id) === current);
-                            if (hit) SetValue(hit.id, hit.name, hit.icon);
-                        }
-                    })
-                    .catch(err => {
-                        loading = false;
-                        console.error('Failed to load gifts.json', err);
+                        console.error('Failed to load gifts.json from any location');
                         note.textContent = 'Could not load gifts.json.';
-                    });
+                        return;
+                    }
+                    fetch(urls[i])
+                        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                        .then(doc => {
+                            gifts = Array.isArray(doc) ? doc : (doc.gifts || []);
+                            loading = false;
+                            RenderList(search.value);
+                            // Nama + ikon untuk nilai tersimpan baru diketahui sekarang.
+                            if (current) {
+                                const hit = gifts.find(g => String(g.id) === current);
+                                if (hit) SetValue(hit.id, hit.name, hit.icon);
+                            }
+                        })
+                        .catch(() => TryLoad(i + 1));
+                };
+                TryLoad(0);
             };
 
             toggle.addEventListener('click', () => {
@@ -2188,18 +2197,6 @@ function BuildInput(setting) {
         }
         else
             value = inputElement.value;
-
-        // Custom override for Auto Test Dropdown: trigger instantly without reload
-        if (setting.id === 'testAlertType') {
-            if (value && value !== 'none') {
-                // Cukup CallWidgetFunction: ia SUDAH menyiarkan lewat BroadcastChannel
-                // (menjangkau browser source OBS) sekaligus postMessage ke iframe pratinjau.
-                // Dulu ada bc.postMessage({type:'trigger_test'}) tambahan di sini; akibatnya
-                // widget dipanggil DUA kali tiap pilihan -> alert test ikut dobel.
-                CallWidgetFunction('testWidgetSelect', [value]);
-            }
-            return; // Skip save & refresh
-        }
 
         // ── Validasi minimal 3 tag (Info Rotation) ──
 // Simpan nilainya, tapi jangan refresh pratinjau sebelum syarat terpenuhi.

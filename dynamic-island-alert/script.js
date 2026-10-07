@@ -2937,6 +2937,13 @@ function ComputeAlertDuration() {
 	return Math.max(MIN_ALERT_FLOOR_MS, Math.round(scaled));
 }
 
+// Status & waktu event simulator. Dipakai TriggerAlert untuk melewati filter
+// duplikat saat Simulator mengirim event, sehingga tiap klik selalu tampil.
+var simAlertActive = false;
+// True selama Simulator memproses event: kondisi "hanya chatter baru" di
+// First Chatter boleh dilewati, jadi klik berulang tetap menampilkan kartu.
+var simChatActive = false;
+
 function TriggerAlert(iconOrOptions, textArg, avatarArg, titleArg, subtextArg) {
 	let alertData = {};
 	if (typeof iconOrOptions === 'object' && iconOrOptions !== null) {
@@ -2973,7 +2980,9 @@ function TriggerAlert(iconOrOptions, textArg, avatarArg, titleArg, subtextArg) {
 	const key = alertData.event
 		? `evt:${alertData.event}:${alertData.userId || ''}:${alertData.text || alertData.title || ''}`
 		: `${alertData.icon}:${alertData.text || alertData.title}`;
-	if (recentAlerts.has(key) && (now - recentAlerts.get(key) < 4000)) {
+	// Simulator: tiap klik adalah uji sengaja, jadi filter duplikat 4 detik
+	// dilewati supaya event yang baru diklik selalu tampil.
+	if (!simAlertActive && recentAlerts.has(key) && (now - recentAlerts.get(key) < 4000)) {
 		return;
 	}
 	recentAlerts.set(key, now);
@@ -3745,9 +3754,10 @@ var NOW_PLAYING_TEST_PALETTE = {
 
 // Tombol Simulate. Mengembalikan false bila ada alert asli yang sedang tayang
 // (tidak menimpa) - pemanggil bisa menampilkan status.
-window.testNowPlaying = function () {
+window.testNowPlaying = function (force) {
 	// Hanya saat pill bebas: jangan menabrak alert asli yang sedang/akan tayang.
-	if (isAlertActive || alertLocked || alertQueue.length > 0) return false;
+	// Simulator memanggil dengan force=true supaya tombolnya selalu tampil.
+	if (!force && (isAlertActive || alertLocked || alertQueue.length > 0)) return false;
 
 	var data = NOW_PLAYING_TEST_PAYLOAD;
 	var s = (data.sessions && data.sessions[0]) || null;
@@ -3821,6 +3831,48 @@ window.testNowPlaying = function () {
 
 
 window.testAlert = TriggerAlert;
+
+// ── Simulator (dashboard) ───────────────────────────────────────────────────
+// Event tiruan dari halaman Simulator datang lewat kanal widget
+// ({type:'callFunction', fn:'gesekiSimulate'}). Diteruskan ke jalur event ASLI
+// supaya toggle di Settings tetap dihormati: event yang alert-nya dimatikan
+// tidak akan tampil.
+window.gesekiSimulate = function (event, data) {
+	data = data || {};
+	// Tanpa anti-spam: SETIAP klik diproses, termasuk spam klik pada event
+	// yang sama. Filter duplikat 4 detik di TriggerAlert dilewati
+	// (simAlertActive) supaya klik berulang pun selalu tampil, walau ada
+	// alert lain sedang mengantre.
+	simAlertActive = true;
+	try {
+		GesekiSimulateRun(event, data);
+	} finally {
+		simAlertActive = false;
+	}
+};
+
+function GesekiSimulateRun(event, data) {
+	if (event === 'nowPlaying') {
+		// force=true: lewati penjagaan "pill sedang bebas" supaya tombol
+		// Simulator selalu menampilkan kartu walau ada alert mengantre.
+		if (typeof window.testNowPlaying === 'function') window.testNowPlaying(true);
+		return;
+	}
+	// Superfan tidak ikut di payload chat: daftarkan dulu supaya peran
+	// "Super Fan" pada tab Comment dikenali seperti di jalur live.
+	if (data.__simSuperFan) {
+		try { TrackSuperFan('superFan', data); } catch (e) { /* abaikan */ }
+		delete data.__simSuperFan;
+	}
+	// Event Simulator: penjagaan "chatter baru" di First Chatter dilewati
+	// supaya spam klik pada Comment tetap menampilkan kartu.
+	simChatActive = event === 'chat';
+	try {
+		handleTikTokEvent(event, data, 'Simulator');
+	} finally {
+		simChatActive = false;
+	}
+}
 window.ALERT_ICONS = ALERT_ICONS;
 
 // Broadcaster receiver: test murni & live update dari jendela Pengaturan / tab lain.
@@ -4255,7 +4307,8 @@ function handleTikTokEvent(event, tiktokData, source) {
 			const userId = tiktokData.userId;
 			if (!userId) return;
 
-			if (!firstChatters.has(userId)) {
+			// Simulator boleh menampilkan berulang (kondisi redundan).
+			if (simChatActive || !firstChatters.has(userId)) {
 				firstChatters.add(userId);
 				SaveFirstChatters();
 				const rawMessage = tiktokData.comment || tiktokData.msg || tiktokData.text || '';

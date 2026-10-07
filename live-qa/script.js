@@ -1549,6 +1549,26 @@ function AddTestQuestion() {
 
 window.testQuestion = AddTestQuestion;
 
+// ── Simulator (dashboard) ───────────────────────────────────────────────────
+// Event tiruan dari halaman Simulator, diteruskan ke jalur event ASLI.
+// Komentar tanpa prefix dianggap pertanyaan: prefix ditambahkan supaya tab
+// Comment langsung menghasilkan satu pertanyaan di antrean (seperti viewer
+// mengetik prefix-nya sendiri).
+window.gesekiSimulate = function (event, data) {
+	data = data || {};
+	if (data.__simSuperFan) {
+		try { HandleStatusEvent('superFan', data); } catch (e) { /* abaikan */ }
+		delete data.__simSuperFan;
+	}
+	if (event === 'chat') {
+		const raw = String(data.comment == null ? '' : data.comment);
+		if (raw && raw.replace(/^\s+/, '').indexOf(questionPrefix) !== 0) {
+			data.comment = questionPrefix + ' ' + raw;
+		}
+	}
+	HandleTikTokEvent(event, data);
+};
+
 function CallFunctionByName(fn, args) {
 	if (typeof window[fn] === 'function') window[fn].apply(null, args || []);
 }

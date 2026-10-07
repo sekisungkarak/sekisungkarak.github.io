@@ -56,10 +56,9 @@
 
 	// Kontrol yang disembunyikan KHUSUS di Controls Panel; dashboard tetap
 	// memilikinya. Nilainya tetap dipertahankan saat Save.
-	//  - testAlertType : hanya memicu simulasi, tidak mengubah widget.
 	//  - obsAddress/obsPort/obsPassword : diatur dari modal "Connect OBS" di
 	//    navbar (tersimpan sebagai preferensi), bukan dari tab Connections.
-	var PANEL_HIDDEN = ['testAlertType', 'obsAddress', 'obsPort', 'obsPassword'];
+	var PANEL_HIDDEN = ['obsAddress', 'obsPort', 'obsPassword'];
 	// Kontrol yang TIDAK dirender di panel karena nilainya dikelola mode Layout
 	// (handle resize), bukan oleh form. Slider-nya tetap ada di dashboard.
 	// Sengaja dipisah dari PANEL_HIDDEN: PANEL_HIDDEN menyalin nilai LAMA saat
