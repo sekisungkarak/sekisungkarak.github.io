@@ -197,9 +197,16 @@ const infoCycleDuration = GetIntParam("infoDuration", 4) * 1000;
 
 // ---- Durasi alert dinamis saat antrean padat ----
 // Antrean = event yang MASIH MENUNGGU (alertQueue.length), tidak termasuk alert yang tayang.
-const queueThreshold = GetIntParam("queueThreshold", 2);        // <= ini -> pakai alertDisplayDuration
-const alertDurationMinMs = GetFloatParam("alertDurationMin", 1.5) * 1000;
-const burstFullBacklog = GetIntParam("burstFullBacklog", 6);    // backlog >= ini -> durasi minimum
+// Dikendalikan SATU slider "Adaptive Alert Speed" (0-100%) di dashboard:
+// 0% = durasi tetap, 100% = paling agresif. Dua besaran diturunkan dari slider
+// supaya selalu konsisten satu sama lain:
+//   durasi terpendek = alertDisplayDuration * (1 - 0.625 * strength)
+//   titik jenuh      = 2 + round(4 * strength)
+const adaptiveStrength = Math.max(0, Math.min(100, GetIntParam("adaptiveStrength", 50))) / 100;
+// Antrean <= ini belum dianggap padat: tetap pakai alertDisplayDuration.
+const queueThreshold = 2;
+const burstQueue = queueThreshold + Math.round(4 * adaptiveStrength);
+const alertDurationMinMs = alertDisplayDuration * (1 - 0.625 * adaptiveStrength);
 
 // Floor absolut: animasi pop 0.38s + transisi pill 0.35s harus sempat selesai.
 const MIN_ALERT_FLOOR_MS = 1000;
@@ -2913,13 +2920,16 @@ const recentAlerts = new Map();
 // Durasi alert saat ini, dihitung ulang tiap kali alert mulai tayang: antrean padat ->
 // lebih cepat; antrean surut -> kembali ke alertDisplayDuration.
 function ComputeAlertDuration() {
+	// Slider 0% -> durasi tetap, antrean tidak mempercepat apa pun.
+	if (adaptiveStrength <= 0) return alertDisplayDuration;
+
 	// Hanya event yang MASIH MENUNGGU. Alert yang sedang tayang tidak dihitung.
 	const backlog = alertQueue.length;
 
 	if (backlog <= queueThreshold) return alertDisplayDuration;
 
-	// Interpolasi linear: threshold -> durasi normal, burstFullBacklog -> durasi minimum.
-	const span = Math.max(1, burstFullBacklog - queueThreshold);
+	// Interpolasi linear: queueThreshold -> durasi normal, burstQueue -> durasi minimum.
+	const span = Math.max(1, burstQueue - queueThreshold);
 	const t = Math.min(1, (backlog - queueThreshold) / span);
 	const scaled = alertDisplayDuration - t * (alertDisplayDuration - alertDurationMinMs);
 

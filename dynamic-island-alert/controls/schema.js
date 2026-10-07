@@ -218,6 +218,17 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "group": "General"
   },
   {
+   "id": "adaptiveStrength",
+   "label": "Adaptive Alert Speed",
+   "description": "Shortens each alert when the queue is busy. 0% = always full length, 100% = shortest and most responsive.",
+   "type": "slider",
+   "min": 0,
+   "max": 100,
+   "step": 5,
+   "defaultValue": 50,
+   "group": "General"
+  },
+  {
    "id": "enableSound",
    "label": "Notification Sound",
    "type": "checkbox",
@@ -664,6 +675,7 @@ window.GESEKI_CONTROLS_SCHEMA = {
    "viewers"
   ],
   "alertDuration": 4,
+  "adaptiveStrength": 50,
   "enableSound": true,
   "enableBadgeIcon": true,
   "testAlertType": "",
