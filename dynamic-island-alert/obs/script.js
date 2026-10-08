@@ -1117,6 +1117,8 @@ function SanitizeVisibleText(raw) {
 		const c = ch.codePointAt(0);
 		// Baris baru / tab jadi spasi supaya kata tidak menempel.
 		if (c === 9 || c === 10 || c === 13) { out += ' '; continue; }
+		// Spasi non-standar (NBSP, ideographic space) jadi spasi biasa.
+		if (c === 0xA0 || c === 0x3000) { out += ' '; continue; }
 		// Kontrol C0/C1.
 		if (c <= 0x1F || (c >= 0x7F && c <= 0x9F)) continue;
 		if (c === 0xAD || c === 0x180E) continue;
@@ -1125,11 +1127,44 @@ function SanitizeVisibleText(raw) {
 		if (c >= 0x2060 && c <= 0x2064) continue;
 		if (c >= 0x2066 && c <= 0x2069) continue;
 		if (c === 0xFEFF) continue;
+		// Karakter yang TAMPIL KOSONG walau bukan kontrol/zero-width. Dipakai
+		// untuk menyamarkan nama sehingga alert terlihat tanpa pemilik; semuanya
+		// tanpa bentuk, jadi dibuang. ZWJ/ZWNJ sengaja DIPERTAHANKAN: keduanya
+		// bagian sah emoji majemuk, dan dijaga oleh HasVisibleUsername.
+		if (c === 0x034F || c === 0x061C) continue;   // combining grapheme joiner, Arabic letter mark
+		if (c === 0x115F || c === 0x1160) continue;   // Hangul choseong/jungseong filler
+		if (c === 0x17B4 || c === 0x17B5) continue;   // Khmer inherent vowels
+		if (c === 0x2800) continue;                   // Braille blank
+		if (c === 0x3164 || c === 0xFFA0) continue;   // Hangul filler (penuh & halfwidth)
+		if (c >= 0xFE00 && c <= 0xFE0F) continue;     // variation selector
+		if (c >= 0xE0000 && c <= 0xE007F) continue;   // tag characters
 		out += ch;
 	}
 	// Rapatkan spasi ganda sisa pembuangan karakter.
 	return out.split('  ').join(' ').trim();
 }
+
+// Karakter yang tak punya bentuk sama sekali. Nama yang hanya berisi ini akan
+// tampak kosong, jadi harus ditolak.
+const INVISIBLE_USERNAME_RE = /[\u00A0\u034F\u061C\u115F\u1160\u17B4\u17B5\u180E\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\u2800\u3000\u3164\uFE00-\uFE0F\uFEFF\uFFA0\u{E0000}-\u{E007F}]/gu;
+
+// Apakah ada sesuatu yang BENAR-BENAR terlihat? Karakter tak terlihat dibuang
+// dulu; kalau setelah itu tak ada huruf/angka/tanda/simbol, nama dianggap
+// kosong. Inilah yang menolak nickname yang disamarkan.
+function HasVisibleUsername(s) {
+	const stripped = String(s == null ? '' : s).replace(INVISIBLE_USERNAME_RE, '');
+	return /[\p{L}\p{N}\p{P}\p{S}]/u.test(stripped);
+}
+
+// Nama pemirsa untuk ditampilkan: pakai nickname bila punya karakter terlihat;
+// kalau disamarkan (hanya karakter tak terlihat), jatuh ke username asli; kalau
+// itu pun kosong, pakai `fallback` ("Someone"/"Viewer").
+function ResolveUsername(nickname, uniqueId, fallback) {
+	if (HasVisibleUsername(nickname)) return String(nickname);
+	if (HasVisibleUsername(uniqueId)) return String(uniqueId);
+	return fallback || 'Someone';
+}
+
 
 function RenderChatTextHtml(segment) {
 	segment = SanitizeVisibleText(segment);
@@ -4095,7 +4130,9 @@ function handleTikTokEvent(event, tiktokData, source) {
 	// Master switch: alert TikTok dimatikan dari dashboard.
 	if (!enableTikTokAlerts) return;
 
-	const userName = SanitizeVisibleText(tiktokData.nickname || tiktokData.uniqueId || 'Someone');
+	// Nama pemirsa: tolak nickname yang disamarkan dengan karakter tak
+	// terlihat supaya tidak ada alert tanpa nama; jatuh ke username asli.
+	const userName = SanitizeVisibleText(ResolveUsername(tiktokData.nickname, tiktokData.uniqueId, 'Someone'));
 	// Batas username: murni alphabet (A-Za-z0-9_) 15 karakter; kalau ada
 	// emoji/huruf non-latin dipotong 10 dengan emoji dihitung terpisah.
 	const displayUser = TruncateUsername(userName);

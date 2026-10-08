@@ -585,7 +585,7 @@ function HasRequiredStatus(data, condition) {
 function LogGift(data) {
 	const id = data.giftId === undefined || data.giftId === null ? '(none)' : data.giftId;
 	const name = data.giftName || '(unnamed)';
-	const user = data.nickname || data.uniqueId || '?';
+	const user = ResolveUsername(data.nickname, data.uniqueId, '?');
 	console.log('[Geseki][Live Q&A] gift id=' + id + ' name="' + name + '" from=' + user);
 }
 
@@ -1195,7 +1195,8 @@ function HandleChat(data) {
 	const emotes = GesekiRebaseEmotes(data.emotes, startOffset, text);
 
 	AddQuestion({
-		name: data.nickname || data.uniqueId || 'Viewer',
+		// Nama peminta: tolak nickname yang disamarkan karakter tak terlihat.
+		name: ResolveUsername(data.nickname, data.uniqueId, 'Viewer'),
 		avatar: data.profilePictureUrl || '',
 		text: text,
 		emotes: emotes
