@@ -1,10 +1,10 @@
 /* Every widget and tool on the site, declared once.
    This feeds the homepage cards, the Docs menu, the search index and each
-   widget's own docs page — so adding a widget here is the whole job.
+   widget's own docs page, so adding a widget here is the whole job.
 
    Paths are relative to the site root; CHROME.root() resolves them.
 
-     tier          'free' | 'freemium' | 'pro'   — 'pro' moves it to the Patreon shelf
+     tier          'free' | 'freemium' | 'pro',   'pro' moves it to the Patreon shelf
      icon          an icones.js.org name, a full URL, or a local file
      thumb         optional; a generated placeholder shows until the file exists
      description   written once, used three times: the homepage card, the docs
@@ -30,7 +30,7 @@ window.CATALOG = [
     name: 'Live Q&A',
     eyebrow: 'ENGAGEMENT',
     version: '1.0',
-    description: 'A dedicated question feed for TikTok LIVE. Viewers can earn a ticket by sending the designated ticket gift, then submit a question in chat using the required prefix.',
+    description: 'A dedicated question feed for TikTok LIVE. Viewers may need to meet a requirement (gift, follower, likes) before asking, then submit a question in chat using the required prefix.',
     tier: 'free',
     platforms: ['tiktok'],
     accent: '#D4A843',

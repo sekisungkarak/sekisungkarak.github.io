@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════════
-   Geseki Settings Page Builder — tema liquid glass (2026 rewrite)
+   Geseki Settings Page Builder, tema liquid glass (2026 rewrite)
    Refraksi kaca via SVG feTurbulence + feDisplacementMap (split
    chromatic 3 kanal). Selector & struktur DOM tidak berubah.
    ════════════════════════════════════════════════════════════════ */
@@ -94,7 +94,7 @@
     --transition: all 380ms var(--glass-ease), opacity ease-in-out 500ms;
 }
 
-/* ══ Latar belakang — motif bloom situs ══
+/* ══ Latar belakang, motif bloom situs ══
    Dua bloom aksen lebar di atas grid titik halus 26px. Blur 60px DIBUANG
    supaya grid tetap tajam seperti di situs; bloom-nya sudah gradien lembut,
    jadi tidak butuh blur. */
@@ -120,7 +120,7 @@ html {
        (--wa-color-surface-default). Kalau `html` punya background opaque,
        browser berhenti mempropagasikan background `body` ke canvas; body
        lalu mengecat background-nya sendiri dan menutupi body::before
-       (z-index -1) — motif latar jadi tak terlihat dan halaman tampak
+       (z-index -1), motif latar jadi tak terlihat dan halaman tampak
        hitam pekat. Transparan di sini mengembalikan propagasi itu, sama
        seperti situs (global.css tidak memberi background pada `html`). */
     background: transparent;
@@ -205,7 +205,7 @@ a { color: var(--accent-color); }
     padding-bottom: 20px;
     flex-grow: 1;
     /* Pakai color-scheme normal (bukan dark) agar kontrol bawaan browser
-       di dalam panel — scrollbar, input, select, autofill — dirender
+       di dalam panel, scrollbar, input, select, autofill, dirender
        dengan warna terang standar, konsisten dengan iframe preview
        yang juga sudah dinormalisasi. */
     color-scheme: normal;
@@ -213,12 +213,12 @@ a { color: var(--accent-color); }
 
 /* ══ Layar loading layar-penuh (#loading) ══════════════════════════════
    Overlay `position: fixed` yang menutupi SELURUH viewport selama
-   settings.json dimuat — mencegah FOUC (panel setengah jadi berkedip).
+   settings.json dimuat, mencegah FOUC (panel setengah jadi berkedip).
 
    Semua selector DI-SCOPING ke `.loading-settings` supaya kelas umum
    (.sk-loader, .sk-orbit, .sk-dot) tidak bocor ke elemen lain.
 
-   Animasi: tiga lingkaran titik yang mengorbit — referensi CodePen
+   Animasi: tiga lingkaran titik yang mengorbit, referensi CodePen
    "Loader" oleh Oliver Holretz (3 orbit ber-rotasi 0/40/80 derajat,
    tiap orbit punya 3 titik dengan keyframes translate sendiri). */
 
@@ -232,7 +232,7 @@ a { color: var(--accent-color); }
     justify-content: center;
     /* Motif latar DISALIN dari body::before, bukan sekadar warna polos.
        Overlay ini menutupi body::before (z-index -1), jadi tanpa menyalin
-       motifnya layar loading tampak hitam pekat — lalu "melompat" ke
+       motifnya layar loading tampak hitam pekat, lalu "melompat" ke
        bermotif saat overlay memudar. */
     background-color: var(--c-bg, #121114);
     background-image:
@@ -274,7 +274,7 @@ a { color: var(--accent-color); }
 }
 
 /* Tiap orbit diputar supaya tiga lingkaran titik tidak saling menumpuk,
-   dan animasi titiknya diberi delay berbeda — inilah yang membuat
+   dan animasi titiknya diberi delay berbeda, inilah yang membuat
    gerakannya terlihat seperti orbit, bukan tiga titik serentak. */
 .loading-settings .sk-orbit:nth-child(2) { transform: rotate(40deg); }
 .loading-settings .sk-orbit:nth-child(2) .sk-dot { animation-delay: -0.5s; }
@@ -290,7 +290,7 @@ a { color: var(--accent-color); }
     box-shadow: 0 0 10px color-mix(in srgb, var(--accent-color, #d4a843) 55%, transparent);
 }
 
-/* Tiga titik per orbit: satu di atas-tengah, dua di kiri/kanan bawah —
+/* Tiga titik per orbit: satu di atas-tengah, dua di kiri/kanan bawah,
    sama seperti referensi, hanya angkanya diskalakan ke 84px. */
 .loading-settings .sk-dot:nth-child(1) {
     top: 0;
@@ -332,7 +332,7 @@ a { color: var(--accent-color); }
     .loading-settings .sk-dot { animation-duration: 3s; }
 }
 
-/* ── Section cards (wa-details) — kaca liquid utama ────── */
+/* ── Section cards (wa-details), kaca liquid utama ────── */
 
 /* ── Kartu level-1.
    Latar disamakan dengan modal: SATU latar kaca + SATU backdrop-filter di
@@ -343,7 +343,7 @@ a { color: var(--accent-color); }
     position: relative;
     /* `isolation: isolate` DIHAPUS: memaksa stacking context baru dan, bersama
        backdrop-filter di ::part(base), membuat browser mengkomposisi ulang
-       lapisan kaca tiap kartu dibuka/tutup — pemicu kedip warna pada input
+       lapisan kaca tiap kartu dibuka/tutup, pemicu kedip warna pada input
        & dropdown di dalamnya. */
     margin-bottom: 20px;
     border: none;
@@ -354,7 +354,7 @@ a { color: var(--accent-color); }
     transition: background-color 400ms var(--glass-ease), box-shadow 400ms var(--glass-ease);
 }
 
-/* bend — DISTORSI KACA DINONAKTIFKAN. Lapisan ini dulunya menyedot klik
+/* bend, DISTORSI KACA DINONAKTIFKAN. Lapisan ini dulunya menyedot klik
    (tanpa pointer-events: none) dan membuat teks blur. */
 #settings wa-details.section::part(base)::before {
     content: none;
@@ -368,18 +368,18 @@ a { color: var(--accent-color); }
     z-index: 3;
 }
 
-/* edge — KILAU TEPI DINONAKTIFKAN: selubung putih inset ini terpaint di
+/* edge, KILAU TEPI DINONAKTIFKAN: selubung putih inset ini terpaint di
    atas teks dan membuatnya blur. Modal tidak memakainya, kartu pun tidak. */
 #settings wa-details.section::part(base)::after {
     content: none;
 }
 
-/* [open] — efek non-hover dihapus (dulunya latar --c-glass 14%) */
+/* [open], efek non-hover dihapus (dulunya latar --c-glass 14%) */
 #settings wa-details.section[open] {
     /* sengaja kosong: tanpa latar tambahan saat kartu terbuka */
 }
 
-/* ── Hover kartu — satu aturan per tingkat ──
+/* ── Hover kartu, satu aturan per tingkat ──
    Diturunkan dari 15%/0.04 ke 6%/0.015/0.01: nilai lama terlalu terang
    sehingga hover tampak "menyala" dan mengalahkan isi kartu. */
 #settings wa-details.section:hover {
@@ -436,7 +436,7 @@ a { color: var(--accent-color); }
     overflow: hidden;
 }
 
-/* Konten — efek non-hover dihapus (dulunya wash kaca tipis) */
+/* Konten, efek non-hover dihapus (dulunya wash kaca tipis) */
 #settings wa-details.section:not(.category-section):not(.nested-section)::part(content) {
     padding: 0 22px 22px 22px;
 }
@@ -458,7 +458,7 @@ a { color: var(--accent-color); }
 }
 
 /* Kartu kategori (mis. "TikTok Alerts") + nested card di dalamnya:
-   Efek non-hover DIHAPUS — tanpa latar kaca, tanpa sheen,
+   Efek non-hover DIHAPUS, tanpa latar kaca, tanpa sheen,
    tanpa backdrop-filter. */
 #settings wa-details.section.category-section,
 #settings wa-details.section.nested-section {
@@ -502,7 +502,7 @@ a { color: var(--accent-color); }
 }
 
 /* Body area nested & kategori: padding kiri/kanan/bawah dikembalikan
-   (kaca dari base umum) — nested sedikit diinset utk hierarki */
+   (kaca dari base umum), nested sedikit diinset utk hierarki */
 #settings wa-details.section.category-section::part(content) {
     padding: 0 22px 22px 22px;
     background-image: none;
@@ -547,7 +547,7 @@ a { color: var(--accent-color); }
     font-weight: bold;
 }
 
-/* Ikon menu kartu: KACA SUNGGUHAN — `backdrop-filter: blur()` membiaskan
+/* Ikon menu kartu: KACA SUNGGUHAN, `backdrop-filter: blur()` membiaskan
    apa pun di belakangnya (kartu section), bukan fill gradien statis.
    Warna mengikuti aksen tema: --h = 40 ≈ #d4a843. Nilai bayangan
    referensi (dalam em, ikon 15.5em) dikalikan 34 / 15.5 ≈ 2.19 supaya
@@ -710,7 +710,7 @@ body.dashboard-mode #settings .header .header-actions wa-button.action-ok::part(
 /* ── Config rows ────────────────────────────────────────── */
 
 /* Pemisah sederhana DI DALAM kartu grup (tipe `heading`, mis. "Font",
-   "Colour" di dalam Text). Bukan kartu baru dan bukan kontrol — hanya label
+   "Colour" di dalam Text). Bukan kartu baru dan bukan kontrol, hanya label
    kecil dengan garis atas tipis supaya sub-bagian mudah dipindai. Heading
    pertama tidak perlu garis karena sudah di bawah judul kartu. */
 #settings .config-heading {
@@ -724,7 +724,7 @@ body.dashboard-mode #settings .header .header-actions wa-button.action-ok::part(
 
 /* Garis pemisah hanya untuk heading KEDUA dan seterusnya (yang didahului
    heading lain). Heading pertama sudah di bawah judul kartu, tidak perlu
-   garis — dulu `:first-child` salah sasaran karena anak pertama kartu adalah
+   garis, dulu `:first-child` salah sasaran karena anak pertama kartu adalah
    header slot=summary, bukan heading. */
 #settings .config-heading ~ .config-heading {
     padding-top: 14px;
@@ -790,7 +790,7 @@ body.dashboard-mode #settings .config-heading {
     margin-top: 8px;
 }
 
-/* ── Switch — mercury drop liquid toggle ── */
+/* ── Switch, mercury drop liquid toggle ── */
 
 :root {
     --liquid-ease-spring: linear(
@@ -869,7 +869,7 @@ body.dashboard-mode #settings .config-heading {
         0 2px 10px color-mix(in srgb, var(--accent-color) 40%, rgba(0, 0, 0, 0.5));
 }
 
-/* ── Inputs / selects / pickers — kolom cair bening ─────── */
+/* ── Inputs / selects / pickers, kolom cair bening ─────── */
 
 #settings wa-input,
 #settings wa-number-input {
@@ -906,7 +906,7 @@ body.dashboard-mode #settings .config-heading {
 #settings .config.full wa-select[multiple] {
     width: 100%;
 
-    /* Token kaca cair — diwariskan ke <wa-tag> di dalam shadow root. */
+    /* Token kaca cair, diwariskan ke <wa-tag> di dalam shadow root. */
     --wa-color-fill-normal: color-mix(in srgb, var(--c-glass) 26%, transparent);
     --wa-color-neutral-fill-normal: color-mix(in srgb, var(--c-glass) 26%, transparent);
     --wa-color-on-normal: var(--c-content);
@@ -991,7 +991,7 @@ body.dashboard-mode #settings .config-heading {
 }
 
 /* Bingkai tag: kaca bening + bevel 3D. --glass-filter (blur polos)
-   dipakai, BUKAN --glass-filter-svg (url(#liquid-glass)) — lihat riwayat
+   dipakai, BUKAN --glass-filter-svg (url(#liquid-glass)), lihat riwayat
    glitch komposisi listbox. */
 #settings wa-select[multiple]::part(tag) {
     background: color-mix(in srgb, var(--c-glass) 26%, transparent);
@@ -1051,7 +1051,7 @@ body.dashboard-mode #settings .config-heading {
 #settings wa-number-input::part(base) {
     /* Latar dibuat LEBIH SOLID dan backdrop-filter DINONAKTIFKAN: input ini
        berada di dalam kartu yang JUGA punya backdrop-filter. Dua
-       backdrop-filter bertumpuk — apalagi dengan filter SVG — sering gagal
+       backdrop-filter bertumpuk, apalagi dengan filter SVG, sering gagal
        dikomposisi saat kartu dianimasikan, sehingga warna melompat
        (glitch). Kekurangan efek ditutup dengan menaikkan latar 26% → 42%. */
     background-color: color-mix(in srgb, var(--c-glass) 42%, transparent);
@@ -1131,7 +1131,7 @@ body.dashboard-mode #settings .config-heading {
 /* Fokus dinonaktifkan: tanpa halo aksen biru */
 #settings wa-input:focus-within::part(base),
 #settings wa-number-input:focus-within::part(base) {
-    /* Disamakan dengan nilai non-fokus (42%) — dulunya 26%, jadi warna
+    /* Disamakan dengan nilai non-fokus (42%), dulunya 26%, jadi warna
        melompat saat diklik karena opacity-nya turun mendadak. */
     background-color: color-mix(in srgb, var(--c-glass) 42%, transparent);
     box-shadow: var(--glass-bevel-outer);
@@ -1168,7 +1168,7 @@ body.dashboard-mode #settings .config-heading {
      bening seperti kontrol lain. CATATAN: jangan pakai --c-bg di sini,
      dan jangan pakai --glass-filter-svg. */
 #settings wa-select::part(listbox) {
-    /* --c-bg adalah #121114 (nyaris hitam) — memakainya di sini membuat
+    /* --c-bg adalah #121114 (nyaris hitam), memakainya di sini membuat
        dropdown tampak menghitam begitu diklik. Diganti ke --c-glass
        (#cbbfae), token yang sama dengan input & combobox. Diturunkan ke
        30%: dropdown sudah di atas kartu yang punya latar sendiri. */
@@ -1211,7 +1211,7 @@ body.dashboard-mode #settings .config-heading {
     margin: 16px 0;
 }
 
-/* ── Callouts — kartu kaca mini ─────────────────────────── */
+/* ── Callouts, kartu kaca mini ─────────────────────────── */
 
 #settings wa-callout {
     margin: 5px 0;
@@ -1230,7 +1230,7 @@ body.dashboard-mode #settings .config-heading {
     margin-right: 10px;
 }
 
-/* ── Chip group — tombol kategori (single-select) ───────── */
+/* ── Chip group, tombol kategori (single-select) ───────── */
 
 #settings .chip-group {
     display: flex;
@@ -1277,7 +1277,7 @@ body.dashboard-mode #settings .config-heading {
     background-color: color-mix(in srgb, var(--accent-color) 95%, transparent);
 }
 
-/* ── Buttons — kaca pill cembung, tekan = "menciup" ─────── */
+/* ── Buttons, kaca pill cembung, tekan = "menciup" ─────── */
 
 #settings wa-button::part(base) {
     background-color: color-mix(in srgb, var(--c-glass) 16%, transparent);
@@ -1318,7 +1318,7 @@ body.dashboard-mode #settings .config-heading {
     color: #FFF;
 }
 
-/* ── Footer — menyatu dengan settings page ── */
+/* ── Footer, menyatu dengan settings page ── */
 
 #settings footer {
     width: 100%;
@@ -1518,7 +1518,7 @@ body.dashboard-mode::-webkit-scrollbar-thumb:hover {
     background-clip: content-box;
 }
 
-/* Layar loading DIPAKAI di mode dashboard — lebih baik ada penanda proses
+/* Layar loading DIPAKAI di mode dashboard, lebih baik ada penanda proses
    daripada panel kosong saat menunggu settings.json. Dulu disembunyikan
    karena overlay-nya dihapus script; sekarang overlay dipertahankan. */
 
@@ -1552,7 +1552,7 @@ body.dashboard-mode::before {
 /* Dock OBS sering lebih sempit dari jendela browser.
    Di bawah 900px, susun kontrol satu kolom dan rapikan. */
 @media (max-width: 900px) {
-    /* Ukuran judul TIDAK diubah di sini — gaya teks harus tetap sama dengan
+    /* Ukuran judul TIDAK diubah di sini, gaya teks harus tetap sama dengan
        halaman settings biasa. */
 
     body.dashboard-mode #settingsPanel {
@@ -1641,7 +1641,7 @@ body.dashboard-mode::before {
 }
 
 .scene-dropdown-menu {
-    /* DULU position:absolute — menu melayang MENUTUPI tombol Cancel/Load dan
+    /* DULU position:absolute, menu melayang MENUTUPI tombol Cancel/Load dan
        terpotong batas dialog. Sekarang in-flow sehingga dialog memanjang
        mengikutinya dan tombol footer tetap terlihat. */
     margin-top: 6px;
@@ -1692,7 +1692,7 @@ body.dashboard-mode::before {
     background-color: rgba(255, 255, 255, 0.10);
 }
 
-/* Entri settings terakhir yang dimuat — ditaruh paling atas popup. */
+/* Entri settings terakhir yang dimuat, ditaruh paling atas popup. */
 .scene-option-last {
     background-color: rgba(255, 255, 255, 0.06);
 }
@@ -1923,7 +1923,7 @@ body.dashboard-mode::before {
 
 /* ── Tahan tampilan sampai WebAwesome terdefinisi ─────────────
    Tanpa ini, <wa-details>/<wa-input>/… dirender sebagai elemen inline tak
-   bergaya beberapa ratus ms pertama — label kartu berantakan (FOUC).
+   bergaya beberapa ratus ms pertama, label kartu berantakan (FOUC).
    Overlay #loading menutupi viewport, tapi ia memudar begitu settings.json
    selesai; panel di bawahnya harus sudah utuh saat itu, jadi gerbang ini
    tetap diperlukan. visibility dipakai, bukan display:none, supaya tinggi
@@ -1968,14 +1968,14 @@ body.wa-pending #settings footer {
         0 10px 30px rgba(0, 0, 0, 0.25);
     background: transparent !important;
     color-scheme: normal;
-    /* DIHAPUS: transition: opacity 120ms ease-out — selama 120ms itu iframe
+    /* DIHAPUS: transition: opacity 120ms ease-out, selama 120ms itu iframe
        lama & baru TAMPIL BERSAMAAN (keduanya position:fixed di titik sama),
        box-shadow 30px keduanya menumpuk -> bingkai berdenyut tiap refresh.
        Opacity kini diganti seketika dalam satu frame yang sama dengan
        disembunyikannya iframe lama. */
 }
 
-/* ── Modals — jendela kaca melayang ─────────────────────── */
+/* ── Modals, jendela kaca melayang ─────────────────────── */
 
 /* Kunci utama menanggulangi "glitch Scrollbar di sisi kanan beda warna
    akibat modal popup": saat <wa-dialog> terbuka, Web Awesome menyuntikkan
@@ -2057,7 +2057,7 @@ body.wa-scroll-lock {
 /* ── Input di modal disamakan dengan input pada kartu pengaturan.
    Kaca liquid hidup di ::part(base) (host transparan), sedangkan
    ::part(input) dibiarkan bening agar teks tidak ikut ter-displacement
-   oleh backdrop-filter — pola yang sama persis dengan #settings wa-input. */
+   oleh backdrop-filter, pola yang sama persis dengan #settings wa-input. */
 .modal wa-input::part(base) {
     background-color: color-mix(in srgb, var(--c-glass) 26%, transparent);
     background-image: var(--glass-sheen);
@@ -2116,7 +2116,7 @@ body.wa-scroll-lock {
     color: #FFF;
 }
 
-/* ── Slider — Liquid Glass: track kaca tipis, progress gradient emas 117°,
+/* ── Slider, Liquid Glass: track kaca tipis, progress gradient emas 117°,
    thumb = lensa cair radial dgn specular inset emas (blob fluid, bukan
    knob kaku) ── */
 
@@ -2152,7 +2152,7 @@ wa-slider::part(indicator) {
     height: 0;
 }
 
-/* Thumb: lensa kaca cair — radial normal-map highlight (liq. blob),
+/* Thumb: lensa kaca cair, radial normal-map highlight (liq. blob),
    specular inset emas, squash saat digenggam */
 wa-slider::part(thumb) {
     background:
@@ -2199,7 +2199,7 @@ wa-slider::part(thumb):active {
     * { transition-duration: 0.01ms !important; }
 }
 
-/* ══ Mode dashboard — TANPA liquid glass (flat solid) ═══════════════════
+/* ══ Mode dashboard, TANPA liquid glass (flat solid) ═══════════════════
    HANYA berlaku di dock OBS (?dashboard=1 -> body.dashboard-mode). Halaman
    Settings standalone tetap liquid glass sepenuhnya.
 
@@ -2214,7 +2214,7 @@ wa-slider::part(thumb):active {
         - --glass-reflex-* -> 0             (sisa color-mix jadi transparan)
 
    2) Repaint PERMUKAAN jadi warna padat dari palet situs, dengan garis
-      rambut (hairline) sebagai pemisah — bukan bayangan berlapis.
+      rambut (hairline) sebagai pemisah, bukan bayangan berlapis.
       Nilainya sengaja ditulis eksplisit (bukan var(--c-glass) 42% yang
       transparan), karena permukaan solid adalah inti gaya flat ini. */
 
@@ -2234,7 +2234,7 @@ body.dashboard-mode {
 /* Kartu section: permukaan situs --raised, hairline, radius tetap 24px.
    Tiga selector eksplisit karena aturan aslinya memakai :not(...) berlapis
    dan varian .category-section/.nested-section yang spesifisitasnya lebih
-   tinggi — prefix body.dashboard-mode dinaikkan supaya pasti menang. */
+   tinggi, prefix body.dashboard-mode dinaikkan supaya pasti menang. */
 body.dashboard-mode #settings wa-details.section:not(.category-section):not(.nested-section)::part(base),
 body.dashboard-mode #settings wa-details.section.category-section::part(base),
 body.dashboard-mode #settings wa-details.section.nested-section::part(base) {
@@ -2412,7 +2412,7 @@ body.dashboard-mode #settings footer .url-bar button.obs-error {
 }
 
 /* Dashboard DIA saja (bukan skin-queue): tombol Reset saat menunggu klik
-   konfirmasi kedua memakai latar SOLID, bukan transparan — di dock gelap
+   konfirmasi kedua memakai latar SOLID, bukan transparan, di dock gelap
    latar 16% nyaris tak terlihat sehingga keadaan "menunggu konfirmasi"
    terbaca ambigu. */
 body.dashboard-mode:not(.skin-queue) .url-bar button.is-armed {
@@ -2468,7 +2468,7 @@ body.dashboard-mode .modal .button:not([appearance=outlined])::part(base):hover 
 
 
 /* ════════════════════════════════════════════════════════════════
-   SKIN QUEUE (?skin=queue) — gaya halaman Queue.
+   SKIN QUEUE (?skin=queue), gaya halaman Queue.
    Latar rata tanpa liquid glass. Header dipakai ulang sebagai top bar
    seperti halaman Queue: judul di kiri, aksi (status OBS + Save / Load /
    Reset) di kanan. Footer dikosongkan. Opt-in, jadi widget lain tetap
@@ -2654,7 +2654,7 @@ body.skin-queue .url-bar button#saveObsButton > .btn-ico {
 
 /* Catatan: keadaan gagal (.obs-error) dan sukses (.copied) sudah diatur oleh
    aturan generik di bawah, jadi warna aksen di atas otomatis tertimpa saat
-   Save gagal — tidak perlu aturan khusus di sini. */
+   Save gagal, tidak perlu aturan khusus di sini. */
 
 body.skin-queue .url-bar button:active {
     transform: none;
@@ -2673,7 +2673,7 @@ body.skin-queue .url-bar button.obs-error {
     box-shadow: none;
 }
 
-/* Menunggu klik konfirmasi kedua (tombol Reset) — merah, seperti tombol
+/* Menunggu klik konfirmasi kedua (tombol Reset), merah, seperti tombol
    hapus antrean di halaman Queue. */
 .url-bar button.is-armed {
     background-color: rgba(226, 104, 107, 0.16) !important;
@@ -2784,7 +2784,7 @@ body.skin-queue #settings #settingsPanel {
     padding-right: 18px;
 }
 
-/* Status aksi Save / Load / Reset — toast di pojok KIRI BAWAH, gaya yang
+/* Status aksi Save / Load / Reset, toast di pojok KIRI BAWAH, gaya yang
    sama dengan Controls Panel widget lain: border kiri aksen, latar gelap,
    hilang sendiri. Ditempel ke <body> (position: fixed), jadi tidak pernah
    menggeser tombol di header. */
@@ -2822,8 +2822,8 @@ body.skin-queue .sk-toast.is-error {
 
 /* ── Popup pengaturan koneksi (grup popup:true) ──────────────────
    Dialog ringan: judul + ikon tutup di atas, lalu daftar baris polos.
-   Sengaja TIDAK memakai kartu wa-details — isinya cuma beberapa field. */
-/* Lebar popup ringan (OBS Connection, Load, Reset) — seragam di semua tema. */
+   Sengaja TIDAK memakai kartu wa-details, isinya cuma beberapa field. */
+/* Lebar popup ringan (OBS Connection, Load, Reset), seragam di semua tema. */
 .modal.sk-popup,
 body.skin-queue .sk-popup {
     --width: 460px;
@@ -2849,7 +2849,7 @@ body.skin-queue .sk-popup::part(body) {
     padding: 16px 18px 18px 18px;
 }
 
-/* Tombol aksi di popup (Load / Yes) TIDAK berbentuk pill — sudut membulat
+/* Tombol aksi di popup (Load / Yes) TIDAK berbentuk pill, sudut membulat
    kecil, senada dengan tombol rata di bar atas. */
 .modal.sk-popup .button::part(base),
 body.skin-queue .sk-popup .button::part(base) {
@@ -2874,7 +2874,7 @@ body.skin-queue .sk-popup .button::part(base) {
 
 /* Input file mentah disembunyikan: tombol "Import" sudah membuka pemilih
    berkas (profileImportFile.click()), jadi tombol "Choose file" bawaan browser
-   cuma duplikat yang mengganggu. Tetap ada di DOM dan tetap bisa diklik —
+   cuma duplikat yang mengganggu. Tetap ada di DOM dan tetap bisa diklik,
    makanya dipakai trik visually-hidden, BUKAN display:none, supaya .click()
    dari tombol Import tetap andal di CEF. */
 .profile-io input[type="file"] {
@@ -2899,7 +2899,7 @@ body.skin-queue .sk-popup .button::part(base) {
     padding-bottom: 12px;
     margin-bottom: 14px;
     /* Garis pemisah judul. Dipasang di head (bukan di grup) supaya SEMUA
-       popup dapat garis yang sama — aturan "grup + grup" dulu hanya kena
+       popup dapat garis yang sama, aturan "grup + grup" dulu hanya kena
        grup kedua, sehingga popup dengan satu grup (OBS) tidak bergaris. */
     border-bottom: 1px solid var(--sk-line, rgba(255, 255, 255, 0.14));
 }

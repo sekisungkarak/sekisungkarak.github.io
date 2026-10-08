@@ -1,4 +1,4 @@
-/* Homepage. Everything on this page is rendered from catalog.js — add a widget
+/* Homepage. Everything on this page is rendered from catalog.js, add a widget
    there and its card, its menu row and its search entries all follow. */
 (function () {
   'use strict';
@@ -64,7 +64,7 @@
 
     return '<article class="tile" style="--brand:' + accent +
         ';--wash-a:' + hex(accent, 0.34) + ';--wash-b:' + hex(accent, 0.12) + '">' +
-      // Covers the card — thumbnail, title and body all lead to the docs.
+      // Covers the card, thumbnail, title and body all lead to the docs.
       '<a class="tile-cover" href="' + C.esc(href) + '" aria-label="' + C.esc(c.name + ' ' + T('documentation')) + '"></a>' +
       // Features-6 accent: a soft gradient blob tinted by the card's own
       // --brand, sitting behind the body copy.
@@ -129,7 +129,7 @@
   // A fresh visit opens on the hero alone; once expanded it stays that way for
   // the session, so coming back from a docs page does not replay the landing.
   // 404.html runs this same script and promises the widgets are below it, so the
-  // landing is for the homepage only — at '/' or at '/index.html'.
+  // landing is for the homepage only, at '/' or at '/index.html'.
   var opened;
   try { opened = sessionStorage.getItem('home-open'); } catch (e) {}
   var isHome = location.pathname.replace(/index\.html$/, '') === new URL(C.root()).pathname;
@@ -149,7 +149,7 @@
   main.innerHTML = hero() +
     '<div class="shelves"><div>' +
       shelf('widgets', T('Widgets & tools'), free) +
-      // Renders nothing at all while there are no pro entries — no empty shelf.
+      // Renders nothing at all while there are no pro entries, no empty shelf.
       shelf('exclusive', T('Patreon-exclusive'), pro) +
     '</div></div>';
   document.body.appendChild(main);

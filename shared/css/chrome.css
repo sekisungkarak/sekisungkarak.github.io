@@ -1,4 +1,4 @@
-/* Header, nav, footer and the search modal — every page wears these.
+/* Header, nav, footer and the search modal, every page wears these.
    Load after global.css, before the page's own stylesheet.
 
    Theme: dark glass. The header is a floating bar with a blurred, translucent
@@ -56,7 +56,7 @@
 
 /* The theme button is the last item in the header, so a centred bubble would
    stick out past the right edge. `opacity: 0` still counts toward scrollWidth,
-   which added a permanent horizontal scrollbar on narrow windows — so this
+   which added a permanent horizontal scrollbar on narrow windows, so this
    bubble anchors right instead of centre. */
 .theme-toggle[data-tooltip]::after {
   left: auto;
@@ -90,7 +90,7 @@
   border-bottom: var(--bw) solid var(--line);
 }
 
-/* The brand is a mark beside a wordmark — no block, no rule. */
+/* The brand is a mark beside a wordmark, no block, no rule. */
 .brand {
   display: flex;
   align-items: center;
@@ -146,7 +146,7 @@
 .nav-link.is-soon { color: var(--faint); cursor: default; }
 .nav-link.is-soon:hover { color: var(--faint); background: none; }
 
-/* The moving bar is retired — the lit pill is its own indicator now. It stays
+/* The moving bar is retired, the lit pill is its own indicator now. It stays
    in the markup so chrome.js has nothing to special-case, but renders nothing. */
 .nav-bar { display: none; }
 
@@ -154,7 +154,7 @@
 .header-actions { display: flex; align-items: center; gap: 12px; }
 .header-divider { width: var(--bw); height: 24px; background: var(--line); }
 
-/* Language switch: a small segmented control — the lit half is the live one. */
+/* Language switch: a small segmented control, the lit half is the live one. */
 .lang-switch {
   display: flex;
   align-items: center;
@@ -204,7 +204,7 @@
 .theme-toggle:hover { background: var(--accent-wash); border-color: var(--accent-line); box-shadow: var(--shadow-sm); }
 .theme-toggle svg { transition: transform var(--t-slow) var(--glide); }
 .theme-toggle:hover svg { transform: rotate(18deg); }
-/* Only one glyph is ever shown — the pair swap on the root attribute. */
+/* Only one glyph is ever shown, the pair swap on the root attribute. */
 .theme-toggle .icon-moon { display: block; }
 .theme-toggle .icon-sun { display: none; }
 html[data-theme="light"] .theme-toggle .icon-moon { display: none; }
@@ -304,8 +304,8 @@ html:not([data-theme]) .theme-toggle svg { visibility: hidden; }
   background: var(--tab);
   transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
 }
-/* Whatever the icon file's own colours are — an Iconify fetch, a downloaded
-   SVG, a PNG — this flattens it to cream, so the row never needs a palette. */
+/* Whatever the icon file's own colours are, an Iconify fetch, a downloaded
+   SVG, a PNG, this flattens it to cream, so the row never needs a palette. */
 .nav-pop-icon img { filter: brightness(0) invert(1); opacity: 0.9; }
 html[data-theme="light"] .nav-pop-icon img { filter: brightness(0); opacity: 0.72; }
 .nav-pop-item:hover .nav-pop-icon { background: var(--accent-wash); border-color: var(--accent-line); }
@@ -329,7 +329,7 @@ html[data-theme="light"] .nav-pop-icon img { filter: brightness(0); opacity: 0.7
 }
 .nav-pop-foot:hover { color: var(--accent-soft); text-decoration: none; }
 
-/* Contact Me: a narrower panel — one block of copy and the invite button. */
+/* Contact Me: a narrower panel, one block of copy and the invite button. */
 .nav-pop-contact { width: 288px; padding: 16px; }
 .contact-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
 .contact-head > svg { flex: none; margin-top: 2px; }
@@ -337,7 +337,7 @@ html[data-theme="light"] .nav-pop-icon img { filter: brightness(0); opacity: 0.7
 .contact-sub { margin-top: 3px; font-size: 0.8rem; line-height: 1.5; color: var(--lede); }
 .nav-pop-empty { padding: 6px 2px; font-size: 0.82rem; color: var(--faint); }
 
-/* Discord invite button — used by the Contact Me panel. */
+/* Discord invite button, used by the Contact Me panel. */
 .contact-cta {
   display: flex;
   align-items: center;
@@ -504,7 +504,7 @@ html[data-theme="light"] .nav-pop-icon img { filter: brightness(0); opacity: 0.7
 
 /* Below ~430px the wordmark + three action buttons stop fitting at their
    default sizes, which pushed the header wider than the viewport. Everything
-   is tightened instead of dropping the name, so the brand stays visible —
+   is tightened instead of dropping the name, so the brand stays visible,
    the text still fits at 320px with no horizontal overflow. */
 @media (max-width: 430px) {
   .site-header { gap: 8px; padding: 0 12px; }

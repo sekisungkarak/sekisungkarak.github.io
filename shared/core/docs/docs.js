@@ -1,5 +1,5 @@
 /* Docs core: fetch a widget's README.md, render it, and build the page around it.
-   The shim carries only an id — title, eyebrow, platforms and URLs all come
+   The shim carries only an id, title, eyebrow, platforms and URLs all come
    from catalog.js, so a widget is described in exactly one place. */
 (function () {
   'use strict';
@@ -26,7 +26,7 @@
   if (!boot.breadcrumb) boot.breadcrumb = ['Docs', boot.title];
 
   // The shim's <title> is a generic no-JS fallback; the real one is the widget's.
-  if (boot.title) document.title = boot.title + ' — ' + T('Install Guide');
+  if (boot.title) document.title = boot.title + ', ' + T('Install Guide');
 
   var ICON = C.ICON, PLATFORM = C.PLATFORM;
   var svg = C.svg, mark = C.mark, el = C.el, esc = C.esc;
@@ -183,7 +183,7 @@
     });
   }
 
-  // A "Field | Value" table whose rows include a URL renders as a copy card —
+  // A "Field | Value" table whose rows include a URL renders as a copy card,
   // the same shape as the old browser-source box, but for the dock details.
   function buildFieldCard(rows) {
     var items = rows.map(function (r) {
@@ -452,7 +452,7 @@
 
   loadMarkdown(boot.source)
     .then(function (md) {
-      // Drop a leading H1 — the hero already carries the title.
+      // Drop a leading H1, the hero already carries the title.
       md = md.replace(/^\s*#\s+.*\n+/, '');
       // Parsed inert so nothing loads before the paths are corrected.
       var parsed = new DOMParser().parseFromString(marked.parse(md), "text/html");
@@ -476,6 +476,6 @@
     })
     .catch(function (e) {
       fail(T('Could not read') + ' ' + boot.source + ' (' + e.message + '). ' +
-        T('If you are opening this from the file system, serve the folder over http instead — fetch does not work on file:// URLs.'));
+        T('If you are opening this from the file system, serve the folder over http instead, fetch does not work on file:// URLs.'));
     });
 })();

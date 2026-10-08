@@ -1,5 +1,5 @@
 /* ============================================================================
-   Live Q&A — antrean pertanyaan penonton + overlay yang dikendalikan streamer.
+   Live Q&A, antrean pertanyaan penonton + overlay yang dikendalikan streamer.
    ----------------------------------------------------------------------------
    Alur:
      1. Chat yang diawali prefix (mis. "!q") masuk ke ANTREAN, bukan langsung
@@ -45,8 +45,8 @@ const WIDGET_ROOT = SCRIPT_SRC
 const SAMPLE_AVATAR = new URL('../resources/sekisungkarak_avatar.jpeg', WIDGET_ROOT).href;
 
 /* Pertanyaan SAMPLE (tombol Sample) TIDAK boleh ikut arsip maupun Export CSV.
-   Dikenali dari dua tanda, supaya sample lama — yang tersimpan sebelum ada
-   penanda `sample` — tetap tertangkap:
+   Dikenali dari dua tanda, supaya sample lama, yang tersimpan sebelum ada
+   penanda `sample`, tetap tertangkap:
      1. penanda `sample: true` (sample baru), atau
      2. avatar sample (nama berkasnya khas milik widget ini).
    Avatar chat TikTok asli selalu berasal dari tiktokcdn, jadi tidak bentrok. */
@@ -63,7 +63,7 @@ const SCENE_PREFIX = WIDGET_NS + 'scene-';
 /* Profil scene: dashboard menyimpan satu set setting per scene OBS dengan
    kunci `geseki:live-qa:scene-<nama>`, dan tombol Save menempelkan
    `?profile=<scene>` ke URL source. Widget ini membacanya supaya tiap scene
-   bisa punya tampilan sendiri — sama seperti dynamic-island-alert. */
+   bisa punya tampilan sendiri, sama seperti dynamic-island-alert. */
 function LoadSceneProfile(profileName) {
 	if (!profileName) return {};
 	try {
@@ -158,7 +158,7 @@ const ticketStatusConditions = ticketConditions.filter(function (c) {
    selain itu 'any' = OR (cukup salah satu). */
 const ticketMatchAll = String(GetParam('ticketMatch', 'any')).trim().toLowerCase() === 'all';
 
-/* Gift: SATU gift dipilih lewat dropdown dan disimpan sebagai ID numerik —
+/* Gift: SATU gift dipilih lewat dropdown dan disimpan sebagai ID numerik,
    nama gift dilokalisasi TikTok (Galaxy -> Galaksi), jadi ID adalah
    satu-satunya kunci yang stabil lintas bahasa dan region. */
 const ticketGiftId = String(GetParam('ticketGiftId', '')).trim();
@@ -298,13 +298,13 @@ const qaHint = document.getElementById('qaHint');
 // pengguna, sama seperti preferensi panel di dynamic-island-alert.
 const LAYOUT_MIN_SCALE = 0.5;
 const LAYOUT_MAX_SCALE = 2.0;
-// Skala bawaan widget overlay — sengaja sedikit di bawah 1 supaya tidak
+// Skala bawaan widget overlay, sengaja sedikit di bawah 1 supaya tidak
 // terlalu besar di canvas. Bisa diubah lewat handle sudut di mode Layout.
 const LAYOUT_DEFAULT_SCALE = 0.8;
 /* Bentuk widget (geser / ukuran / skala / rotasi) disimpan PER SCENE, sama
    seperti profil settings scene: satu scene = satu kunci `layout:<scene>`.
    Dulu kuncinya GLOBAL, sehingga mengatur bentuk di scene "Live" ikut
-   mengubah scene lain — sekarang tiap scene mandiri.
+   mengubah scene lain, sekarang tiap scene mandiri.
 
    Kunci ini SENGAJA terpisah dari profil settings: Reset dan Save di
    dashboard hanya menyentuh `live-qa-settings` dan
@@ -602,14 +602,14 @@ function UserKey(data) {
 ////////////////////
 
 /* Antrean pertanyaan: { id, name, avatar, text, shown, at }.
-   `shown` menandai sudah pernah tampil (badge di Queue page) — barisnya
+   `shown` menandai sudah pernah tampil (badge di Queue page), barisnya
    TETAP di daftar supaya streamer bisa menampilkannya lagi. */
 const questions = [];
 /* Arsip pertanyaan yang pernah masuk, dipakai tombol Export CSV di halaman
    Queue supaya riwayat tanya-jawab bisa diunduh (mis. dibuka lagi di Excel).
    Entri tetap disimpan walau dihapus atau di-Clear dari antrean.
 
-   Retensi: hanya 7 HARI TERAKHIR — entri lebih tua dibuang otomatis. Selain
+   Retensi: hanya 7 HARI TERAKHIR, entri lebih tua dibuang otomatis. Selain
    itu ada batas aman JUMLAH entri: localStorage cuma ~5 MB dan kegagalan
    simpan ditelan diam-diam, jadi seminggu stream ramai bisa membuat arsip
    berhenti tersimpan tanpa peringatan. Batas ini menjaga itu, dan hanya
@@ -619,7 +619,7 @@ const HISTORY_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_HISTORY = 3000;
 /* Pertanyaan yang sedang tayang di overlay SCENE INI. Ikut disimpan bersama
    antrean scene (kunci per scene), jadi pindah scene menampilkan On screen
-   milik scene itu sendiri — bukan membawa pertanyaan dari scene sebelumnya. */
+   milik scene itu sendiri, bukan membawa pertanyaan dari scene sebelumnya. */
 let currentId = null;
 let questionSeq = 0;
 
@@ -629,7 +629,7 @@ let questionSeq = 0;
    "Just Chatting" tidak saling menimpa.
 
    Kunci selalu PASTI: bila `?profile=` kosong (dibuka di browser biasa), dipakai
-   sentinel `_default` — bukan kunci bersama tanpa sufiks. Dulu kunci tanpa
+   sentinel `_default`, bukan kunci bersama tanpa sufiks. Dulu kunci tanpa
    sufiks itu terbagi semua instance sehingga dua source bisa saling menimpa;
    sekarang tiap scene punya kuncinya sendiri, kosong atau tidak. Data lama di
    kunci bersama dimigrasikan sekali ke `_default` supaya tidak hilang. */
@@ -1147,7 +1147,7 @@ function HandleStatusEvent(event, data) {
 
 /* Chat yang diawali prefix masuk antrean. Bila ada syarat tiket, penanya
    WAJIB memenuhi SALAH SATU kondisi (OR): AKSI (gift / likes) lewat
-   ticketHolders — tiket habis sekali pakai; STATUS (follower, fan club,
+   ticketHolders, tiket habis sekali pakai; STATUS (follower, fan club,
    subscriber, superfan) dicek pada payload chat dan tidak dikonsumsi. */
 function HandleChat(data) {
 	// Komentar mentah: placeholder emote (bila ada) masih di dalamnya, dan
@@ -1334,12 +1334,12 @@ function PostToChannel(msg) {
 
 /* Id instance: widget ini bisa hidup di beberapa tempat sekaligus (browser
    source OBS, tab browser, pratinjau). Tiap instance punya daftar sendiri,
-   jadi Queue page perlu tahu dari instance mana sebuah qa_state datang —
+   jadi Queue page perlu tahu dari instance mana sebuah qa_state datang,
    tanpa itu daftarnya bergantian antara dua daftar yang berbeda. */
 const INSTANCE_ID = 'w' + Math.random().toString(36).slice(2, 10);
 
 /* Status "source ini ada di scene yang sedang tayang", dari obs-browser.
-   Dipakai HANYA untuk menandai state mana yang ditampilkan halaman Queue —
+   Dipakai HANYA untuk menandai state mana yang ditampilkan halaman Queue,
    bukan lagi untuk memilih satu pemimpin. SEMUA source tetap aktif di
    belakang layar dan mengisi antrean scene-nya masing-masing:
      true  -> diketahui ada di scene yang sedang tayang
@@ -1353,16 +1353,16 @@ let activeState = null;
 // halaman Queue; semua source tetap memproses chat.
 //
 // Dua jalur, karena jalur event saja tidak cukup:
-//   1. 'obsSceneChanged' — obs-browser menyiarkannya ke SEMUA browser source,
+//   1. 'obsSceneChanged', obs-browser menyiarkannya ke SEMUA browser source,
 //      membawa NAMA scene program, dan TIDAK butuh izin. Nama itu dibandingkan
 //      dengan scene milik source ini (?profile=<scene>). Ini yang membuat
 //      halaman Queue langsung tahu scene mana yang tayang begitu scene pindah.
-//   2. getCurrentScene() — sekali saat halaman dimuat, untuk mengisi status
+//   2. getCurrentScene(), sekali saat halaman dimuat, untuk mengisi status
 //      AWAL. Event 'obsSourceActiveChanged' hanya menyala saat status BERUBAH,
 //      jadi source yang sudah aktif sejak halaman dimuat tidak pernah
 //      menerimanya; tanpa pengisian awal status tetap kosong sampai scene
 //      diganti ("harus pindah scene dulu"). Butuh control level ReadUser pada
-//      browser source — dashboard menyetelnya saat Save.
+//      browser source, dashboard menyetelnya saat Save.
 function ApplyProgramScene(name) {
 	// Tanpa ?profile=<scene> scene source ini tidak diketahui; serahkan ke
 	// event aktif biasa (perilaku lama).
@@ -1398,7 +1398,7 @@ if (typeof window !== 'undefined' && window.obsstudio) {
 			window.obsstudio.getCurrentScene(function (scene) {
 				if (scene && scene.name) ApplyProgramScene(scene.name);
 			});
-		} catch (err) { /* control level belum cukup — abaikan */ }
+		} catch (err) { /* control level belum cukup, abaikan */ }
 	}
 }
 
@@ -1497,7 +1497,7 @@ window.RemoveQuestion = RemoveQuestion;
 /* Teks contoh untuk memeriksa tata letak overlay. Diambil dari tiga paragraf
    lorem ipsum lalu dipotong pada batas kata, mulai dari posisi acak.
 
-   BATAS PANJANG: chat TikTok LIVE yang bisa dikirim viewer pendek — sekitar
+   BATAS PANJANG: chat TikTok LIVE yang bisa dikirim viewer pendek, sekitar
    100 karakter. Contoh nyata (97 karakter):
      "Lorem ipsum dolor sit amet, irure exercitation fugiat occaecat.
       Anim exercitation nisi minim nisi"

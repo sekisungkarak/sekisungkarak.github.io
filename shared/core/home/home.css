@@ -8,7 +8,7 @@
 /* Flex in both states: justify-content only has free space to distribute while
    min-height is holding the box open, so the landing and the ordinary page are
    the same layout, and opening one into the other is a single animated length.
-   min-height must be 0 rather than auto here — auto cannot be interpolated, and
+   min-height must be 0 rather than auto here, auto cannot be interpolated, and
    a transition into it snaps. */
 .page-wrap {
   position: relative;
@@ -24,7 +24,7 @@
 
 /* ── hero ───────────────────────────────────────────── */
 /* A glass panel: translucent ground, hairline edge, soft lift. The blur is what
-   separates it from the backdrop — there is no drawn border to do the job. */
+   separates it from the backdrop, there is no drawn border to do the job. */
 .hero {
   position: relative;
   margin: 72px 0 64px;
@@ -201,7 +201,7 @@
 .tile:hover .tile-go svg,
 .tile:focus-within .tile-go svg { transform: translateX(3px); }
 
-/* Motion is decoration here — drop it when the reader asks for less. */
+/* Motion is decoration here, drop it when the reader asks for less. */
 @media (prefers-reduced-motion: reduce) {
   .tile-blob, .tile-go svg, .tile, .plat { transition: none; }
   .tile:hover, .tile:focus-within { transform: none; }
@@ -238,7 +238,7 @@
 
 /* ── blurb reveal ───────────────────────────────────── */
 /* Words fade up into place, staggered by their own index, the first time the
-   card is seen. Opacity, transform and filter only — never a layout property —
+   card is seen. Opacity, transform and filter only, never a layout property,
    so nothing below the paragraph can be pushed around mid-animation. */
 .tile-desc .w {
   display: inline-block;
@@ -252,7 +252,7 @@
 
 /* The clamp and the reveal disagree about who owns the box: a clamped box hides
    words the stagger is still animating in. This rule needs two classes to beat
-   `.tile-body p` (0,1,1) — one class loses on specificity and the clamp stays. */
+   `.tile-body p` (0,1,1), one class loses on specificity and the clamp stays. */
 .tile-body .tile-desc {
   display: block;
   -webkit-line-clamp: none;
@@ -315,7 +315,7 @@
    a single screen with the shelves closed to nothing between them. Browse widgets
    drops .is-landing: the page stops being held open, the shelves grow, and the
    group rises to the top as the free space around it runs out. No rule here sets
-   a layout mode or a keyword — every one of them is a length that interpolates. */
+   a layout mode or a keyword, every one of them is a length that interpolates. */
 .is-landing .page-wrap { min-height: calc(100vh - var(--header-h)); }
 .is-landing .hero { margin: 0 0 24px; padding: 44px 42px 36px; }
 .is-landing .hero h1 { font-size: clamp(2.7rem, 5.6vw, 4.4rem); }
@@ -324,7 +324,7 @@
 /* The shelves grow open from nothing rather than hiding in place, so everything
    below them keeps its position in the flow. 0fr → 1fr animates to the content's
    own height, which no max-height guess can do. The clip is only needed while
-   that runs — left on, it would cut the top row's hover lift. */
+   that runs, left on, it would cut the top row's hover lift. */
 .shelves {
   display: grid;
   grid-template-rows: 1fr;

@@ -6,7 +6,7 @@
    are the field's palette, kept here so a theme swap is a CSS change and never
    a rebuild of the grid.
 
-   A page opts in by linking this file — chrome.js mounts the field only when it
+   A page opts in by linking this file, chrome.js mounts the field only when it
    finds this stylesheet, so a page without it (the docs page) is left plain. */
 
 /* z-index -1, not 0: a positioned box at 0 paints above in-flow content, so the
@@ -28,7 +28,7 @@
 
 /* ── light ──────────────────────────────────────────── */
 /* Warm paper: the same grid in a darker gold so it reads as ink on paper, over
-   a pale glow — a dark pool would look like a smudge. */
+   a pale glow, a dark pool would look like a smudge. */
 html[data-theme="light"] {
   --dot-from: #8a6d23;
   --dot-to: #b98d2e;

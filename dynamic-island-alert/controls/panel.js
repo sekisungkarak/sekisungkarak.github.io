@@ -854,7 +854,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 	var OBS_STATE = 'off';
 	// Modal Connect OBS yang sedang terbuka. 'required' masih didukung untuk
 	// pemanggil yang memang butuh (mis. alur OBS sync), tapi auto-pop-up panel
-	// TIDAK wajib — user boleh menutupnya.
+	// TIDAK wajib, user boleh menutupnya.
 	var obsDialogBack = null;
 	var obsDialogRequired = false;
 
@@ -1831,7 +1831,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		giOverlay.appendChild(giGuideV);
 		giOverlay.appendChild(giGuideH);
 		giOverlay.appendChild(giFrame);
-		giOverlay.appendChild(h('div', 'gi-hint', 'Layout mode \u2014 drag to move \u00b7 corners to resize \u00b7 top dot to rotate'));
+		giOverlay.appendChild(h('div', 'gi-hint', 'Layout mode, drag to move \u00b7 corners to resize \u00b7 top dot to rotate'));
 		document.body.appendChild(giOverlay);
 		LayoutBind();
 	}
@@ -1856,11 +1856,11 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 	function SetLayoutMode(on) {
 		if (on) {
 			LayoutEnter();
-			SetStatus('Layout mode on \u2014 drag the widget to move, drag a handle to resize.');
+			SetStatus('Layout mode on, drag the widget to move, drag a handle to resize.');
 		} else {
 			var was = layoutOn;
 			LayoutExit();
-			if (was && dirty) SetStatus('Layout changed \u2014 press Save to apply.');
+			if (was && dirty) SetStatus('Layout changed, press Save to apply.');
 		}
 	}
 
@@ -2407,7 +2407,7 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		// Layout harus ikut hidup lagi supaya "collapsed <=> Layout aktif".
 		if (root.classList.contains('is-collapsed')) SetLayoutMode(true);
 		// Begitu panel pertama kali muncul dan OBS belum pernah dikonfigurasi,
-		// modal Connect dipop-upkan sebagai SARAN — tidak wajib: X/backdrop/Esc
+		// modal Connect dipop-upkan sebagai SARAN, tidak wajib: X/backdrop/Esc
 		// boleh menutupnya tanpa menyambung.
 		if (CFG.read('obsAutoConnect') !== '1' && !obsDialogBack) {
 			setTimeout(function () {

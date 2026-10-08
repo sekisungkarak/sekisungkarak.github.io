@@ -12,7 +12,7 @@
   var T = I18N && I18N.t ? I18N.t : function (s) { return s; };
 
   // This file lives at <root>/shared/core/, so every shared path resolves from
-  // its own src. Nothing here is depth-bound — a page at any level works.
+  // its own src. Nothing here is depth-bound, a page at any level works.
   var me = document.currentScript || document.querySelector('script[src$="chrome.js"]');
   var CORE = new URL('./', me.src).href;
   var ROOT = new URL('../../', me.src).href;
@@ -115,7 +115,7 @@
   function mountAtmosphere() {
     // Only pages that opted in by linking atmosphere.css get the backdrop.
     // Without that stylesheet the layer has no positioning at all, so the
-    // canvas would stretch over the page and swallow clicks — the docs page
+    // canvas would stretch over the page and swallow clicks, the docs page
     // deliberately has no backdrop, so it must be skipped here.
     var hasCss = Array.prototype.some.call(
       document.querySelectorAll('link[rel="stylesheet"]'),
@@ -160,7 +160,7 @@
     });
   }
 
-  // Shared by docs.js (heading ids) and search.js (deep links) — they must agree.
+  // Shared by docs.js (heading ids) and search.js (deep links), they must agree.
   function slugify(text) {
     return text.toLowerCase().trim()
       .replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-');
@@ -216,7 +216,7 @@
   }
 
   // Contact Me: a nav tab that opens a small panel holding the Discord invite.
-  // Sourced from site.discord — the one place the invite link lives.
+  // Sourced from site.discord, the one place the invite link lives.
   function contactPop() {
     if (!site.discord) {
       return '<div class="nav-pop nav-pop-contact">' +
@@ -315,13 +315,13 @@
     });
   }
 
-  // Hover owns both panels. Where there is no hover to read — touch — the tap
+  // Hover owns both panels. Where there is no hover to read, touch, the tap
   // has to do the opening instead.
   var HOVERS = !window.matchMedia || matchMedia('(hover: hover)').matches;
 
   function wireMenu(header) {
     // Two menus can share the header now (Contact Me, Docs), so each is wired
-    // on its own — one open panel never depends on another's state.
+    // on its own, one open panel never depends on another's state.
     header.querySelectorAll('.nav-menu').forEach(function (wrap) {
       var btn = wrap.querySelector('.has-menu');
       var pop = wrap.querySelector('.nav-pop');
@@ -398,7 +398,7 @@
 
   /* ── footer ─────────────────────────────────────────── */
 
-  // Brand marks (simple-icons paths), monochrome on purpose — these are my
+  // Brand marks (simple-icons paths), monochrome on purpose, these are my
   // channels, not the per-widget platform-support badges.
   var SOCIAL = {
     twitch: 'M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z',

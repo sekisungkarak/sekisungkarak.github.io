@@ -3,7 +3,7 @@
    Clicking an internal link normally swaps pages the moment the browser has a
    response, so you land on a document that is still fetching its images. This
    keeps you on the page you are already looking at, runs a progress bar, warms
-   the destination, and only then navigates — so arrivals are whole.
+   the destination, and only then navigates, so arrivals are whole.
 
    Everything degrades to a plain link: no JS, modifier-click, new tab, external
    host, download and in-page anchors are all left alone. */
@@ -25,7 +25,7 @@
     done = false;
     bar.classList.remove('is-done');
     bar.style.transform = 'scaleX(0)';
-    // Crawls toward 90% — it reports that something is happening, not how far along.
+    // Crawls toward 90%, it reports that something is happening, not how far along.
     requestAnimationFrame(function () {
       bar.classList.add('is-on');
       bar.style.transform = 'scaleX(0.9)';

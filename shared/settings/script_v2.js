@@ -1,4 +1,4 @@
-// Geseki settings-page-builder — halaman settings (Web Awesome).
+// Geseki settings-page-builder, halaman settings (Web Awesome).
 // Memuat settings.json (?settingsJson=) lalu merender kartu section,
 // lengkap dengan iframe pratinjau widget.
 const queryString = window.location.search;
@@ -17,7 +17,7 @@ const showUnmuteIndicator = GetBooleanParam("showUnmuteIndicator", false);
 
 // Mode DASHBOARD: halaman untuk dock OBS. Tanpa pratinjau iframe.
 // Layar loading TETAP dipakai di kedua mode (tanpa kunci scroll dan tanpa
-// jeda minimum di dashboard — begitu data siap, overlay langsung memudar).
+// jeda minimum di dashboard, begitu data siap, overlay langsung memudar).
 const isDashboardMode = urlParams.get('dashboard') === '1';
 if (isDashboardMode) {
     document.body.classList.add('dashboard-mode');
@@ -35,7 +35,7 @@ const WA_TAGS = [
 
 if (isDashboardMode) document.body.classList.add('wa-pending');
 
-// Penanda settings.json selesai diproses — gerbang tampilan menunggu ini,
+// Penanda settings.json selesai diproses, gerbang tampilan menunggu ini,
 // bukan sekadar definisi elemen, supaya Load scene tidak memicu FOUC ulang.
 let settingsReady = false;
 const settingsReadyPromise = new Promise(resolve => {
@@ -70,7 +70,7 @@ setTimeout(() => document.body.classList.remove('wa-pending'), 8000);
 //
 // keyPrefix = segmen terakhir widgetURL tanpa nama berkas: widgetURL
 // ".../<widget-folder>/index.html" -> "<widget-folder>". Memakai segmen
-// mentah akan menghasilkan "index.html" — kunci yang justru dibagi semua
+// mentah akan menghasilkan "index.html", kunci yang justru dibagi semua
 // widget.
 const keyPrefix = (() => {
     let segments = widgetURL.replace(/\/+$/, '').split('/').filter(Boolean);
@@ -91,7 +91,7 @@ const CHANNEL_NAME = WIDGET_NS + 'channel';
 const SCENE_SETTINGS_PREFIX = WIDGET_NS + 'scene-';
 
 // Kunci LAMA tanpa namespace (versi sebelum namespace diperkenalkan). Hanya
-// widget yang historis memakainya — dynamic-island-alert — yang membacanya
+// widget yang historis memakainya, dynamic-island-alert, yang membacanya
 // sebagai cadangan, supaya widget baru tidak mencuri profil milik widget lama.
 const LEGACY_SCENE_PREFIX = keyPrefix === 'dynamic-island-alert' ? 'geseki-scene-' : '';
 
@@ -123,13 +123,13 @@ const settingsPanel = document.getElementById('settingsPanel');
 const previewContainer = document.getElementById('preview');
 
 // Layar loading tampil minimal selama ini (ms) supaya tidak sekadar berkedip.
-// Dashboard memakai 0 — overlay #loading menutupi panel, jadi menahannya
+// Dashboard memakai 0, overlay #loading menutupi panel, jadi menahannya
 // lebih lama hanya menambah jeda yang terasa.
 const MIN_LOADING_MS = isDashboardMode ? 0 : 1000;
 const pageLoadStart = Date.now();
 
 // Pratinjau pakai double-buffering: iframe baru dimuat tersembunyi dulu,
-// baru diswap setelah DOM-nya siap — menghilangkan flash putih saat refresh.
+// baru diswap setelah DOM-nya siap, menghilangkan flash putih saat refresh.
 let activeIframe = document.createElement('iframe');
 activeIframe.id = 'widgetPreview';
 if (!isDashboardMode) previewContainer.appendChild(activeIframe);
@@ -155,7 +155,7 @@ const DEFAULT_REFRESH_DEBOUNCE_MS = 30;
 function CallWidgetFunction(fnName, args = []) {
     if (!fnName) return;
 
-    // 1) BroadcastChannel — satu-satunya jalur ke widget sungguhan (OBS/TTLS)
+    // 1) BroadcastChannel, satu-satunya jalur ke widget sungguhan (OBS/TTLS)
 //    yang berjalan di konteks teratas, bukan iframe halaman ini.
     if (bc) {
         try {
@@ -214,12 +214,12 @@ if (widgetTitle) {
     }
 }
 
-/* ?skin=queue — pakai gaya halaman Queue: latar rata, kartu rata bergaris
+/* ?skin=queue, pakai gaya halaman Queue: latar rata, kartu rata bergaris
    tipis, dan baris aksi (Save / Load / Reset + status OBS) dirapikan jadi
    top bar seperti halaman Queue: judul di kiri, aksi di kanan.
    Opt-in: hanya dashboard yang meminta, widget lain tetap tema kaca. */
 /* Status aksi Save / Load / Reset. Di skin=queue hasil aksi dilaporkan di
-   elemen ini (di header), BUKAN di dalam tombol — supaya teks dan lebar
+   elemen ini (di header), BUKAN di dalam tombol, supaya teks dan lebar
    tombol tidak berubah-ubah saat melaporkan hasil. Widget lain tetap
    memakai perilaku lama. */
 /* Toast gaya Controls Panel: menumpuk di pojok kiri bawah, hilang sendiri.
@@ -251,7 +251,7 @@ if (skinQueue) {
     document.body.classList.add('skin-queue');
 }
 
-/* ?chrome=min — halaman ini dibuka di dalam dock yang SUDAH punya navbar
+/* ?chrome=min, halaman ini dibuka di dalam dock yang SUDAH punya navbar
    sendiri, jadi header nama widget disembunyikan supaya tidak tampil dua
    kali. Diabaikan saat skin=queue: header itu justru dipakai ulang sebagai
    top bar aksi. */
@@ -264,7 +264,7 @@ if (skinQueue) {
     const header = document.querySelector('#settings > header');
     const footerUrlBar = document.querySelector('#settings footer .url-bar');
     if (header && footerUrlBar) {
-        // Kiri: ikon + nama widget + label "Settings" — seperti "Live Q&A Queue".
+        // Kiri: ikon + nama widget + label "Settings", seperti "Live Q&A Queue".
         const title = document.createElement('div');
         title.className = 'sk-title';
         title.innerHTML = '<i class="ri-settings-3-line" aria-hidden="true"></i>';
@@ -281,7 +281,7 @@ if (skinQueue) {
         const pill = document.createElement('span');
         pill.id = 'statusObsNav';
         pill.className = 'sk-obs-pill';
-        pill.title = 'Connection to OBS — click to open settings';
+        pill.title = 'Connection to OBS, click to open settings';
         pill.style.cursor = 'pointer';
         pill.innerHTML = '<i class="ri-plug-line" aria-hidden="true"></i><span>OBS</span>';
         pill.addEventListener('click', function () {
@@ -349,7 +349,7 @@ function EnsureSettingsPopup() {
     });
 
     // Esc dan klik latar menutup dialog. Ditangani sendiri, bukan lewat
-    // `light-dismiss`, karena jalur tutup bawaan komponen tidak berfungsi —
+    // `light-dismiss`, karena jalur tutup bawaan komponen tidak berfungsi,
     // lihat penjelasan di CloseSettingsPopup().
     settingsPopupDialog.addEventListener('click', function (e) {
         if (e.target === settingsPopupDialog) CloseSettingsPopup();
@@ -365,7 +365,7 @@ function EnsureSettingsPopup() {
 /* Menutup popup settings.
    wa-dialog (Web Awesome 3.10) TIDAK bisa ditutup lewat `open = false`:
    handleOpenChange()-nya bereaksi dengan `this.open = true` lalu memanggil
-   show() lagi, sehingga dialog langsung terbuka kembali — inilah sebabnya
+   show() lagi, sehingga dialog langsung terbuka kembali, inilah sebabnya
    popup dulu tak pernah mau hilang dan selalu muncul lagi.
    Cara yang terbukti menutup permanen adalah melepas dialog dari DOM, sama
    seperti modal panel kontrol DIA. Elemen kartunya disimpan di
@@ -404,7 +404,7 @@ let settingsPopupSource = null;
 function NotifyPopupClosed() {
     if (settingsPopupSource !== 'queue') return;
     settingsPopupSource = null;
-    // Lewat BroadcastChannel yang sama dengan dashboard — dashboard memang
+    // Lewat BroadcastChannel yang sama dengan dashboard, dashboard memang
     // mendengarkan kanal ini, bukan event 'message' dari iframe.
     try { if (bc) bc.postMessage({ type: 'settings_popup_closed' }); } catch (e) {}
 }
@@ -601,7 +601,7 @@ function SetFooterButtonState(btn, text, ok) {
     }
 
     // Label tombol Load dinamis, jadi selalu baca ulang dari dataset.baseLabel
-// — kalau disimpan sekali, teks basi akan dikembalikan setelah scene ganti.
+//, kalau disimpan sekali, teks basi akan dikembalikan setelah scene ganti.
     const original = btn.dataset.baseLabel || btn.textContent;
 
     // Tulis HANYA ke span teks, supaya struktur tombol tidak berubah.
@@ -627,7 +627,7 @@ function SetFooterButtonState(btn, text, ok) {
 
 // ── Interact: buka dialog Interact browser source (dari navbar dashboard) ──
 // obs-websocket v5 menyediakan request OpenInputInteractDialog. Dashboard
-// tidak memegang koneksi OBS — koneksinya ada di halaman ini — jadi tombol
+// tidak memegang koneksi OBS, koneksinya ada di halaman ini, jadi tombol
 // di navbar dokumen induk mengirim pesan ke sini, bukan menyambung sendiri.
 // Nama source dicari persis seperti Save (SourceNameCandidates), supaya
 // tombol ini selalu menunjuk source yang sama dengan yang baru disimpan.
@@ -649,10 +649,10 @@ async function GesekiOpenInteractDialog() {
         for (const cand of candidates) {
             if (names.includes(cand)) { target = cand; break; }
         }
-        if (!target) throw new Error('Source not found — press Save first');
+        if (!target) throw new Error('Source not found, press Save first');
 
         await ObsRequest('OpenInputInteractDialog', { inputName: target });
-        SetActionStatus('Interact opened — ' + target, true);
+        SetActionStatus('Interact opened, ' + target, true);
         return { ok: true, name: target };
     } catch (err) {
         console.error('[OBS Interact]', err);
@@ -708,8 +708,8 @@ if (saveObsButton) {
 
             SetFooterButtonState(
                 saveObsButton,
-                result.created ? `Saved — source created: ${result.name}`
-                    : `Saved — ${result.name} updated`,
+                result.created ? `Saved, source created: ${result.name}`
+                    : `Saved, ${result.name} updated`,
                 true
             );
         } catch (err) {
@@ -770,7 +770,7 @@ function ReadLastScene() {
     try {
         const v = localStorage.getItem(LAST_SCENE_KEY) || '';
         if (!v) return '';
-        // Hanya pakai bila profilnya masih ada — bisa saja sudah dihapus sesi lalu.
+        // Hanya pakai bila profilnya masih ada, bisa saja sudah dihapus sesi lalu.
         return ReadSceneProfileRaw(v) ? v : '';
     } catch (e) {
         return '';
@@ -812,7 +812,7 @@ function RenderSceneMenu(scenes) {
 
     // Settings terakhir yang dimuat ditaruh paling atas supaya langsung
     // kelihatan; sisanya menyusul urutan abjad. Baca localStorage langsung
-    // (bukan ListSavedScenes) — fungsi itu dideklarasikan lebih bawah dan
+    // (bukan ListSavedScenes), fungsi itu dideklarasikan lebih bawah dan
     // memicu ReferenceError (TDZ) bila dipanggil dari sini.
     let last = '';
     try { last = localStorage.getItem(LAST_SCENE_KEY) || ''; } catch (e) { /* abaikan */ }
@@ -1027,7 +1027,7 @@ async function SaveViaBridge(text, name) {
     }
 }
 
-/* Unduhan blob biasa — cadangan saat bridge tidak tersedia. */
+/* Unduhan blob biasa, cadangan saat bridge tidak tersedia. */
 function DownloadJSONFile(text, name) {
     try {
         const blob = new Blob([text], { type: 'application/json' });
@@ -1048,7 +1048,7 @@ function DownloadJSONFile(text, name) {
 /* Pop up Export Saved Settings: teks JSON selalu ditampilkan di kotak yang
    bisa disalin. OBS memakai CEF tanpa UI unduhan (obs-browser tidak punya
    download handler), jadi klik Export bisa terlihat gagal tanpa pesan apa
-   pun — kadang berkas tersimpan diam-diam di folder Downloads, kadang
+   pun, kadang berkas tersimpan diam-diam di folder Downloads, kadang
    dibuang. Dengan kotak ini, hasilnya selalu bisa diambil (Copy / Ctrl+C),
    dan tombol Save file tetap mencoba unduhan biasa untuk dipakai di browser.
 
@@ -1081,7 +1081,7 @@ function ExportProfiles() {
         if (profileExportInfo) {
             profileExportInfo.textContent = count
                 ? `Exported ${count} profile(s). Click Copy to paste the JSON elsewhere, or Save file to download it.`
-                : 'No saved settings yet — nothing to export.';
+                : 'No saved settings yet, nothing to export.';
         }
         profileExportDialog.open = true;
         profileExportText.focus();
@@ -1094,7 +1094,7 @@ function ExportProfiles() {
         const ok = path ? true : DownloadJSONFile(text, lastExportName);
         if (loadObsButton) {
             SetFooterButtonState(loadObsButton,
-                path ? `Exported ${count} profile(s)` : (ok ? 'Saved via browser download' : 'Download blocked — copy manually'),
+                path ? `Exported ${count} profile(s)` : (ok ? 'Saved via browser download' : 'Download blocked, copy manually'),
                 ok);
         }
     });
@@ -1188,7 +1188,7 @@ if (profileExportDialog) {
                 const original = profileExportInfo.textContent;
                 profileExportInfo.textContent = ok
                     ? 'Copied to clipboard.'
-                    : 'Could not copy automatically — select the text and press Ctrl+C.';
+                    : 'Could not copy automatically, select the text and press Ctrl+C.';
                 setTimeout(() => { profileExportInfo.textContent = original; }, 2200);
             }
         });
@@ -1205,8 +1205,8 @@ if (profileExportDialog) {
                 const ok = DownloadJSONFile(text, lastExportName);
                 if (profileExportInfo) {
                     profileExportInfo.textContent = ok
-                        ? 'Bridge not running — saved through the browser download instead.'
-                        : 'Could not save the file — click Copy instead.';
+                        ? 'Bridge not running, saved through the browser download instead.'
+                        : 'Could not save the file, click Copy instead.';
                 }
             });
         });
@@ -1234,7 +1234,7 @@ if (profileImportBtn && profileImportFile) {
 }
 
 // Pengaturan yang TIDAK boleh dihapus tombol Reset.
-// Koneksi OBS adalah konfigurasi aplikasi, bukan tampilan widget —
+// Koneksi OBS adalah konfigurasi aplikasi, bukan tampilan widget,
 // kalau ikut tereset, pengguna harus memasukkan ulang IP/password
 // setiap kali reset, lalu Save gagal tanpa sebab yang jelas.
 const RESET_PRESERVE_IDS = ['obsAddress', 'obsPort', 'obsPassword'];
@@ -1247,7 +1247,7 @@ const LAYOUT_RESET_DEFAULTS = { x: 0, y: 0, scale: 0.8, rotation: 0, width: 0, h
 // Bentuk widget disimpan TERPISAH dari `live-qa-settings`, per scene
 // (`geseki:<widget>:layout:<scene>`), jadi menghapus settings saja tidak
 // mengembalikan bentuk. Reset menulis bentuk bawaan ke slot scene yang
-// sedang dipilih — scene lain tidak tersentuh — lalu menyuruh semua source
+// sedang dipilih, scene lain tidak tersentuh, lalu menyuruh semua source
 // widget memuat ulang supaya bentuk baru langsung terpakai (tanpa Save).
 // Ditulis eksplisit (bukan removeItem) supaya kunci GLOBAL lama tidak
 // ter-migrasi ulang dan mengembalikan bentuk yang baru saja direset.
@@ -1340,7 +1340,7 @@ function LoadJSON(settingsJson) {
 // transisi selesai supaya tidak menghalangi klik.
             HideLoadingScreen();
 
-            // Buka gerbang tampilan — settings.json sudah diproses.
+            // Buka gerbang tampilan, settings.json sudah diproses.
             if (typeof window.__markSettingsReady === 'function') {
                 window.__markSettingsReady();
             }
@@ -1448,7 +1448,7 @@ function LoadJSON(settingsJson) {
                 //  - groups[].button  : satu tombol lama (Reset First Chatter),
                 //    tetap tampil di semua tempat seperti sebelumnya, dan
                 //    diletakkan PALING KIRI.
-                //  - groups[].buttons : deret tombol "Simulate" — HANYA di
+                //  - groups[].buttons : deret tombol "Simulate", HANYA di
                 //    dashboard (?dashboard=1), supaya halaman settings mandiri
                 //    dan panel OBS tidak berubah.
                 //  - groups[].enable  : id setting checkbox on/off alert. Di
@@ -1486,7 +1486,7 @@ function LoadJSON(settingsJson) {
                         return btn;
                     };
 
-                    // 1) Tombol lama (Reset First Chatter) — selalu tampil, paling kiri.
+                    // 1) Tombol lama (Reset First Chatter), selalu tampil, paling kiri.
                     //    Diberi kelas sendiri supaya bisa diberi warna hover tersendiri.
                     if (legacyButton) {
                         const legacyEl = mkBtn(legacyButton);
@@ -1506,7 +1506,7 @@ function LoadJSON(settingsJson) {
                         actions.appendChild(legacyEl);
                     }
 
-                    // 2) Tombol Simulate (dashboard) — disembunyikan saat alert mati.
+                    // 2) Tombol Simulate (dashboard), disembunyikan saat alert mati.
                     const simButtons = simButtonsCfg.map((btnCfg) => {
                         const btn = mkBtn(btnCfg);
                         actions.appendChild(btn);
@@ -1548,7 +1548,7 @@ function LoadJSON(settingsJson) {
                     if (isDashboardMode && categoryEnableId && setting.id === categoryEnableId) return;
 
                     // `heading`: pemisah sederhana di DALAM kartu grup (mis.
-                    // "Font", "Colour" di dalam Text) — bukan kartu baru dan
+                    // "Font", "Colour" di dalam Text), bukan kartu baru dan
                     // bukan kontrol. Tidak punya nilai, jadi tidak ikut disimpan.
                     if (setting.type === 'heading') {
                         const heading = document.createElement('div');
@@ -1594,7 +1594,7 @@ function LoadJSON(settingsJson) {
                 });
 
                 // Grup `popup: true`: barisnya masuk ke dialog sebagai daftar
-                // polos — TANPA kartu wa-details. Baris .config diambil dari
+                // polos, TANPA kartu wa-details. Baris .config diambil dari
                 // section sementara lalu section-nya dibuang, jadi id kontrol,
                 // penyimpanan, dan showIf tetap identik dengan panel biasa.
                 if (data.groups?.[groupName]?.popup === true) {
@@ -1662,7 +1662,7 @@ function LoadJSON(settingsJson) {
 
                         catSection.appendChild(catHeader);
 
-                        // Cat: liquid glass via CSS (.category-section) — tanpa inline override
+                        // Cat: liquid glass via CSS (.category-section), tanpa inline override
                         settingsPanel.appendChild(catSection);
                         window.__categoryMap[categoryName] = catSection;
                     }
@@ -1688,7 +1688,7 @@ function LoadJSON(settingsJson) {
         })
         .catch(error => {
             console.error('Error loading settings:', error);
-            // Layar loading wajib ditutup juga saat GAGAL — kalau tidak,
+            // Layar loading wajib ditutup juga saat GAGAL, kalau tidak,
             // overlay fixed z-index 1111 menutupi pesan error sehingga
             // tombol "Try Again" tidak bisa diklik.
             HideLoadingScreen();
@@ -1820,7 +1820,7 @@ function BuildInput(setting) {
             // Teks pengganti saat semua tag dihapus (Close / clear all).
             inputElement.setAttribute('placeholder', setting.placeholder || 'No options');
             // Tampilkan SEMUA tag (tanpa "+N") agar tiap tag bisa dihapus satu-satu.
-// CATATAN: propertinya `maxOptionsVisible` — atributnya tidak ada.
+// CATATAN: propertinya `maxOptionsVisible`, atributnya tidak ada.
             inputElement.maxOptionsVisible = setting.options.length;
             setting.options.forEach(option => {
                 const optionElement = document.createElement('wa-option');
@@ -1922,7 +1922,7 @@ function BuildInput(setting) {
 
         case 'gift': {
             // Dropdown gift: ikon + nama + id + harga koin. Nilai yang disimpan
-            // adalah ID gift (string) — satu-satunya yang stabil lintas bahasa.
+            // adalah ID gift (string), satu-satunya yang stabil lintas bahasa.
             // Kosong = tidak ada gift tiket (penonton boleh langsung bertanya).
             inputElement = document.createElement('div');
             inputElement.className = 'gift-select';
@@ -2170,7 +2170,7 @@ function BuildInput(setting) {
     // Common: remember the setting id, persist + refresh on change
     inputElement.id = setting.id;
     // ── Strategi refresh: jangan reload iframe per ketikan. ──
-    // Nilai TETAP disimpan setiap event (localStorage) — yang ditunda hanya
+    // Nilai TETAP disimpan setiap event (localStorage), yang ditunda hanya
     // reload iframe-nya. Reload hanya diperlukan agar widget membaca ulang
     // query param; menyimpan nilainya sendiri tidak butuh reload.
     const typedType = REFRESH_DEBOUNCE_MS[setting.type] !== undefined;
@@ -2383,7 +2383,7 @@ function ListSavedScenes() {
 }
 
 // Terapkan settingsMap ke SELURUH kontrol yang sudah dirender, DI TEMPAT.
-// Dulu fungsi ini memanggil location.reload() — cara paling andal, tapi
+// Dulu fungsi ini memanggil location.reload(), cara paling andal, tapi
 // halaman berkedip setiap ganti scene. Sekarang nilainya ditulis langsung
 // ke tiap kontrol (tanpa reload), jadi pergantian scene tak terasa.
 function SetControlValueFromMap(setting) {
@@ -2452,7 +2452,7 @@ function LoadSettingsForScene(sceneName) {
 
 // ── Ikuti scene OBS yang sedang aktif (DASHBOARD saja) ───────────
 // Halaman settings mandiri (Chrome) TIDAK ikut reload saat scene OBS
-// berganti — hanya dashboard di dock OBS yang perlu selalu selaras
+// berganti, hanya dashboard di dock OBS yang perlu selalu selaras
 // dengan scene aktif.
 const SCENE_FOLLOW_INTERVAL = 2000;
 
@@ -2483,7 +2483,7 @@ async function SceneFollowTick() {
         if (!SceneHasProfile(scene)) return;
         SetSelectedScene(scene);
         LoadSettingsForScene(scene); // terapkan profil scene ini DI TEMPAT
-    } catch (e) { /* OBS belum terhubung / profil rusak — abaikan */ }
+    } catch (e) { /* OBS belum terhubung / profil rusak, abaikan */ }
     finally { sceneFollowBusy = false; }
 }
 
@@ -2521,7 +2521,7 @@ function LoadDefaultSettings() {
 
 // ── Layar loading layar-penuh (#loading) ──────────────────────────
 // Fade-out via kelas .hidden, lalu display:none setelah transisi
-// selesai. Kalau elemen #loading tidak ada, fungsi ini diam saja —
+// selesai. Kalau elemen #loading tidak ada, fungsi ini diam saja,
 // aman kalau markupnya kelak dihapus.
 
 // Kunci scroll halaman SELAMA loading berlangsung.
@@ -2632,7 +2632,7 @@ function BuildWidgetURL(options = {}) {
         parts.push(`${encodeURIComponent(paramName)}=${encodeURIComponent(flat)}`);
     });
 
-    // Penanda khusus PRATINJAU — bukan pengaturan widget. Ditambahkan di sini
+    // Penanda khusus PRATINJAU, bukan pengaturan widget. Ditambahkan di sini
 // (bukan settings.json) supaya tidak tampil sebagai opsi, tidak tersimpan,
 // dan tidak pernah ada di URL OBS.
     if (previewOnly) parts.push('dragPreview=1');
@@ -2741,7 +2741,7 @@ function RefreshWidgetPreview(immediate = false, waitMs = null) {
         }
 
         // Iframe kedua dibuat tanpa id 'widgetPreview', jadi selector `#preview
-// iframe` tetap melingkupinya. Saat diswap id dipindah — geometri harus
+// iframe` tetap melingkupinya. Saat diswap id dipindah, geometri harus
 // identik agar tidak ada lompatan posisi.
         const next = document.createElement('iframe');
         next.style.opacity = '0';
@@ -2848,7 +2848,7 @@ function ImportSettings(urlString) {
                     if (next) {
                         inputElement = next;
                         // Import membangkitkan 'input' synthetic saat `value` masih [] (komponen
-// belum upgrade) dan sync() akan menghapus penanda — kunci dulu satu tick.
+// belum upgrade) dan sync() akan menghapus penanda, kunci dulu satu tick.
                         let tagsLocked = true;
                         const sync = () => {
                             if (tagsLocked) return;
@@ -3150,13 +3150,13 @@ let relayBusy = false;          // cegah tumpang tindih saat ekstraksi palet
 // URL hanya berubah saat byte gambar berubah. Saat ganti lagu, metadata SMTC
 // sering mendahului artwork 1-2 detik: URL masih menunjuk gambar LAGU SEBELUMNYA.
 // Widget menoleransi ini karena ia mengekstrak palet ulang tiap tick, tapi relay
-// hanya menembak SEKALI per lagu (relayLastSongId) — tanpa penjagaan ini relay
+// hanya menembak SEKALI per lagu (relayLastSongId), tanpa penjagaan ini relay
 // terkunci memakai warna lagu lama.
 let relayLastArtUrl = null;     // artwork lagu terakhir yang BENAR-BENAR terkirim
 let relayArtWaitSongId = null;  // lagu yang sedang ditunggu artwork barunya
 let relayArtWaitSince = 0;      // waktu mulai menunggu (untuk batas waktu)
 // Batas tunggu: dua lagu berurutan bisa punya artwork identik (satu album) sehingga
-// URL-nya memang tidak berubah — tanpa batas ini relay tidak akan pernah menembak.
+// URL-nya memang tidak berubah, tanpa batas ini relay tidak akan pernah menembak.
 const RELAY_ART_SETTLE_TIMEOUT = 4000;
 
 // ── Palet relay: samakan persis dengan widget ────────────────────
@@ -3373,7 +3373,7 @@ async function RelaySongChange(data) {
             palette,
 			source: s.source_app_id || '',
             playbackStatus: s.playback_info?.PlaybackStatus ?? 0,
-            // Timeline SMTC — snapshot saat ganti lagu, satuan milidetik.
+            // Timeline SMTC, snapshot saat ganti lagu, satuan milidetik.
             EndTime: Number(tp.EndTime) || 0,
             Position: Number(tp.Position) || 0,
             LastUpdatedTime: tp.LastUpdatedTime || ''
@@ -3449,7 +3449,7 @@ function InitNowPlayingRelay() {
 
 // ── Badge status koneksi OBS ──────────────────────────────────────
 // obs-websocket memakai WebSocket, jadi
-// status diuji dengan membuka koneksi sebentar lalu langsung menutupnya —
+// status diuji dengan membuka koneksi sebentar lalu langsung menutupnya,
 // kalau dibiarkan terbuka, tiap pengecekan menambah koneksi ke OBS.
 function InitOBSBadge() {
     const status = document.getElementById('status-obs');
@@ -3491,7 +3491,7 @@ function InitOBSBadge() {
         }, 3000);
 
         probe.onopen = () => {
-            // Terhubung di level TCP — artinya server obs-websocket
+            // Terhubung di level TCP, artinya server obs-websocket
             // hidup. Tidak perlu autentikasi untuk sekadar cek status.
             clearTimeout(timer);
             setConnected(true);

@@ -194,7 +194,7 @@ function ObsRequest(type, data = {}) {
 // ── Nama source berformat "{scene} | Dynamic Island Alert" ───────
 // Tiap scene boleh punya widget-nya sendiri, jadi nama menyertakan scene
 // agar unik lintas scene ("Live | …", "BRB | …"). Bila satu scene butuh
-// lebih dari satu widget, tambah akhiran " 2", " 3" — otomatis.
+// lebih dari satu widget, tambah akhiran " 2", " 3", otomatis.
 function BuildSourceName(sceneName, existingNames) {
     const base = `${sceneName} | ${OBS_SOURCE_BASE_NAME}`;
     let name = base;
@@ -206,7 +206,7 @@ function BuildSourceName(sceneName, existingNames) {
     return name;
 }
 
-// Daftar calon nama untuk scene tertentu — dipakai untuk mencari source
+// Daftar calon nama untuk scene tertentu, dipakai untuk mencari source
 // yang SUDAH ada di scene itu.
 function SourceNameCandidates(sceneName) {
     const base = `${sceneName} | ${OBS_SOURCE_BASE_NAME}`;
@@ -215,7 +215,7 @@ function SourceNameCandidates(sceneName) {
     return list;
 }
 
-// Nama source lama (tanpa awalan scene) — kompatibilitas dengan source
+// Nama source lama (tanpa awalan scene), kompatibilitas dengan source
 // yang dibuat sebelum format ini diterapkan.
 function LegacySourceNameCandidates() {
     const list = [OBS_SOURCE_BASE_NAME];
@@ -225,7 +225,7 @@ function LegacySourceNameCandidates() {
 
 // ── Nama scene aktif ─────────────────────────────────────────────
 // Dipakai tombol Load untuk menampilkan "Load (Current: <scene>)".
-// Mengembalikan null bila OBS belum terhubung — pemanggil wajib
+// Mengembalikan null bila OBS belum terhubung, pemanggil wajib
 // menangani itu dan tidak mengubah label.
 async function ObsGetCurrentSceneName() {
     try {
@@ -241,7 +241,7 @@ async function ObsGetCurrentSceneName() {
 // Menghapus input bernama "{scene} | Dynamic Island Alert" (atau nama lama
 // "Dynamic Island Alert"), plus semua varian "… 2", "… 3". Mengembalikan
 // daftar nama yang dihapus. Catatan: RemoveInput menghapus input secara
-// GLOBAL di OBS, jadi source hilang dari semua scene yang memakainya —
+// GLOBAL di OBS, jadi source hilang dari semua scene yang memakainya,
 // itu memang yang diminta tombol hapus.
 async function ObsDeleteSourcesForScene(sceneName) {
     await ObsConnect();
@@ -268,7 +268,7 @@ async function ObsDeleteSourcesForScene(sceneName) {
     return removed;
 }
 // ── Pusatkan source secara horizontal ────────────────────────────
-// Dipanggil HANYA saat source pertama kali dibuat — bukan saat update URL,
+// Dipanggil HANYA saat source pertama kali dibuat, bukan saat update URL,
 // supaya posisi yang sudah disesuaikan manual tidak terus ditimpa.
 // alignment itu bitmask (1=Left, 2=Right, 4=Top, 8=Bottom); Top-center = 4,
 // jadi positionX = setengah lebar canvas, positionY = tepi atas.
@@ -307,7 +307,7 @@ async function ObsCenterSourceHorizontally(sceneName, sourceName) {
         });
         return true;
     } catch (e) {
-        // Pusatkan itu opsional — kegagalan tidak boleh menggagalkan Save yang
+        // Pusatkan itu opsional, kegagalan tidak boleh menggagalkan Save yang
 // sudah berhasil membuat source.
         console.warn('[OBS] Gagal memusatkan source', e);
         return false;
@@ -361,10 +361,10 @@ async function ObsSyncBrowserSource(widgetUrl) {
 
     if (target) {
         // Sudah ada -> update URL-nya saja. SetInputSettings hanya mengubah `url`;
-// untuk memaksa widget memuat ulang, `reroute` tidak cukup — OBS butuh
+// untuk memaksa widget memuat ulang, `reroute` tidak cukup, OBS butuh
 // RefreshNoCache atau perubahan URL. CATATAN: URL Save TIDAK lagi membawa
 // param ?v= (cacheBust dihapus), jadi bila setting tidak berubah URL-nya
-// identik dan OBS tidak memuat ulang widget — pakai RefreshNoCache bila
+// identik dan OBS tidak memuat ulang widget, pakai RefreshNoCache bila
 // ingin reload paksa.
         await ObsRequest('SetInputSettings', {
             inputName: target,

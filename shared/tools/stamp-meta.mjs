@@ -23,7 +23,7 @@ async function load(...files) {
   return g;
 }
 
-// Same set as CHROME.esc — two descriptions contain a literal '&'.
+// Same set as CHROME.esc, two descriptions contain a literal '&'.
 const esc = (s) =>
   String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -31,8 +31,8 @@ function block(c, site) {
   const url = (p) => new URL(p, site.origin.replace(/\/*$/, '/')).href;
   const tag = (s) => '  ' + s;
   const lines = [
-    `${START} — generated from shared/core/catalog.js by shared/tools/stamp-meta.mjs. Do not edit by hand. -->`,
-    `<title>${esc(c.name)} — Install Guide</title>`,
+    `${START}, generated from shared/core/catalog.js by shared/tools/stamp-meta.mjs. Do not edit by hand. -->`,
+    `<title>${esc(c.name)}, Install Guide</title>`,
     `<meta name="description" content="${esc(c.description || '')}">`,
     '<meta property="og:type" content="article">',
     `<meta property="og:site_name" content="${esc(site.brand || '')}">`,
@@ -67,12 +67,12 @@ for (const c of CATALOG) {
 
   const a = html.indexOf(START), b = html.indexOf(END);
   if (a < 0 || b < a) {
-    console.error(`  ${rel}  no ${START} … ${END} markers — copy them from another docs shim`);
+    console.error(`  ${rel}  no ${START} … ${END} markers, copy them from another docs shim`);
     failed++;
     continue;
   }
 
-  // Follow the file's own line ending — autocrlf gives CRLF on some checkouts.
+  // Follow the file's own line ending, autocrlf gives CRLF on some checkouts.
   const eol = html.includes('\r\n') ? '\r\n' : '\n';
   const stamped = block(c, SITE).trimStart().replace(/\n/g, eol);
   const next = html.slice(0, a) + stamped + html.slice(b + END.length);

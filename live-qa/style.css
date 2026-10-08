@@ -1,5 +1,5 @@
 /* ============================================================================
-   Live Q&A — overlay SATU pertanyaan.
+   Live Q&A, overlay SATU pertanyaan.
    ----------------------------------------------------------------------------
    Ditulis untuk CEF Chromium 127 (OBS 32.2.2): tanpa properti CSS terbaru
    (interpolate-size, :has(), dsb).
@@ -69,7 +69,7 @@ html, body {
 	pointer-events: none;
 }
 
-/* Tapi mode Layout harus tetap terlihat walau feed kosong — kalau tidak,
+/* Tapi mode Layout harus tetap terlihat walau feed kosong, kalau tidak,
    bingkai & handle-nya menggantung tanpa panel yang bisa disetel. */
 .qa-panel.is-empty.is-layout {
 	opacity: 1;

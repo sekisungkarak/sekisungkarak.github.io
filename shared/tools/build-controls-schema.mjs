@@ -8,7 +8,7 @@
 // Jalankan setiap kali settings.json berubah:
 //   node shared/tools/build-controls-schema.mjs
 //
-// Kalau lupa, panel akan menampilkan skema lama — tidak error, hanya kurang
+// Kalau lupa, panel akan menampilkan skema lama, tidak error, hanya kurang
 // sinkron. Karena itu skrip ini juga dipanggil dari shared/hooks/pre-commit
 // (kalau hook-nya terpasang).
 

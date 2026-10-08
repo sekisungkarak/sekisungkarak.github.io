@@ -1,10 +1,10 @@
 /* Docs theme. Palette matches the widget settings core; type is the docs' own.
 
-   Theme: dark glass, the same kit as the chrome — hairline edges, soft radii,
+   Theme: dark glass, the same kit as the chrome, hairline edges, soft radii,
    blurred panels and low shadows. Code blocks and table headers sink to the
    well colour so they read as surfaces cut into the page. */
 :root {
-  /* Everything else — palette, type, radii, easings — comes from
+  /* Everything else, palette, type, radii, easings, comes from
      ../../css/global.css, which every page that wears the chrome must load. */
   --col: 764px;
   --header-h: 64px;
@@ -175,7 +175,7 @@ a:hover { color: var(--accent-pale); text-decoration: underline; text-decoration
 }
 .install-copy:hover { filter: brightness(1.12); box-shadow: var(--shadow); }
 .install-copy.is-done { background: #1c8a45; }
-/* Streamer.bot import code — same box, deeper purple. */
+/* Streamer.bot import code, same box, deeper purple. */
 .install-card.is-sb { margin-top: 14px; }
 .install-card.is-sb .install-copy { background: var(--accent-deep); }
 .install-card.is-sb .install-copy.is-done { background: #1c8a45; }

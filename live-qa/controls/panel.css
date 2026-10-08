@@ -1,10 +1,10 @@
 /* ============================================================================
-   Live Q&A — mode Layout (tanpa panel kotak) + bingkai penyesuaian.
+   Live Q&A, mode Layout (tanpa panel kotak) + bingkai penyesuaian.
    Port dari pola dynamic-island-alert: bingkai + 8 handle + knob rotasi, plus
    ikon reset mengambang. Ditulis untuk CEF Chromium 127 (OBS 32.2.2).
    ========================================================================== */
 
-/* ── Gear kecil — pola tombol pembuka DIA (muncul saat pointer bergerak) ─ */
+/* ── Gear kecil, pola tombol pembuka DIA (muncul saat pointer bergerak) ─ */
 
 .cp-gear {
 	position: fixed;
@@ -116,7 +116,7 @@
 }
 .gi-frame.is-rotating .gi-rotate { cursor: grabbing; }
 
-/* Ikon reset mengambang — gaya sama seperti knob rotasi, di pojok kanan-atas. */
+/* Ikon reset mengambang, gaya sama seperti knob rotasi, di pojok kanan-atas. */
 .gi-reset {
 	position: absolute;
 	right: 0;

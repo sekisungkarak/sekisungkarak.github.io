@@ -1,4 +1,4 @@
-/* Halaman Simulator — tema gelap yang seragam dengan dashboard widget. */
+/* Halaman Simulator, tema gelap yang seragam dengan dashboard widget. */
 :root {
 	--sim-bg: #17161a;
 	--sim-line: rgba(255, 255, 255, 0.09);

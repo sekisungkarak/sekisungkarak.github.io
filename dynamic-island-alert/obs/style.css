@@ -470,7 +470,7 @@ body {
 	width: 0%; /* JS yang mengatur */
 	border-radius: 1em;
 	background-color: var(--accent-color, #ffffff);
-	/* Lebar di-update via rAF (250ms) — transisi width malah bikin bar
+	/* Lebar di-update via rAF (250ms), transisi width malah bikin bar
    tertinggal. Yang ditransisi hanya warna saat ganti lagu. */
 	transition: background-color 0.5s ease-in-out;
 	background-image: none;
@@ -607,11 +607,11 @@ body {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   MUSIC MEDIUM — "Dynamic Medium"
+   MUSIC MEDIUM, "Dynamic Medium"
    Kartu pendek & lebar: artwork besar di kiri mengisi penuh tinggi kartu,
    judul + artis di kanan (terpusat vertikal terhadap art), progress bar
    absolut di dasar kartu (sejajar tepi bawah art). Tanpa kontrol transport
-   & tanpa slider volume — desain aslinya pun tidak bisa diklik di browser
+   & tanpa slider volume, desain aslinya pun tidak bisa diklik di browser
    source OBS. Menggantikan alert-music-big saat musicStyle = medium.
    ══════════════════════════════════════════════════════════════════ */
 #dynamicIsland.alert-music-medium.alert-active {
@@ -631,9 +631,9 @@ body {
 	border-radius: 26px;
 	align-items: stretch;
 	/* Catatan: #dynamicIsland sudah position:fixed di base, jadi ia SUDAH
-	   jadi acuan untuk progress bar absolut di bawah — jangan di-set ulang,
+	   jadi acuan untuk progress bar absolut di bawah, jangan di-set ulang,
 	   menimpa fixed akan merusak posisi widget. */
-	/* LIQUID GLASS (default): jangan override `background` shorthand —
+	/* LIQUID GLASS (default): jangan override `background` shorthand,
 	   itu akan mematikan background-color kaca dari base pill. Glow aksen
 	   ditumpuk lewat background-image saja dan memudar ke transparan,
 	   supaya kaca tetap tembus pandang. Refraksi asli Liquid Glass
@@ -699,7 +699,7 @@ body {
 	max-width: 100%;
 	margin-top: 2px;
 }
-/* Wave/equalizer di kanan — rata-atas dengan judul (seperti referensi). */
+/* Wave/equalizer di kanan, rata-atas dengan judul (seperti referensi). */
 #dynamicIsland.alert-music-medium #islandEventIcon {
 	width: 22px !important;
 	height: 22px !important;
@@ -710,7 +710,7 @@ body {
 /* Progress bar: diposisikan absolut di dasar kartu supaya TIDAK menambah
    tinggi di bawah baris artwork. Kalau ia ikut aliran layout, tingginya
    (5px + gap 6px) mendorong baris artwork+teks naik ~5,5px sehingga art
-   tidak terpusat di kartu — inilah penyebab tampak "tidak sejajar".
+   tidak terpusat di kartu, inilah penyebab tampak "tidak sejajar".
    left = padding 18 + art 86 + gap 14 = 118 (sejajar tepi kiri judul). */
 #dynamicIsland.alert-music-medium #musicBigExtra {
 	position: absolute;
@@ -730,7 +730,7 @@ body {
 	flex-direction: column-reverse;
 	justify-content: space-between;
 }
-/* Transport ⏪⏸⏩ — hanya 3 ikon; hati (anak pertama) dan shuffle
+/* Transport ⏪⏸⏩, hanya 3 ikon; hati (anak pertama) dan shuffle
    (anak terakhir) disembunyikan supaya sama dengan desain referensi.
    Jarak antar ikon diatur `gap` (bukan space-between) dan grupnya
    di tengah kolom. */

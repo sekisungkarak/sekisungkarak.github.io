@@ -1,4 +1,4 @@
-/* Simulator — mengirim event TikTok tiruan ke widget lewat kanal yang sama
+/* Simulator, mengirim event TikTok tiruan ke widget lewat kanal yang sama
    dengan Settings/Controls (BroadcastChannel -> {type:'callFunction'}).
 
    Generik: halaman ini tidak tahu widget apa yang dikendalikan. Ia hanya
@@ -16,7 +16,7 @@ const bc = (CHANNEL && window.BroadcastChannel) ? new BroadcastChannel(CHANNEL) 
 
 /* Satu-satunya jalur keluar: panggil fungsi `gesekiSimulate` di widget. */
 function Send(event, data) {
-	if (!bc) { Toast('No channel — open this from a widget dashboard.', true); return; }
+	if (!bc) { Toast('No channel, open this from a widget dashboard.', true); return; }
 	bc.postMessage({ type: 'callFunction', fn: 'gesekiSimulate', args: [event, data] });
 }
 
@@ -34,7 +34,7 @@ const SIM_USER = {
 const BADGE_SUB = 'https://p16-webcast.tiktokcdn.com/webcast-va/subscriber_badge_icon.png~tplv-obj.image';
 const BADGE_FAN = 'https://p16-webcast.tiktokcdn.com/webcast-va/fans_badge_icon_lv1.png~tplv-obj.image';
 
-/* Badge contoh — SAMA seperti Test Alert DIA yang lama: grade lv1 + Top Gifter
+/* Badge contoh, SAMA seperti Test Alert DIA yang lama: grade lv1 + Top Gifter
    No. 3. Ditambahkan ke SETIAP event Simulator supaya kartu alert tampil seperti
    live. Jalur event asli (GetUserBadges) membaca `name`, bukan `label`. */
 const BADGE_GRADE = 'https://p19-webcast.tiktokcdn.com/webcast-va/grade_badge_icon_lite_lv1_v1.png~tplv-obj.image';

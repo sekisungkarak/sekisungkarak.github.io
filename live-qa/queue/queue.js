@@ -1,10 +1,10 @@
 /* ============================================================================
-   Live Q&A — Queue page.
+   Live Q&A, Queue page.
    ----------------------------------------------------------------------------
    The queue of questions that came in from chat. Click a row to put that
    question on screen in OBS, or take the current one back off.
 
-   Two-way traffic over the BroadcastChannel `geseki:live-qa:channel` — the
+   Two-way traffic over the BroadcastChannel `geseki:live-qa:channel`, the
    same channel the dashboard uses:
      - send    : { type:'qa_hello' } then qa_show / qa_hide / qa_remove / qa_clear
      - receive : { type:'qa_state', questions:[...], currentId, connected, ... }
@@ -73,7 +73,7 @@ let queuePage = 1;
 /* Last state reported by the widget. */
 let state = {
 	questions: [],
-	/* Arsip lengkap dari widget (semua pertanyaan pernah masuk) — sumber Export CSV. */
+	/* Arsip lengkap dari widget (semua pertanyaan pernah masuk), sumber Export CSV. */
 	history: [],
 	currentId: null,
 	currentQuestion: null,
@@ -129,7 +129,7 @@ function BuildAvatar(q) {
 }
 
 /* Nama scene OBS yang sedang tayang. Ditampilkan supaya jelas antrean milik
-   scene mana — tiap scene punya antrean sendiri. */
+   scene mana, tiap scene punya antrean sendiri. */
 function RenderScene() {
 	if (!sceneTag) return;
 	const s = state.scene || '';
@@ -364,7 +364,7 @@ if (bc) {
 
    Kenapa ada kotak teks, bukan cuma unduhan: OBS memakai CEF tanpa UI unduhan
    (obs-browser tidak punya download handler), jadi tidak ada dialog "Save As"
-   dan klik Export bisa terlihat seperti tidak terjadi apa-apa — padahal file
+   dan klik Export bisa terlihat seperti tidak terjadi apa-apa, padahal file
    kadang tersimpan diam-diam di folder Downloads, kadang dibuang. Karena itu
    teksnya SELALU ditampilkan di kotak yang bisa dipilih (tombol Copy atau
    Ctrl+C), dan tombol "Save file" tetap mencoba unduhan biasa di browser. */
@@ -437,7 +437,7 @@ async function SaveViaBridge(text, name) {
 	}
 }
 
-/* Unduhan blob biasa — cadangan saat bridge tidak tersedia (mis. halaman
+/* Unduhan blob biasa, cadangan saat bridge tidak tersedia (mis. halaman
    dibuka di browser normal). Di dalam OBS ini sering dibatalkan diam-diam. */
 function DownloadCsv(text, name) {
 	try {
@@ -580,8 +580,8 @@ function ShowExportDialog(text, name) {
 			}
 			const ok = DownloadCsv(text, name);
 			msg.textContent = ok
-				? 'Bridge not running \u2014 saved through the browser download instead.'
-				: 'Could not save the file \u2014 click Copy and paste it instead.';
+				? 'Bridge not running, saved through the browser download instead.'
+				: 'Could not save the file, click Copy and paste it instead.';
 		});
 	});
 	closeBtn.addEventListener('click', CloseExportDialog);
@@ -670,7 +670,7 @@ setInterval(function () {
 	Send({ type: 'qa_hello' });
 	setTimeout(function () {
 		if (!helloAnswered) {
-			// No reply: mark offline, but KEEP the list — the widget may
+			// No reply: mark offline, but KEEP the list, the widget may
 			// simply be reloading.
 			state.connected = false;
 		}

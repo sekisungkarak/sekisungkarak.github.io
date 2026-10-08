@@ -1,7 +1,7 @@
 /* Site language: English (default) and Indonesian.
 
    The dictionary is keyed by the English source string, so a page only ever
-   writes the English copy and asks I18N.t() for it — no key registry to keep
+   writes the English copy and asks I18N.t() for it, no key registry to keep
    in sync, and a string with no translation falls through unchanged.
 
    Switching language reloads the page. Every page is drawn by JS on load, so a
@@ -41,8 +41,8 @@ window.I18N = (function () {
     /* homepage */
     'WIDGET OVERLAY': 'WIDGET OVERLAY',
     'Widget Overlay For Your Stream': 'Widget Overlay Untuk Stream Kamu',
-    'A collection of overlay widgets for streaming. Loaded as a browser source in OBS — easy to install.':
-      'Kumpulan widget overlay untuk streaming. Dimuat sebagai browser source di OBS — mudah dipasang.',
+    'A collection of overlay widgets for streaming. Loaded as a browser source in OBS, easy to install.':
+      'Kumpulan widget overlay untuk streaming. Dimuat sebagai browser source di OBS, mudah dipasang.',
     'Browse widgets': 'Jelajahi widget',
     'Supports': 'Mendukung',
     'Widgets & tools': 'Widget & alat',
@@ -69,8 +69,8 @@ window.I18N = (function () {
     'Install Guide': 'Panduan Instalasi',
     'Dynamic Island–style alerts for TikTok events (follow, subscribe, share, gift) and first chatter, plus a Now Playing panel for the media that is currently playing.':
       'Alert bergaya Dynamic Island untuk event TikTok (follow, subscribe, share, gift) dan first chatter, plus panel Now Playing untuk media yang sedang diputar.',
-    'A dedicated question feed for TikTok LIVE. Viewers can earn a ticket by sending the designated ticket gift, then submit a question in chat using the required prefix.':
-      'Feed pertanyaan khusus untuk TikTok LIVE. Penonton bisa mendapatkan tiket dengan mengirim gift tiket yang ditentukan, lalu mengirim pertanyaan di chat dengan prefix yang diwajibkan.',
+    'A dedicated question feed for TikTok LIVE. Viewers may need to meet a requirement (gift, follower, likes) before asking, then submit a question in chat using the required prefix.':
+      'Feed pertanyaan khusus untuk TikTok LIVE. Penonton mungkin perlu memenuhi syarat (gift, follower, likes) sebelum bertanya, lalu mengirim pertanyaan di chat dengan prefix yang diwajibkan.',
     'Updated': 'Diperbarui',
     'ON THIS PAGE': 'DI HALAMAN INI',
     'On this page': 'Di halaman ini',
@@ -78,8 +78,8 @@ window.I18N = (function () {
     'Copied': 'Tersalin',
     "Couldn't load these docs": 'Gagal memuat dokumentasi ini',
     'Could not read': 'Gagal membaca',
-    'If you are opening this from the file system, serve the folder over http instead — fetch does not work on file:// URLs.':
-      'Kalau kamu membuka ini dari file system, sajikan foldernya lewat http — fetch tidak bekerja pada URL file://.',
+    'If you are opening this from the file system, serve the folder over http instead, fetch does not work on file:// URLs.':
+      'Kalau kamu membuka ini dari file system, sajikan foldernya lewat http, fetch tidak bekerja pada URL file://.',
     'Note': 'Catatan',
     'Tip': 'Tips',
     'Important': 'Penting',

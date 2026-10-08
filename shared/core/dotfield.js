@@ -1,4 +1,4 @@
-/* DotField — a grid of dots that bulges away from the cursor, under a soft glow
+/* DotField, a grid of dots that bulges away from the cursor, under a soft glow
    that follows it. Ported from React Bits' <DotField /> (React + canvas) to a
    plain module, because this site has no build step and no React.
 
@@ -54,7 +54,7 @@ export function mount(container, opts) {
   // Both stops carry the SAME colour, and only the opacity falls to zero. The
   // obvious `stop-color="transparent"` is a trap: in SVG that keyword means
   // rgba(0,0,0,0), not "whatever colour, faded out", so the gradient would run
-  // through black and leave a dark halo — invisible on a dark page, a grey
+  // through black and leave a dark halo, invisible on a dark page, a grey
   // smudge on a light one.
   const glowId = 'dotfield-glow-' + (++glowSeq);
   const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -278,7 +278,7 @@ export function mount(container, opts) {
   }
 
   const api = {
-    // A theme swap only changes colours, so this must not rebuild the grid —
+    // A theme swap only changes colours, so this must not rebuild the grid,
     // rebuilding would snap every bulged dot back to rest.
     setOptions: function (patch) {
       const rebuild = !!(patch && ('dotRadius' in patch || 'dotSpacing' in patch));

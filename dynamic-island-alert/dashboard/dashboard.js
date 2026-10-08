@@ -1,4 +1,4 @@
-// Dashboard khusus dock OBS — dynamic-island-alert/dashboard/
+// Dashboard khusus dock OBS, dynamic-island-alert/dashboard/
 // Susunannya sengaja disamakan dengan dashboard Live Q&A supaya halaman
 // Settings seluruh widget terlihat seragam: navbar berisi pil status TikTok,
 // tab Settings, dan tombol Interact.
@@ -7,7 +7,7 @@
 //   1. TIDAK membuat iframe preview → hemat CPU/GPU di OBS
 //   2. Tetap memakai layar loading #loading (overlay layar-penuh) sampai
 //      settings.json selesai, lalu memudar tanpa jeda minimum
-// Catatan: mode ini TIDAK mengubah cara kerja tombol Reset —
+// Catatan: mode ini TIDAK mengubah cara kerja tombol Reset,
 // BroadcastChannel tetap butuh pengirim, yaitu halaman ini.
 //
 // ?skin=queue dipakai supaya halaman Settings memakai top bar yang sama
@@ -47,7 +47,7 @@ dashFrame.src =
 // ── Tombol Interact ─────────────────────────────────────────────────────────
 // Dialog Interact adalah jendela native OBS, dibuka lewat request obs-websocket
 // OpenInputInteractDialog. Koneksi OBS hidup di dalam iframe Settings, jadi
-// tombol ini cuma meneruskan permintaan ke sana — bukan menyambung sendiri.
+// tombol ini cuma meneruskan permintaan ke sana, bukan menyambung sendiri.
 tabInteract.addEventListener('click', () => {
     if (!dashFrame.contentWindow) return;
     tabInteract.classList.add('is-busy');
@@ -58,7 +58,7 @@ tabInteract.addEventListener('click', () => {
     setTimeout(() => tabInteract.classList.remove('is-busy'), 1500);
 });
 
-// Balasan dari iframe Settings (berhasil / gagal) — hanya untuk melepas status.
+// Balasan dari iframe Settings (berhasil / gagal), hanya untuk melepas status.
 window.addEventListener('message', (ev) => {
     const d = ev.data || {};
     if (d.type === 'geseki_interact_result') {
@@ -80,7 +80,7 @@ const liveAvatar = document.getElementById('liveAvatar');
 // dipasang ulang (dan tidak memicu muat ulang gambar).
 let liveAvatarUrl = '';
 // Toast hanya untuk PERUBAHAN status. Saat dashboard dimuat, bridge
-// mengirim keadaan saat ini (atau koneksinya gagal) — itu snapshot, bukan
+// mengirim keadaan saat ini (atau koneksinya gagal), itu snapshot, bukan
 // perubahan. Jadi toast baru "diaktifkan" setelah status pertama selesai
 // diproses; sebelumnya semua pembaruan dianggap snapshot.
 let liveToastState = null;
@@ -215,10 +215,10 @@ function SetLiveStatus(state, username, message, avatar, suppressToast) {
 		liveState.textContent = detail || LIVE_STATE_LABEL[s];
 		liveState.classList.toggle('is-message', !!detail);
 	}
-	if (liveUser) liveUser.textContent = username ? ('@' + TruncateUsername(username)) : '@\u2014';
+	if (liveUser) liveUser.textContent = username ? ('@' + TruncateUsername(username)) : '@-';
 	liveStatus.title = 'TikTok: ' + LIVE_STATE_LABEL[s] +
 		(username ? ' (@' + username + ')' : '') +
-		(detail ? ' \u2014 ' + detail : '');
+		(detail ? ', ' + detail : '');
 }
 
 let liveWs = null;

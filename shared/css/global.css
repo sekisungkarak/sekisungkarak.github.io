@@ -5,7 +5,7 @@
    and soft corners throughout. Depth comes from blur and a low shadow rather
    than from heavy outlines, so nothing on the page shouts.
 
-   Palette is one place only — change it here and every page follows. The light
+   Palette is one place only, change it here and every page follows. The light
    values live in the [data-theme="light"] block at the bottom; every token the
    two themes share keeps its name, so no rule below needs to know which is on. */
 
@@ -18,14 +18,14 @@
   --tab: #26232f;
   --well: #0d0c10;
 
-  /* lines — hairlines. Anything heavier would read as a drawn border, which
+  /* lines, hairlines. Anything heavier would read as a drawn border, which
      is not this theme. */
   --line: rgba(255, 255, 255, 0.10);
   --line-soft: rgba(255, 255, 255, 0.06);
   --line-mid: rgba(255, 255, 255, 0.14);
   --line-hard: rgba(255, 255, 255, 0.20);
 
-  /* text — the ladder is stepped so every step clears 4.5:1 on the lightest
+  /* text, the ladder is stepped so every step clears 4.5:1 on the lightest
      surface it can land on (--tab), not just on the page. Ratios on --tab:
      ink 14.0, strong 11.8, body 8.4, lede 6.4, soft 5.7, muted 5.1, faint 4.5. */
   --ink: #f5f3f7;
@@ -36,7 +36,7 @@
   --muted: #96919f;
   --faint: #8e8899;
 
-  /* accent — the one warm colour on the page. --accent is the fill; --accent-on
+  /* accent, the one warm colour on the page. --accent is the fill; --accent-on
      is what sits on top of it, and it is dark because the fill is light. */
   --accent: #d4a843;
   --accent-on: #1a1408;
@@ -74,7 +74,7 @@
   --display: 'Archivo Black', 'Archivo', system-ui, sans-serif;
   --mono: 'Space Mono', ui-monospace, 'SFMono-Regular', monospace;
 
-  /* geometry — soft by default, pill for controls */
+  /* geometry, soft by default, pill for controls */
   --r-sm: 10px;
   --r: 14px;
   --r-lg: 24px;
@@ -92,7 +92,7 @@
   --lift: 0 10px 28px rgba(0, 0, 0, 0.38);
   --ring: 0 0 0 1px var(--accent-line);
 
-  /* motion — eased, never snappy */
+  /* motion, eased, never snappy */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --glide: cubic-bezier(0.22, 1, 0.36, 1);
   --t-fast: 0.15s;

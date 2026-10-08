@@ -1,5 +1,5 @@
 /* ============================================================================
-   Live Q&A — mode Layout DI DALAM overlay.
+   Live Q&A, mode Layout DI DALAM overlay.
    ----------------------------------------------------------------------------
    Tidak ada panel kotak lagi: klik gear kecil di sudut kiri-atas (atau tekan S)
    untuk masuk mode Layout, klik sekali lagi untuk keluar. Semua pengaturan lain
@@ -24,7 +24,7 @@
 
 	var LAYOUT_MIN_SCALE = 0.5;
 	var LAYOUT_MAX_SCALE = 2.0;
-	// Skala bawaan (sama dengan script.js) — sedikit di bawah 1.
+	// Skala bawaan (sama dengan script.js), sedikit di bawah 1.
 	var LAYOUT_DEFAULT_SCALE = 0.8;
 	var LAYOUT_SNAP = 8;
 	// Ukuran minimum supaya widget tidak bisa diciutkan sampai tak terlihat.
@@ -329,7 +329,7 @@
 		giOverlay.appendChild(giGuideV);
 		giOverlay.appendChild(giGuideH);
 		giOverlay.appendChild(giFrame);
-		giOverlay.appendChild(h('div', 'gi-hint', 'Layout mode — drag to move · sides to resize · corners to scale · top dot to rotate'));
+		giOverlay.appendChild(h('div', 'gi-hint', 'Layout mode, drag to move · sides to resize · corners to scale · top dot to rotate'));
 		document.body.appendChild(giOverlay);
 
 		// Terapkan layout tersimpan (widget sudah menerapkannya; mode Layout

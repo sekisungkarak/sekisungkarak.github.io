@@ -1,4 +1,4 @@
-/* Site-wide chrome config. Every page reads this — change it here, not per page.
+/* Site-wide chrome config. Every page reads this, change it here, not per page.
    Paths are relative to the site root; CHROME.root() resolves them, so nothing
    here is tied to how deep the page lives. */
 window.SITE = {

@@ -300,7 +300,7 @@ const enableSuperFanBox = GetBoolParam("enableSuperFanBox", true);
 // Master switch: mematikan SEMUA alert TikTok sekaligus (dashboard).
 const enableTikTokAlerts = GetBoolParam("enableTikTokAlerts", true);
 
-// Ikon event TikTok (chat/gift/follow/subscribe/share) — KHUSUS event TikTok.
+// Ikon event TikTok (chat/gift/follow/subscribe/share), KHUSUS event TikTok.
 // Tiap grup event punya toggle sendiri. Default true = perilaku lama tidak berubah.
 // Hanya memengaruhi ikon event di kartu alert; ikon panel ambient (wave/album art)
 // tidak tersentuh karena jalurnya beda (SyncIslandIcon, bukan ProcessAlertQueue).
@@ -336,7 +336,7 @@ const musicStyle = (() => {
 	return GetBoolParam("enableDynamicStyleBig", true) ? "big" : "small";
 })();
 const isMusicMedium = musicStyle === "medium";
-// Kartu besar ATAU medium sama-sama "mekar" — kode lama memakai flag ini di
+// Kartu besar ATAU medium sama-sama "mekar", kode lama memakai flag ini di
 // banyak tempat, jadi nilainya diturunkan agar tidak perlu diubah semua.
 const enableDynamicStyleBig = musicStyle !== "small";
 const enableDynamicBig = enableDynamicStyleBig;
@@ -1497,7 +1497,7 @@ function GetTimeNowText() {
 const PAUSE_STORAGE_KEY = WIDGET_NS + 'paused-state';
 
 // Metadata lagu valid terakhir disimpan terpisah agar judul/artis tidak
-// tertimpa "Unknown" — itu bikin HasPlayableTrack() false dan panel di-skip.
+// tertimpa "Unknown", itu bikin HasPlayableTrack() false dan panel di-skip.
 function SaveTrackMeta() {
 	if (!HasPlayableTrack()) return;   // jangan simpan metadata kosong
 	try {
@@ -1593,8 +1593,8 @@ const infoPanels = [
 		rightIcon: () => ((HasPlayableTrack() && nowPlayingData.albumArt) ? (() => {
 			const hexStr = encodeURIComponent(nowPlayingData.lightVibrant || "#8A2BE2");
 			// ══ Wave icon: PLAY vs PAUSE ══
-			// - Play : 3 bar beranimasi (SMIL <animate>) — equalizer hidup.
-			// - Pause: 3 bar FLAT pendek, tanpa animasi — "equalizer kosong".
+			// - Play : 3 bar beranimasi (SMIL <animate>), equalizer hidup.
+			// - Pause: 3 bar FLAT pendek, tanpa animasi, "equalizer kosong".
 			//   (Pilihan user 2026-09-19; overlay ⏸ tetap di album art.)
 			// [PENTING] src berbeda antara play/pause -> RefreshMusicWaveIcon()
 			// mengganti src hanya saat src-nya berbeda, jadi animasi tidak restart
@@ -1606,7 +1606,7 @@ const infoPanels = [
 			return `data:image/svg+xml;utf8,%3Csvg%20fill%3D%22${hexStr}%22%20viewBox%3D%220%200%2024%2024%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Crect%20x%3D%222%22%20y%3D%229%22%20width%3D%225%22%20height%3D%226%22%20rx%3D%222%22%3E%3Canimate%20attributeName%3D%22height%22%20values%3D%226%3B16%3B6%22%20begin%3D%220s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3Canimate%20attributeName%3D%22y%22%20values%3D%229%3B4%3B9%22%20begin%3D%220s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3C%2Frect%3E%3Crect%20x%3D%229%22%20y%3D%223%22%20width%3D%225%22%20height%3D%2218%22%20rx%3D%222%22%3E%3Canimate%20attributeName%3D%22height%22%20values%3D%2218%3B8%3B18%22%20begin%3D%220.2s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3Canimate%20attributeName%3D%22y%22%20values%3D%223%3B8%3B3%22%20begin%3D%220.2s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3C%2Frect%3E%3Crect%20x%3D%2216%22%20y%3D%227%22%20width%3D%225%22%20height%3D%2210%22%20rx%3D%222%22%3E%3Canimate%20attributeName%3D%22height%22%20values%3D%2210%3B18%3B10%22%20begin%3D%220.4s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3Canimate%20attributeName%3D%22y%22%20values%3D%227%3B3%3B7%22%20begin%3D%220.4s%22%20dur%3D%221s%22%20repeatCount%3D%22indefinite%22%2F%3E%3C%2Frect%3E%3C%2Fsvg%3E`;
 		})() : null),
 		ticks: true,
-		// Tengah: waktu saja — judul/artis tidak ditampilkan di panel gabungan.
+		// Tengah: waktu saja, judul/artis tidak ditampilkan di panel gabungan.
 		text: () => GetTimeNowText()
 	},
 	{
@@ -1653,7 +1653,7 @@ const infoPanels = [
 	}
 	// [DIHAPUS] Panel music lama: digabung ke panel "Time & Now Playing" di atas
 	// (wave kiri, waktu tengah, album art kanan). Jalur alert song-change tetap
-	// memakai id 'music' — sekarang menunjuk panel gabungan ini.
+	// memakai id 'music', sekarang menunjuk panel gabungan ini.
 ];
 
 // Urutan rotasi info (settings: infoRotationOrder).
@@ -1840,7 +1840,7 @@ function StartScrubberAnimation() {
 			if (elFill && totalMs > 0) {
 				const pct = (posMs / totalMs) * 100;
 				// Big: visual mulai 25% agar bar terlihat hidup sejak awal.
-				// Medium: mulai 0% — bar mengisi penuh dari kiri, seperti progress asli.
+				// Medium: mulai 0%, bar mengisi penuh dari kiri, seperti progress asli.
 				const visualPct = isMusicMedium ? pct : (25 + (pct * 0.75));
 				elFill.style.width = `${visualPct}%`;
 				if (elThumb) elThumb.style.left = `${visualPct}%`;
@@ -1927,7 +1927,7 @@ function RefreshMusicWaveIcon(force = false) {
 	if (islandEventIcon) {
 		// Set ulang src me-restart animasi <animate> di SVG (wave jadi kedut).
 		const nextSrc = typeof panel.rightIcon === 'function' ? panel.rightIcon() : panel.rightIcon;
-		// [GUARD null] Panel gabungan mengembalikan null saat tidak ada lagu —
+		// [GUARD null] Panel gabungan mengembalikan null saat tidak ada lagu,
 		// jangan set src=null (ikon rusak), sembunyikan saja wave-nya.
 		if (!nextSrc) {
 			islandEventIcon.classList.add('hidden');
@@ -1974,7 +1974,7 @@ function SyncIslandIcon(panel) {
 	if (!islandIcon || !panel) return;
 	const nextIcon = typeof panel.icon === 'function' ? panel.icon() : panel.icon;
 	// Bandingkan atribut mentah (getAttribute), bukan properti .src yang sudah
-	// di-resolve jadi URL absolut — supaya tidak set ulang tiap detik (tick jam).
+	// di-resolve jadi URL absolut, supaya tidak set ulang tiap detik (tick jam).
 	if (islandIcon.getAttribute('src') !== nextIcon) {
 		islandIcon.src = nextIcon;
 	}
@@ -1998,7 +1998,7 @@ function ApplyInfoPanel(animate, allowBounce = true) {
 	const nextText = panel.text();
 
 	// Penanda panel gabungan "Time & Now Playing" sedang aktif di AMBIENT.
-	// Dipakai CSS untuk memindah album art ke kanan (order) — hanya bila
+	// Dipakai CSS untuk memindah album art ke kanan (order), hanya bila
 	// ada lagu; mode jam-saja tidak dipindah agar ikon jam tetap di kiri.
 	// `panel-time` menyala TANPA syarat lagu: dipakai untuk mengunci lebar
 	// teks jam (angka tabular) supaya pill tidak goyang tiap detik.
@@ -2055,7 +2055,7 @@ function ApplyInfoPanel(animate, allowBounce = true) {
 		dynamicIsland.classList.add('ambient-bounce');
 	}
 
-	// Sinkronkan ikon kiri (album art / ikon jam) — satu jalur dengan mode senyap.
+	// Sinkronkan ikon kiri (album art / ikon jam), satu jalur dengan mode senyap.
 	SyncIslandIcon(panel);
 
 	// Simpan nilai mentah di dataset.viewers untuk inspeksi/debug.
@@ -2176,7 +2176,7 @@ async function ApplyNowPlayingData(data) {
 			const nextArtist = targetSession.media_properties?.Artist || "Unknown";
 
 			// Jangan alert untuk metadata kosong ("Unknown"). PENTING: jangan reset
-			// _lastSongKey — metadata asli datang 1-2 detik kemudian dan kalau key
+			// _lastSongKey, metadata asli datang 1-2 detik kemudian dan kalau key
 			// jadi "" alert tidak pernah muncul.
 			const isUnknownMeta = (nextTitle === "Unknown" || nextArtist === "Unknown");
 			if (isUnknownMeta) {
@@ -2271,7 +2271,7 @@ async function ApplyNowPlayingData(data) {
 				// Tandai SEBELUM TriggerAlert: satu songId = satu alert.
 				nowPlayingData._lastAlertedSongId = songIdKey;
 				const musicPanel = infoPanels.find(p => p.id === 'music');
-				// Big/Medium: judul SAJA — artis tampil di baris #islandSubtext.
+				// Big/Medium: judul SAJA, artis tampil di baris #islandSubtext.
 				// Small: kartu tidak mekar & #islandSubtext disembunyikan, jadi
 				// artis WAJIB inline "judul • artis" atau namanya hilang total.
 				const alertText = enableDynamicStyleBig ? nowPlayingData.title : musicText();
@@ -2485,7 +2485,7 @@ function ApplyLiveStatus(nextStatus, startOverrideMs) {
 			// Saat source OBS di-refresh di tengah sesi, waktu mulai dipulihkan dari
 			// localStorage (liveStartFromStorage = true) dan status pertama langsung
 			// 'live' dengan prev = null. Tanpa penjaga ini, refresh dianggap live baru
-			// dan riwayat first chatter ikut terhapus — padahal sesinya sama.
+			// dan riwayat first chatter ikut terhapus, padahal sesinya sama.
 			if (!liveStartFromStorage && typeof ResetFirstChatter === 'function') ResetFirstChatter();
 		}
 	} else if (prev === LS_STATUS.live || liveStartFromStorage) {
@@ -2497,7 +2497,7 @@ function ApplyLiveStatus(nextStatus, startOverrideMs) {
 		console.debug('[Geseki][LiveDetect] Tidak live, status =', nextStatus);
 	}
 
-	// Segarkan HANYA bila status berubah — poll jalan tiap 2.5 detik.
+	// Segarkan HANYA bila status berubah, poll jalan tiap 2.5 detik.
 	if (!changed || isAlertActive) return;
 
 	const panel = infoPanels[currentPanelIndex];
@@ -2564,7 +2564,7 @@ function ConnectLiveStudio(portIndex) {
 		// ScheduleLiveRetry memanggil ConnectLiveStudio(7) yang langsung
 		// kembali ke sini: terjebak selamanya tanpa pernah memindai port
 		// 0-6 lagi. Akibatnya deteksi baru jalan setelah halaman
-		// di-refresh — itu satu-satunya saat pemindaian penuh terjadi.
+		// di-refresh, itu satu-satunya saat pemindaian penuh terjadi.
 		ScheduleLiveRetry(0);
 		return;
 	}
@@ -2644,7 +2644,7 @@ function ScheduleLiveRetry(portIndex) {
 function InitLiveDetection() {
 	if (!enableLiveDetect) {
 		// Deteksi mati: tidak ada sumber waktu mulai lain, jadi anggap live
-		// dari widgetStartTime — durasi nol tiap kali OBS reload source.
+		// dari widgetStartTime, durasi nol tiap kali OBS reload source.
 		console.debug('[Geseki][LiveDetect] Dinonaktifkan lewat pengaturan.');
 		liveStatus = LS_STATUS.live;
 		liveStartedAtMs = widgetStartTime;
@@ -2756,7 +2756,7 @@ async function FetchWeather() {
 		if (!response.ok) throw new Error("HTTP " + response.status);
 		const data = await response.json();
 		const cur = data.current || {};
-		// Tanpa suhu valid, biarkan panel kosong dan retry — jangan tampilkan angka palsu.
+		// Tanpa suhu valid, biarkan panel kosong dan retry, jangan tampilkan angka palsu.
 		if (typeof cur.temperature_2m !== "number") throw new Error("respons tanpa suhu");
 		const table = isId ? WMO_DESC_ID : WMO_DESC_EN;
 		const weatherDesc = table[cur.weather_code] || (isId ? "Cuaca" : "Weather");
@@ -2801,7 +2801,7 @@ async function InitInfoLoop() {
 	// Now Playing tidak di-poll: bridge mendorongnya lewat WebSocket (lihat
 	// bridgeConnection), jadi tidak ada setInterval di sini.
 	// Cuaca: jadwal pertama ditentukan hasil fetch di atas (sukses 15 menit,
-	// gagal 1,5 menit) — bukan setInterval buta yang mengunci 15 menit.
+	// gagal 1,5 menit), bukan setInterval buta yang mengunci 15 menit.
 	ScheduleWeatherFetch(weatherData ? WEATHER_REFRESH_INTERVAL : WEATHER_RETRY_INTERVAL);
 
 	UpdateInfoText();
@@ -3286,7 +3286,7 @@ function ProcessAlertQueue() {
 }
 
 // [Stale-alert guard] Dipanggil saat terdeteksi lompatan jam antar-tick
-// — tanda halaman tadi dibekukan OBS (scene tidak tampil).
+//, tanda halaman tadi dibekukan OBS (scene tidak tampil).
 // Semua alert yang tertinggal sudah basi: tutup paksa yang masih tayang,
 // kosongkan antrean, lalu seed ulang lagu supaya tick berikutnya hanya
 // menanam lagu yang sedang berjalan TANPA memicu music big basi.
