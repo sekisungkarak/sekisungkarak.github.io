@@ -3,7 +3,7 @@
    here is tied to how deep the page lives. */
 window.SITE = {
   brand: 'Sekisungkarak',
-  logo: 'shared/assets/images/avatar.png',
+  logo: 'shared/assets/images/logo.png',
 
   // Wide 1200x630 card used for link previews (og:image).
   ogImage: 'shared/assets/images/og-banner.png',
