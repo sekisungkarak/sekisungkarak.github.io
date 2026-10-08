@@ -211,6 +211,55 @@ function ShowLiveToast(state, message) {
 	setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 3400);
 }
 
+// Batas panjang username di pil status navbar. Aturannya SAMA dengan overlay
+// Dynamic Island Alert supaya nama yang tampil di dua tempat tidak pernah
+// berbeda: murni alphabet (huruf latin, angka, underscore) boleh sampai 15
+// karakter; begitu ada emoji / huruf non-latin / tanda lain, batasnya 10.
+const USERNAME_ALPHABET_RE = /^[A-Za-z0-9_]+$/;
+const USERNAME_MAX_ALPHA = 15;
+const USERNAME_MAX_MIXED = 10;
+
+// Satu "satuan" untuk kuota username campuran. Emoji dihitung TERPISAH per
+// bagian yang terlihat: ZWJ (perekat), variation selector, modifier warna
+// kulit/rambut, dan tanda gabung TIDAK dihitung, sehingga
+// 👨‍👩‍👧‍👦 = 4, 👍🏽 = 1, dan é (e + tanda gabung) = 1.
+function IsCountableUsernameUnit(ch, cp) {
+	if (cp === 0x200D) return false;                    // ZWJ (perekat keluarga)
+	if (cp === 0xFE0E || cp === 0xFE0F) return false;   // variation selector
+	if (cp >= 0x1F3FB && cp <= 0x1F3FF) return false;   // modifier warna kulit
+	if (cp >= 0x1F9B0 && cp <= 0x1F9B3) return false;   // modifier rambut
+	if (/\p{M}/u.test(ch)) return false;                // tanda gabung (combining)
+	return true;
+}
+
+// Buang perekat ZWJ yang menggantung di ujung (bila pemotongan jatuh tepat
+// setelah ZWJ). Variation selector / tanda gabung TIDAK dibuang: keduanya
+// menempel pada huruf dasarnya, jadi harus ikut tampil utuh.
+function TrimTrailingGlue(s) {
+	return s.replace(/\u200D+$/u, '');
+}
+
+// Potong username sesuai batas di atas. Murni alphabet -> potong per karakter
+// (ASCII, jadi aman). Campuran -> potong per satuan terlihat, tanpa membelah
+// emoji gabungan jadi karakter rusak.
+function TruncateUsername(str) {
+	if (!str) return '';
+	if (USERNAME_ALPHABET_RE.test(str)) {
+		return str.length <= USERNAME_MAX_ALPHA ? str : str.slice(0, USERNAME_MAX_ALPHA) + '\u2026';
+	}
+	let out = '';
+	let n = 0;
+	for (const ch of str) {          // iterasi per code point
+		const cp = ch.codePointAt(0);
+		if (IsCountableUsernameUnit(ch, cp)) {
+			if (n >= USERNAME_MAX_MIXED) return TrimTrailingGlue(out) + '\u2026';
+			n++;
+		}
+		out += ch;
+	}
+	return out;
+}
+
 const LIVE_STATE_LABEL = {
 	connected: 'Live',
 	connecting: 'Connecting\u2026',
@@ -238,7 +287,7 @@ function SetLiveStatus(state, username, message, avatar, suppressToast) {
 		liveState.textContent = detail || LIVE_STATE_LABEL[s];
 		liveState.classList.toggle('is-message', !!detail);
 	}
-	if (liveUser) liveUser.textContent = username ? ('@' + username) : '@\u2014';
+	if (liveUser) liveUser.textContent = username ? ('@' + TruncateUsername(username)) : '@\u2014';
 	liveStatus.title = 'TikTok: ' + LIVE_STATE_LABEL[s] +
 		(username ? ' (@' + username + ')' : '') +
 		(detail ? ' \u2014 ' + detail : '');
