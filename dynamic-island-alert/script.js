@@ -879,12 +879,15 @@ function IsIconOnlyBadge(badge) {
 // Shortcode emote ("[thumb]") panjang di teks mentah tapi hanya tampil sebagai
 // SATU emote, jadi menghitung `length` mentah membuat kuota habis oleh sintaks:
 // empat "[thumb]" (28 karakter) menyisakan 2 slot untuk isi pesan. Di sini satu
-// emote = satu slot, sama seperti yang terlihat di layar.
+// emote = satu slot, sama seperti yang terlihat di layar. Emoji juga dihitung
+// SATU per emoji (bukan per code unit), supaya potongan tidak pernah membelah
+// emoji jadi karakter rusak.
 const CHAT_MESSAGE_MAX = 30;
 
 // Batas jumlah emote pada alert first chatter. Viewer bisa mengirim puluhan
 // emote sekaligus; tanpa batas ini pill penuh oleh stiker. Emote ke-16 dan
-// seterusnya dipotong, bukan ditampilkan.
+// seterusnya dipotong, bukan ditampilkan. Berlaku untuk emote payload MAUPUN
+// shortcode yang diketik (mis. "[thumb]").
 const FIRST_CHATTER_EMOTE_MAX = 15;
 
 // Cocokkan shortcode emote yang DIKENAL pada posisi awal `text`.
@@ -897,64 +900,77 @@ function ChatShortcodeAt(text, index) {
 	return Object.prototype.hasOwnProperty.call(EMOTES, m[0].toLowerCase()) ? m[0].length : 0;
 }
 
-// Indeks mentah tempat karakter TERLIHAT ke-`max` berakhir.
-// Mengembalikan -1 bila seluruh teks masih di dalam kuota.
-function ChatVisibleCutIndex(text, emotes, max) {
-	const emoteAt = new Set();
+// Panjang satu "satuan terlihat" pada posisi i: emote payload = 1 (menempati
+// satu placeholder), shortcode dikenal = panjang token, emoji = 2 code unit
+// (pasangan surrogate, tidak boleh dibelah), dan tanda yang menempel pada
+// karakter dasar (ZWJ / variation selector / modifier / tanda gabung) = 0.
+function ChatUnitAt(text, i, emoteAt) {
+	if (emoteAt.has(i)) return 1;
+	const tokenLen = ChatShortcodeAt(text, i);
+	if (tokenLen > 0) return tokenLen;
+	const cp = text.codePointAt(i);
+	if (cp >= 0x1F3FB && cp <= 0x1F3FF) return 0;   // modifier warna kulit
+	if (cp >= 0x1F9B0 && cp <= 0x1F9B3) return 0;   // modifier rambut
+	if (cp === 0x200D) return 0;                    // ZWJ (perekat emoji)
+	if (cp === 0xFE0E || cp === 0xFE0F) return 0;   // variation selector
+	if (/\p{M}/u.test(text[i])) return 0;          // tanda gabung (combining)
+	return cp > 0xFFFF ? 2 : 1;
+}
+
+// Kumpulkan indeks emote payload (dari `placeInComment`).
+function ChatEmoteIndexSet(emotes) {
+	const set = new Set();
 	if (Array.isArray(emotes)) {
 		for (const e of emotes) {
 			const at = Number(e && e.placeInComment);
-			if (isFinite(at) && at >= 0) emoteAt.add(at);
+			if (isFinite(at) && at >= 0) set.add(at);
 		}
 	}
+	return set;
+}
+
+// Potong kelebihan emote: emote payload DAN shortcode yang diketik digabung
+// berurutan, lalu emote ke-(max+1) dan sesudahnya dibuang. Mengembalikan teks
+// baru, atau teks asli bila jumlahnya masih di dalam batas.
+function CutExcessEmotes(text, emotes, max) {
+	if (!(max > 0)) return text;
+	const emoteAt = ChatEmoteIndexSet(emotes);
+	const marks = [];
+	let i = 0;
+	while (i < text.length) {
+		if (emoteAt.has(i)) { marks.push({ start: i, end: i + 1 }); i += 1; continue; }
+		const tokenLen = ChatShortcodeAt(text, i);
+		if (tokenLen > 0) { marks.push({ start: i, end: i + tokenLen }); i += tokenLen; continue; }
+		i += 1;
+	}
+	if (marks.length <= max) return text;
+	return text.slice(0, marks[max].start);
+}
+
+// Indeks mentah tempat satuan TERLIHAT ke-`max` berakhir.
+// Mengembalikan -1 bila seluruh teks masih di dalam kuota.
+function ChatVisibleCutIndex(text, emotes, max) {
+	const emoteAt = ChatEmoteIndexSet(emotes);
 
 	let visible = 0;
 	let i = 0;
 	while (i < text.length) {
-		// Emote payload menempati satu karakter placeholder di dalam teks.
-		if (emoteAt.has(i)) {
-			i += 1;
+		const unitLen = ChatUnitAt(text, i, emoteAt);
+		if (unitLen > 0) {
+			if (visible + 1 > max) return i;
 			visible += 1;
-			if (visible > max) return i - 1;
-			continue;
 		}
-		const tokenLen = ChatShortcodeAt(text, i);
-		if (tokenLen > 0) {
-			i += tokenLen;
-			visible += 1;
-			if (visible > max) return i - tokenLen;
-			continue;
-		}
-		i += 1;
-		visible += 1;
-		if (visible > max) return i - 1;
+		i += unitLen > 0 ? unitLen : 1;
 	}
 	return -1;
 }
 
-// Indeks mentah tempat emote ke-(max+1) mulai; -1 bila jumlah emote masih di
-// dalam batas. Dipakai untuk memotong kelebihan emote.
-function EmoteCutIndex(text, emotes, max) {
-	if (!Array.isArray(emotes) || emotes.length <= max) return -1;
-	const at = [];
-	for (const e of emotes) {
-		const i = Number(e && e.placeInComment);
-		if (isFinite(i) && i >= 0 && i < text.length) at.push(i);
-	}
-	at.sort((a, b) => a - b);
-	return at.length <= max ? -1 : at[max];
-}
-
 // Potong pesan chat pada kuota karakter TERLIHAT; tambahkan elipsis bila ada
-// yang dibuang. `maxEmotes` (opsional) juga membatasi jumlah emote: teks dipotong
-// di emote ke-(maxEmotes+1) sehingga emote berlebih hilang, bukan tampil sebagai
-// karakter mentah. Dipakai jalur live maupun tombol Test.
+// yang dibuang. `maxEmotes` (opsional) juga membatasi jumlah emote (payload dan
+// shortcode). Dipakai jalur live maupun tombol Test.
 function TruncateChatMessage(rawMessage, emotes, maxEmotes) {
 	let text = String(rawMessage == null ? '' : rawMessage);
-	if (maxEmotes > 0) {
-		const emoteCut = EmoteCutIndex(text, emotes, maxEmotes);
-		if (emoteCut >= 0) text = text.slice(0, emoteCut);
-	}
+	text = CutExcessEmotes(text, emotes, maxEmotes);
 	const cut = ChatVisibleCutIndex(text, emotes, CHAT_MESSAGE_MAX);
 	return cut < 0 ? text : text.slice(0, cut) + '\u2026';
 }
@@ -4307,8 +4323,8 @@ function handleTikTokEvent(event, tiktokData, source) {
 	if (!enableTikTokAlerts) return;
 
 	const userName = SanitizeVisibleText(tiktokData.nickname || tiktokData.uniqueId || 'Someone');
-	// Username dibatasi 15 karakter. Dipotong per GRAPHEME (bukan code unit)
-	// supaya nickname ber-emoji tidak terbelah jadi karakter rusak.
+	// Batas username: murni alphabet (A-Za-z0-9_) 15 karakter; kalau ada
+	// emoji/huruf non-latin dipotong 10 dengan emoji dihitung terpisah.
 	const displayUser = TruncateUsername(userName);
 	const badges = GetUserBadges(tiktokData);
 	const avatar = tiktokData.profilePictureUrl || tiktokData.profilePicture || tiktokData.avatarThumb || tiktokData.user?.profilePictureUrl || '';
