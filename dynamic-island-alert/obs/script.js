@@ -516,35 +516,52 @@ async function GetAccentPaletteCached(imageUrl) {
 // HELPERS //
 /////////////
 
-// Hitung panjang per grapheme cluster: emoji, kanji, Arab, dll = 1 karakter tampilan.
-function GetGraphemeCount(str) {
-	if (!str) return 0;
-	if (typeof Intl !== 'undefined' && Intl.Segmenter) {
-		const seg = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
-		let count = 0;
-		for (const _ of seg.segment(str)) count++;
-		return count;
-	}
-	return [...str].length;
+// Batas panjang username. Username MURNI alphabet (huruf latin, angka,
+// underscore - khas username TikTok) boleh sampai 15 karakter. Begitu ada
+// emoji / huruf non-latin / tanda lain, batasnya dipotong jadi 10.
+const USERNAME_ALPHABET_RE = /^[A-Za-z0-9_]+$/;
+const USERNAME_MAX_ALPHA = 15;
+const USERNAME_MAX_MIXED = 10;
+
+// Satu "satuan" untuk kuota username campuran. Emoji dihitung TERPISAH per
+// bagian yang terlihat: ZWJ (perekat), variation selector, modifier warna
+// kulit/rambut, dan tanda gabung TIDAK dihitung, sehingga
+// 👨‍👩‍👧‍👦 = 4, 👍🏽 = 1, dan é (e + tanda gabung) = 1.
+function IsCountableUsernameUnit(ch, cp) {
+	if (cp === 0x200D) return false;                    // ZWJ (perekat keluarga)
+	if (cp === 0xFE0E || cp === 0xFE0F) return false;   // variation selector
+	if (cp >= 0x1F3FB && cp <= 0x1F3FF) return false;   // modifier warna kulit
+	if (cp >= 0x1F9B0 && cp <= 0x1F9B3) return false;   // modifier rambut
+	if (/\p{M}/u.test(ch)) return false;                // tanda gabung (combining)
+	return true;
 }
 
-// Potong string per GRAPHEME (bukan code unit) supaya emoji/ZWJ/Arab tidak
-// terbelah jadi karakter rusak. Dipakai untuk batas username 15 karakter.
-function TruncateGraphemes(str, maxChars) {
+// Buang perekat ZWJ yang menggantung di ujung (bila pemotongan jatuh tepat
+// setelah ZWJ). Variation selector / tanda gabung TIDAK dibuang: keduanya
+// menempel pada huruf dasarnya, jadi harus ikut tampil utuh.
+function TrimTrailingGlue(s) {
+	return s.replace(/\u200D+$/u, '');
+}
+
+// Potong username sesuai batas di atas. Murni alphabet -> potong per karakter
+// (ASCII, jadi aman). Campuran -> potong per satuan terlihat, tanpa membelah
+// emoji gabungan jadi karakter rusak.
+function TruncateUsername(str) {
 	if (!str) return '';
-	if (GetGraphemeCount(str) <= maxChars) return str;
-	if (typeof Intl !== 'undefined' && Intl.Segmenter) {
-		const seg = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
-		let out = '';
-		let n = 0;
-		for (const { segment } of seg.segment(str)) {
-			if (n >= maxChars) break;
-			out += segment;
+	if (USERNAME_ALPHABET_RE.test(str)) {
+		return str.length <= USERNAME_MAX_ALPHA ? str : str.slice(0, USERNAME_MAX_ALPHA) + '…';
+	}
+	let out = '';
+	let n = 0;
+	for (const ch of str) {          // iterasi per code point
+		const cp = ch.codePointAt(0);
+		if (IsCountableUsernameUnit(ch, cp)) {
+			if (n >= USERNAME_MAX_MIXED) return TrimTrailingGlue(out) + '…';
 			n++;
 		}
-		return out + '…';
+		out += ch;
 	}
-	return [...str].slice(0, maxChars).join('') + '…';
+	return out;
 }
 
 function GetIntParam(paramName, defaultValue) {
@@ -4065,7 +4082,7 @@ function handleTikTokEvent(event, tiktokData, source) {
 	const userName = SanitizeVisibleText(tiktokData.nickname || tiktokData.uniqueId || 'Someone');
 	// Username dibatasi 15 karakter. Dipotong per GRAPHEME (bukan code unit)
 	// supaya nickname ber-emoji tidak terbelah jadi karakter rusak.
-	const displayUser = TruncateGraphemes(userName, 15);
+	const displayUser = TruncateUsername(userName);
 	const badges = GetUserBadges(tiktokData);
 	const avatar = tiktokData.profilePictureUrl || tiktokData.profilePicture || tiktokData.avatarThumb || tiktokData.user?.profilePictureUrl || '';
 
