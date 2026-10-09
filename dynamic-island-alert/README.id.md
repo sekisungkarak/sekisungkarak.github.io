@@ -12,12 +12,14 @@ ke OBS. Buka **Docks** di menu bar lalu aktifkan.
 
 ![Aktifkan dock Dynamic Island Alert di OBS](docs/assets/enable-dock.png)
 
-Di dock-nya, isi kartu **OBS Connection**: **Server IP** dan **Port** (default
-`4455`), plus **Password** kalau kamu memasangnya di **Tools → WebSocket
-Server Settings**, lalu tekan **Save**. Menekan Save otomatis menambahkan widget
-ke scene yang sedang aktif, overlay langsung muncul di stream, tanpa perlu
-menambah sumber Browser sendiri. Titik statusnya berubah hijau begitu widget
-tersambung ke OBS.
+Lewati ini kalau kamu tidak memasang password di **Tools → WebSocket Server
+Settings**. Di dock-nya, buka **OBS Connection**: **Server IP** sudah terisi
+`127.0.0.1`, dan **Port** diisi otomatis dari pengaturan obs-websocket,
+ditandai lencana **Auto**. Kalau servermu memakai password, baris **Password**
+ditandai **Required**. Lalu tekan **Save**. Menekan Save otomatis menambahkan
+widget ke scene yang sedang aktif, overlay langsung muncul di stream, tanpa
+perlu menambah sumber Browser sendiri. Titik statusnya berubah hijau begitu
+widget tersambung ke OBS.
 
 ![Pengaturan OBS Connection di dock](docs/assets/obs-websocket.png)
 

@@ -790,6 +790,54 @@ body.dashboard-mode #settings .config-heading {
     margin-top: 8px;
 }
 
+/* Label "Auto" untuk input Port OBS yang diisi hasil discovery bridge. */
+#settings .obs-port-auto {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-color);
+    background: color-mix(in srgb, var(--accent-color) 16%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-color) 38%, transparent);
+    border-radius: 999px;
+    padding: 1px 7px;
+    margin-right: 8px;
+    line-height: 1.5;
+}
+
+/* Label "Required" di baris Password (server OBS memakai password). */
+#settings .obs-pw-req {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #e8a3a3;
+    background: color-mix(in srgb, #e06a6a 18%, transparent);
+    border: 1px solid color-mix(in srgb, #e06a6a 42%, transparent);
+    border-radius: 999px;
+    padding: 1px 7px;
+    margin-left: 8px;
+    line-height: 1.5;
+}
+
+/* Baris Port saat terkunci: badge + input yang lebih ramping. */
+#settings .config:has(.obs-port-auto:not([hidden])) .element {
+    width: auto;
+}
+
+#settings wa-number-input[readonly] {
+    width: 96px;
+}
+
+/* Port terkunci (Auto): redupkan kaca dan sembunyikan stepper. */
+#settings wa-number-input[readonly]::part(base) {
+    background-color: color-mix(in srgb, var(--c-glass) 26%, transparent);
+}
+
+#settings wa-number-input[readonly]::part(stepper) {
+    display: none;
+}
+
 /* ── Switch, mercury drop liquid toggle ── */
 
 :root {

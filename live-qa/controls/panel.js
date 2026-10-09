@@ -468,6 +468,11 @@
 		isOn: function () { return layoutOn; }
 	};
 
+	// Dipanggil dari Settings lewat BroadcastChannel (`callFunction`) saat
+	// tombol Interact di navbar dashboard diklik, supaya widget langsung
+	// masuk Layout mode tanpa membuka panel kontrol dulu.
+	window.gesekiEnterLayout = function () { SetLayoutMode(true); };
+
 	BuildGear();
 
 	// Dibuka otomatis hanya kalau URL meminta (?controls=1).

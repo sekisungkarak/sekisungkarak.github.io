@@ -12,12 +12,14 @@ Bridge adds to OBS. Open **Docks** in the menu bar and enable it.
 
 ![Enable the Dynamic Island Alert dock in OBS](docs/assets/enable-dock.png)
 
-In the dock, fill the **OBS Connection** card: **Server IP** and **Port**
-(default `4455`), plus the **Password** if you set one under **Tools →
-WebSocket Server Settings**, then press **Save**. Saving adds the widget to the
-active scene on its own, the overlay shows up on stream right away, with no
-Browser source to add by hand. The status dot turns green once the widget is
-talking to OBS.
+Skip this if you haven't set a password under **Tools → WebSocket Server
+Settings**. In the dock, open **OBS Connection**: **Server IP** is already set
+to `127.0.0.1`, and **Port** is filled automatically from your obs-websocket
+settings, marked with an **Auto** badge. If your server uses a password, the
+**Password** row is marked **Required**. Then press **Save**. Saving adds the
+widget to the active scene on its own, the overlay shows up on stream right
+away, with no Browser source to add by hand. The status dot turns green once
+the widget is talking to OBS.
 
 ![OBS Connection settings in the dock](docs/assets/obs-websocket.png)
 

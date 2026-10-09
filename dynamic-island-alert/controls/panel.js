@@ -771,63 +771,158 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			});
 		}
 
+		// Host bridge untuk discovery port obs-websocket. Panel berjalan di
+		// dokumen yang sama dengan widget, jadi param URL-nya bisa dibaca di
+		// sini juga.
+		var OBS_BRIDGE_HOST = (function () {
+			try { return new URLSearchParams(location.search).get('bridgeHost') || '127.0.0.1'; }
+			catch (e) { return '127.0.0.1'; }
+		})();
+		var discoveredObsPort = null;
+		var discoveryFailedAt = 0;
+		// Dari discovery: apakah obs-websocket meminta password. Passwordnya
+		// sendiri tidak pernah lewat bridge.
+		var discoveredAuthRequired = false;
+
+		// Tanya bridge port obs-websocket yang sebenarnya (dibaca dari config
+		// plugin-nya). Gagal -> pakai port dari input. Password tidak lewat sini.
+		function ResolveObsPort(fallbackPort) {
+			if (discoveredObsPort) return Promise.resolve(discoveredObsPort);
+			if (discoveryFailedAt && (Date.now() - discoveryFailedAt) < 30000) {
+				return Promise.resolve(fallbackPort);
+			}
+			return new Promise(function (resolve) {
+				var ctl = new AbortController();
+				var t = setTimeout(function () { ctl.abort(); resolve(fallbackPort); }, 1500);
+				fetch('http://' + OBS_BRIDGE_HOST + ':47800/obs-port', { signal: ctl.signal })
+					.then(function (r) { return r.ok ? r.json() : null; })
+					.then(function (d) {
+						clearTimeout(t);
+						if (d && d.ok === true && d.enabled !== false) {
+							var p = Number(d.port);
+							if (Number.isInteger(p) && p > 0 && p <= 65535) {
+								discoveredObsPort = p;
+								resolve(p);
+								return;
+							}
+						}
+						discoveryFailedAt = Date.now();
+						resolve(fallbackPort);
+					})
+					.catch(function () {
+						clearTimeout(t);
+						discoveryFailedAt = Date.now();
+						resolve(fallbackPort);
+					});
+			});
+		}
+
+		// Seperti ResolveObsPort tetapi tanpa fallback dan tanpa cache sukses:
+		// null berarti bridge tidak tersedia, jadi label "Auto" tidak muncul.
+		function DiscoverPort() {
+			if (discoveryFailedAt && (Date.now() - discoveryFailedAt) < 30000) {
+				return Promise.resolve(null);
+			}
+			return new Promise(function (resolve) {
+				var ctl = new AbortController();
+				var t = setTimeout(function () { ctl.abort(); resolve(null); }, 1500);
+				fetch('http://' + OBS_BRIDGE_HOST + ':47800/obs-port', { signal: ctl.signal })
+					.then(function (r) { return r.ok ? r.json() : null; })
+					.then(function (d) {
+						clearTimeout(t);
+						if (d && d.ok === true && d.enabled !== false) {
+							var p = Number(d.port);
+							if (Number.isInteger(p) && p > 0 && p <= 65535) {
+								discoveredObsPort = p;
+								discoveredAuthRequired = (d.authRequired === true);
+								resolve(p);
+								return;
+							}
+						}
+						discoveryFailedAt = Date.now();
+						resolve(null);
+					})
+					.catch(function () {
+						clearTimeout(t);
+						discoveryFailedAt = Date.now();
+						resolve(null);
+					});
+			});
+		}
+
 		function Connect() {
 			var c = Cfg();
-			var ep = 'ws://' + c.address + ':' + c.port;
-			if (socket && endpoint === ep && socket.readyState === WebSocket.OPEN) {
-				return Promise.resolve(socket);
-			}
-			if (socket) { try { socket.close(); } catch (e) { /* abaikan */ } socket = null; endpoint = null; }
+			return ResolveObsPort(c.port).then(function (port) {
+				var ep = 'ws://' + c.address + ':' + port;
+				if (socket && endpoint === ep && socket.readyState === WebSocket.OPEN) {
+					return socket;
+				}
+				if (socket) { try { socket.close(); } catch (e) { /* abaikan */ } socket = null; endpoint = null; }
 
-			return new Promise(function (resolve, reject) {
-				var ws;
-				try { ws = new WebSocket(ep); }
-				catch (e) { reject(new Error('WebSocket is not available here')); return; }
+				return new Promise(function (resolve, reject) {
+					var ws;
+					try { ws = new WebSocket(ep); }
+					catch (e) { reject(new Error('WebSocket is not available here')); return; }
 
-				var timer = setTimeout(function () {
-					try { ws.close(); } catch (e) { /* abaikan */ }
-					reject(new Error('Timed out. Check Tools > WebSocket Server Settings and the IP/port/password.'));
-				}, 6000);
+					var timer = setTimeout(function () {
+						try { ws.close(); } catch (e) { /* abaikan */ }
+						reject(new Error('Timed out. Check Tools > WebSocket Server Settings and the IP/port/password.'));
+					}, 6000);
 
-				ws.addEventListener('message', function (ev) {
-					var msg;
-					try { msg = JSON.parse(ev.data); } catch (e) { return; }
+					ws.addEventListener('message', function (ev) {
+						var msg;
+						try { msg = JSON.parse(ev.data); } catch (e) { return; }
 
-					if (msg.op === 0) {
-						var auth = msg.d && msg.d.authentication;
-						if (auth) {
-							Sha256Base64(c.password + auth.salt)
-								.then(function (secret) { return Sha256Base64(secret + auth.challenge); })
-								.then(function (resp) {
-									ws.send(JSON.stringify({ op: 1, d: { rpcVersion: 1, authentication: resp, eventSubscriptions: 0 } }));
-								})
-								.catch(function () { /* biarkan timeout yang melaporkan */ });
-						} else {
-							ws.send(JSON.stringify({ op: 1, d: { rpcVersion: 1, eventSubscriptions: 0 } }));
+						if (msg.op === 0) {
+							var auth = msg.d && msg.d.authentication;
+							if (auth) {
+								Sha256Base64(c.password + auth.salt)
+									.then(function (secret) { return Sha256Base64(secret + auth.challenge); })
+									.then(function (resp) {
+										ws.send(JSON.stringify({ op: 1, d: { rpcVersion: 1, authentication: resp, eventSubscriptions: 0 } }));
+									})
+									.catch(function () { /* biarkan timeout yang melaporkan */ });
+							} else {
+								ws.send(JSON.stringify({ op: 1, d: { rpcVersion: 1, eventSubscriptions: 0 } }));
+							}
+							return;
 						}
-						return;
-					}
 
-					if (msg.op === 2) {
+						if (msg.op === 2) {
+							clearTimeout(timer);
+							socket = ws; endpoint = ep;
+							resolve(ws);
+							return;
+						}
+
+						if (msg.op === 7) {
+							var id = msg.d && msg.d.requestId;
+							var entry = pending[id];
+							if (!entry) return;
+							delete pending[id];
+							if (msg.d.requestStatus && msg.d.requestStatus.result) entry.resolve(msg.d.responseData);
+							else entry.reject(new Error((msg.d.requestStatus && msg.d.requestStatus.comment) || 'OBS refused the request'));
+						}
+					});
+
+					ws.addEventListener('error', function () {
 						clearTimeout(timer);
-						socket = ws; endpoint = ep;
-						resolve(ws);
-						return;
-					}
+						try { ws.close(); } catch (e) { /* abaikan */ }
+						reject(new Error('Could not reach OBS WebSocket at ' + c.address + ':' + port));
+					});
 
-					if (msg.op === 7) {
-						var id = msg.d && msg.d.requestId;
-						var entry = pending[id];
-						if (!entry) return;
-						delete pending[id];
-						if (msg.d.requestStatus && msg.d.requestStatus.result) entry.resolve(msg.d.responseData);
-						else entry.reject(new Error((msg.d.requestStatus && msg.d.requestStatus.comment) || 'OBS refused the request'));
-					}
-				});
-
-				ws.addEventListener('error', function () {
-					clearTimeout(timer);
-					reject(new Error('Could not reach OBS WebSocket at ' + c.address + ':' + c.port));
+					// Kode 4009 = obs-websocket menolak autentikasi (password salah).
+					// Tanpa handler ini promise menggantung sampai timeout 6 detik,
+					// sehingga password yang salah hanya terlihat sebagai timeout.
+					ws.addEventListener('close', function (ev) {
+						clearTimeout(timer);
+						if (socket === ws) { socket = null; endpoint = null; }
+						if (ev && ev.code === 4009) {
+							reject(new Error('Wrong OBS WebSocket password. Check Tools > WebSocket Server Settings.'));
+						} else {
+							reject(new Error('OBS WebSocket closed (code ' + (ev ? ev.code : '?') + ').'));
+						}
+					});
 				});
 			});
 		}
@@ -845,7 +940,11 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 			});
 		}
 
-		return { connect: Connect, request: Request, cfg: Cfg };
+		return {
+			connect: Connect, request: Request, cfg: Cfg,
+			discoverPort: DiscoverPort,
+			authRequired: function () { return discoveredAuthRequired === true; }
+		};
 	})();
 
 	/* ------------------------------------------- status OBS (badge navbar) */
@@ -905,12 +1004,21 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		box.appendChild(hd);
 
 		box.appendChild(h('label', 'cp-dialog-label', 'Port'));
+		var portRow = h('div', 'cp-dialog-port');
 		var port = h('input', 'cp-input');
 		port.type = 'text';
 		port.value = String(CFG.read('obsPort') || 4455);
-		box.appendChild(port);
+		var portAuto = h('span', 'cp-dialog-auto', 'Auto');
+		portAuto.hidden = true;
+		portRow.appendChild(port);
+		portRow.appendChild(portAuto);
+		box.appendChild(portRow);
 
-		box.appendChild(h('label', 'cp-dialog-label', 'Password'));
+		var pwLabel = h('label', 'cp-dialog-label', 'Password');
+		var pwReq = h('span', 'cp-dialog-req', 'Required');
+		pwReq.hidden = true;
+		pwLabel.appendChild(pwReq);
+		box.appendChild(pwLabel);
 		var pwWrap = h('div', 'cp-pw');
 		var pw = h('input', 'cp-input');
 		pw.type = 'password';
@@ -922,6 +1030,18 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		pwWrap.appendChild(pw);
 		pwWrap.appendChild(eye);
 		box.appendChild(pwWrap);
+
+		// Bridge bisa mendeteksi port obs-websocket sendiri: isi + kunci input
+		// Port dan tampilkan label "Auto". Sekaligus tandai kolom Password bila
+		// server meminta password (passwordnya sendiri tidak lewat bridge).
+		ObsWS.discoverPort().then(function (p) {
+			pwReq.hidden = !(ObsWS.authRequired && ObsWS.authRequired());
+			if (!p) return;
+			port.value = String(p);
+			port.readOnly = true;
+			port.setAttribute('readonly', '');
+			portAuto.hidden = false;
+		});
 
 		var msg = h('div', 'cp-dialog-msg');
 		box.appendChild(msg);
@@ -2408,11 +2528,22 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		if (root.classList.contains('is-collapsed')) SetLayoutMode(true);
 		// Begitu panel pertama kali muncul dan OBS belum pernah dikonfigurasi,
 		// modal Connect dipop-upkan sebagai SARAN, tidak wajib: X/backdrop/Esc
-		// boleh menutupnya tanpa menyambung.
-		if (CFG.read('obsAutoConnect') !== '1' && !obsDialogBack) {
+		// boleh menutupnya tanpa menyambung. Modal juga muncul saat
+		// obs-websocket memakai password tapi password belum diisi, supaya pil
+		// "OBS Offline" tidak membingungkan tanpa penjelasan.
+		function PopObsDialogSoon() {
 			setTimeout(function () {
 				if (isOpen && !obsDialogBack) ObsConnectDialog();
 			}, 260);
+		}
+		if (CFG.read('obsAutoConnect') !== '1') {
+			PopObsDialogSoon();
+		} else {
+			ObsWS.discoverPort().then(function (p) {
+				if (!isOpen || obsDialogBack) return;
+				if (!(p && ObsWS.authRequired && ObsWS.authRequired() && !CFG.read('obsPassword'))) return;
+				PopObsDialogSoon();
+			});
 		}
 	}
 	function Close() {
@@ -2549,6 +2680,11 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		toggle: function () { if (layoutOn) SetLayoutMode(false); else SetLayoutMode(true); },
 		get isOn() { return layoutOn; }
 	};
+
+	// Dipanggil dari Settings lewat BroadcastChannel (`callFunction`) saat
+	// tombol Interact di navbar dashboard diklik, supaya widget langsung
+	// masuk Layout mode tanpa membuka panel kontrol dulu.
+	window.gesekiEnterLayout = function () { SetLayoutMode(true); };
 
 	window.GesekiPanel = {
 		open: Open,

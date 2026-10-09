@@ -453,16 +453,22 @@ function ProbeObsConnection() {
             try { if (sock) { sock.onopen = sock.onerror = sock.onclose = null; sock.close(); } } catch (e) {}
             resolve(ok);
         };
-        try {
-            sock = new WebSocket('ws://' + cfg.address + ':' + cfg.port);
-        } catch (e) {
-            resolve(false);
-            return;
-        }
-        const timer = setTimeout(function () { done(false); }, 3000);
-        sock.onopen = function () { clearTimeout(timer); done(true); };
-        sock.onerror = function () { clearTimeout(timer); done(false); };
-        sock.onclose = function () { clearTimeout(timer); };
+        // Port dari discovery bila bridge tersedia, kalau tidak pakai input.
+        const resolvePort = (typeof ResolveObsPort === 'function')
+            ? ResolveObsPort(cfg.port)
+            : Promise.resolve(cfg.port);
+        resolvePort.then(function (port) {
+            try {
+                sock = new WebSocket('ws://' + cfg.address + ':' + port);
+            } catch (e) {
+                resolve(false);
+                return;
+            }
+            const timer = setTimeout(function () { done(false); }, 3000);
+            sock.onopen = function () { clearTimeout(timer); done(true); };
+            sock.onerror = function () { clearTimeout(timer); done(false); };
+            sock.onclose = function () { clearTimeout(timer); };
+        }).catch(function () { resolve(false); });
     });
 }
 
@@ -478,10 +484,17 @@ function MaybeSuggestObsConnection() {
     setTimeout(function () {
         // Popup lain (mis. dipicu Queue) sudah terbuka: jangan tumpuk.
         if (settingsPopupDialog && settingsPopupDialog.open) return;
-        ProbeObsConnection().then(function (connected) {
-            // OBS hidup: catat supaya tidak ditanya lagi, dan jangan munculkan
-            // popup. Kalau memang belum terkoneksi, barulah disarankan.
-            if (connected) {
+        // Discovery dulu supaya tahu apakah obs-websocket memakai password.
+        const ensureAuth = (typeof DiscoverObsPort === 'function')
+            ? DiscoverObsPort() : Promise.resolve(null);
+        ensureAuth.then(function () {
+            return ProbeObsConnection();
+        }).then(function (connected) {
+            const needsPw = (typeof ObsAuthRequired === 'function') && ObsAuthRequired();
+            const cfgPw = (typeof GetObsConfig === 'function') ? (GetObsConfig().password || '') : '';
+            // OBS hidup DAN tidak butuh password (atau passwordnya sudah
+            // diisi): catat supaya tidak ditanya lagi, jangan munculkan popup.
+            if (connected && !(needsPw && !cfgPw)) {
                 WriteControlsPref('obsAutoConnect', '1');
                 return;
             }
@@ -631,6 +644,19 @@ function SetFooterButtonState(btn, text, ok) {
 // di navbar dokumen induk mengirim pesan ke sini, bukan menyambung sendiri.
 // Nama source dicari persis seperti Save (SourceNameCandidates), supaya
 // tombol ini selalu menunjuk source yang sama dengan yang baru disimpan.
+//
+// Widget (DIA / Live Q&A) mendengarkan kanal ini lewat `callFunction`, jadi
+// kita bisa menyuruhnya masuk Layout mode begitu jendela Interact terbuka:
+// drag/resize langsung aktif tanpa perlu membuka panel kontrol dulu.
+function EnterWidgetLayout() {
+    if (!window.BroadcastChannel) return;
+    try {
+        const relay = new BroadcastChannel(CHANNEL_NAME);
+        relay.postMessage({ type: 'callFunction', fn: 'gesekiEnterLayout', args: [] });
+        relay.close();
+    } catch (e) { /* abaikan */ }
+}
+
 async function GesekiOpenInteractDialog() {
     try {
         await ObsConnect();
@@ -653,6 +679,8 @@ async function GesekiOpenInteractDialog() {
 
         await ObsRequest('OpenInputInteractDialog', { inputName: target });
         SetActionStatus('Interact opened, ' + target, true);
+        // Jendela Interact sudah terbuka: minta widget masuk Layout mode.
+        EnterWidgetLayout();
         return { ok: true, name: target };
     } catch (err) {
         console.error('[OBS Interact]', err);
@@ -1679,6 +1707,7 @@ function LoadJSON(settingsJson) {
 
             ApplyShowIfVisibility();
             InitConnectionBadges();
+            InitObsPortAuto();
             // Semua kartu popup sudah dibangun di atas; sekarang aman menyarankan
             // koneksi OBS bila user belum pernah mengisinya.
             MaybeSuggestObsConnection();
@@ -2434,6 +2463,8 @@ function SetControlValueFromMap(setting) {
 function ApplySettingsMapToForm() {
     (settingsData?.settings || []).forEach(SetControlValueFromMap);
     ApplyShowIfVisibility();
+    // Profil scene bisa membawa port lama; discovery bridge yang menang.
+    if (typeof ApplyObsPortAuto === 'function') ApplyObsPortAuto();
     // Widget di pratinjau (non-dashboard) ikut diperbarui tanpa reload.
     RefreshWidgetPreview();
 }
@@ -3451,6 +3482,79 @@ function InitNowPlayingRelay() {
 // obs-websocket memakai WebSocket, jadi
 // status diuji dengan membuka koneksi sebentar lalu langsung menutupnya,
 // kalau dibiarkan terbuka, tiap pengecekan menambah koneksi ke OBS.
+// ── Port OBS otomatis (hasil discovery bridge) ────────────────────
+// Bila bridge (plugin native) bisa membaca port obs-websocket, input Port di
+// grup "OBS Connection" diisi nilai itu, dikunci, dan diberi label "Auto".
+// Tujuannya: angka di UI sama dengan port yang BENAR-BENAR dipakai, karena
+// koneksi memang selalu memakai hasil discovery lebih dulu.
+// Bridge mati / server nonaktif -> input kembali editable tanpa label.
+function ObsPortAutoBadge(input) {
+    const wrap = input.parentElement;
+    if (!wrap) return null;
+    let badge = wrap.querySelector('.obs-port-auto');
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'obs-port-auto';
+        badge.textContent = 'Auto';
+        badge.hidden = true;
+        wrap.insertBefore(badge, input);
+    }
+    return badge;
+}
+
+// Label "Required" di baris Password, muncul saat bridge melaporkan
+// obs-websocket memakai password. Password-nya sendiri tidak lewat bridge.
+function ObsPasswordReqBadge() {
+    const row = document.getElementById('item-obsPassword');
+    if (!row) return null;
+    const title = row.querySelector('.info .title');
+    if (!title) return null;
+    let badge = title.querySelector('.obs-pw-req');
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'obs-pw-req';
+        badge.textContent = 'Required';
+        badge.hidden = true;
+        title.appendChild(badge);
+    }
+    return badge;
+}
+
+function ApplyObsPortAuto() {
+    if (typeof DiscoverObsPort !== 'function') return;
+    const input = document.getElementById('obsPort');
+    if (!input) return;
+    DiscoverObsPort().then((port) => {
+        // Tandai kolom Password bila server meminta password.
+        const reqBadge = ObsPasswordReqBadge();
+        if (reqBadge) reqBadge.hidden = !(typeof ObsAuthRequired === 'function' && ObsAuthRequired());
+        const badge = ObsPortAutoBadge(input);
+        if (port) {
+            if (String(input.value) !== String(port)) input.value = String(port);
+            input.setAttribute('readonly', '');
+            input.readOnly = true;
+            if (badge) badge.hidden = false;
+            // Simpan supaya Save / profil scene tetap membawa port yang benar
+            // walau user tidak mengetik apa pun.
+            if (String(settingsMap.get('obsPort')) !== String(port)) {
+                settingsMap.set('obsPort', port);
+                SaveSettingsToStorage();
+            }
+        } else {
+            input.removeAttribute('readonly');
+            input.readOnly = false;
+            if (badge) badge.hidden = true;
+        }
+    });
+}
+
+// Dipanggil dari render settings.json; TIDAK ditaruh di InitOBSBadge karena
+// fungsi itu bisa keluar lebih awal saat pil status OBS tidak ada.
+function InitObsPortAuto() {
+    ApplyObsPortAuto();
+    setInterval(ApplyObsPortAuto, 10000);
+}
+
 function InitOBSBadge() {
     const status = document.getElementById('status-obs');
     // Pil di bar atas (skin=queue) memakai elemen terpisah; keduanya
@@ -3476,35 +3580,48 @@ function InitOBSBadge() {
             probe = null;
         }
 
-        try {
-            probe = new WebSocket(`ws://${cfg.address}:${cfg.port}`);
-        } catch (e) {
-            setConnected(false);
-            return;
-        }
+        // Port dari discovery bila bridge tersedia, kalau tidak pakai input.
+        const resolvePort = (typeof ResolveObsPort === 'function')
+            ? ResolveObsPort(cfg.port)
+            : Promise.resolve(cfg.port);
+        resolvePort.then((port) => {
+            try {
+                probe = new WebSocket(`ws://${cfg.address}:${port}`);
+            } catch (e) {
+                setConnected(false);
+                return;
+            }
 
-        // Pengaman: kalau OBS menerima koneksi tapi tidak pernah
-        // mengirim Hello, anggap gagal.
-        const timer = setTimeout(() => {
-            setConnected(false);
-            try { probe?.close(); } catch (e) {}
-        }, 3000);
+            // Pengaman: kalau OBS menerima koneksi tapi tidak pernah
+            // mengirim Hello, anggap gagal.
+            const timer = setTimeout(() => {
+                setConnected(false);
+                try { probe?.close(); } catch (e) {}
+            }, 3000);
 
-        probe.onopen = () => {
-            // Terhubung di level TCP, artinya server obs-websocket
-            // hidup. Tidak perlu autentikasi untuk sekadar cek status.
-            clearTimeout(timer);
-            setConnected(true);
-            // OBS terbukti hidup: tandai supaya popup saran koneksi tidak
-            // muncul lagi di reload berikutnya.
-            WriteControlsPref('obsAutoConnect', '1');
-            try { probe.close(); } catch (e) {}
-        };
-        probe.onerror = () => {
-            clearTimeout(timer);
-            setConnected(false);
-        };
-        probe.onclose = () => { clearTimeout(timer); };
+            probe.onopen = () => {
+                // Terhubung di level TCP saja belum cukup bila obs-websocket
+                // memakai password: autentikasi baru dianggap berhasil saat
+                // handshake op1/op2 lolos. Jadi pil JANGAN hijau dulu, tetap
+                // abu-abu (seperti offline) supaya tidak menyesatkan.
+                clearTimeout(timer);
+                if (typeof ObsAuthRequired === 'function' && ObsAuthRequired()) {
+                    setConnected(false);
+                    try { probe.close(); } catch (e) {}
+                    return;
+                }
+                setConnected(true);
+                // OBS terbukti hidup: tandai supaya popup saran koneksi tidak
+                // muncul lagi di reload berikutnya.
+                WriteControlsPref('obsAutoConnect', '1');
+                try { probe.close(); } catch (e) {}
+            };
+            probe.onerror = () => {
+                clearTimeout(timer);
+                setConnected(false);
+            };
+            probe.onclose = () => { clearTimeout(timer); };
+        }).catch(() => { setConnected(false); });
     }
 
     checkOBS();

@@ -12,6 +12,10 @@
 
 const OBS_WS_DEFAULT_PORT = 4455;
 
+// Host bridge (plugin native) untuk discovery port obs-websocket. Sama dengan
+// yang dipakai widget: 127.0.0.1, atau ?bridgeHost= bila diarahkan lain.
+const OBS_BRIDGE_HOST = ObsBuilderParam('bridgeHost', '127.0.0.1');
+
 // Nama & ukuran source bisa di-override lewat query string halaman builder
 // (?sourceName=…&sourceWidth=…&sourceHeight=…). Tanpa param, nilainya persis
 // seperti sebelumnya, jadi widget lama tidak terpengaruh. Ini penting karena
@@ -58,16 +62,92 @@ function GetObsConfig() {
     };
 }
 
+// ── Deteksi port obs-websocket otomatis ──────────────────────────
+// Bridge (plugin native) bisa membaca config obs-websocket, jadi kita tanya
+// ke port discovery tetapnya. Kalau gagal (bridge lama/tidak jalan), pakai
+// port yang diketik pengguna. Password TIDAK pernah lewat sini: bridge hanya
+// mengembalikan port, karena endpoint ini bisa diakses halaman mana pun.
+let obsDiscoveredPort = null;
+let obsDiscoveryFailedAt = 0;
+// Diisi dari discovery: apakah obs-websocket meminta password. null = belum tahu.
+// Nilai password sendiri tidak pernah lewat bridge.
+let obsDiscoveredAuthRequired = null;
+const OBS_DISCOVERY_RETRY_MS = 30000;
+async function ResolveObsPort(fallbackPort) {
+    if (obsDiscoveredPort) return obsDiscoveredPort;
+    // Bridge mati? jangan fetch tiap kali probe status (interval 10 dtk).
+    if (obsDiscoveryFailedAt && (Date.now() - obsDiscoveryFailedAt) < OBS_DISCOVERY_RETRY_MS) {
+        return fallbackPort;
+    }
+    try {
+        const ctl = new AbortController();
+        const t = setTimeout(() => ctl.abort(), 1500);
+        const r = await fetch(`http://${OBS_BRIDGE_HOST}:47800/obs-port`, { signal: ctl.signal });
+        clearTimeout(t);
+        if (!r.ok) { obsDiscoveryFailedAt = Date.now(); return fallbackPort; }
+        const d = await r.json();
+        if (d && d.ok === true && d.enabled !== false) {
+            const p = Number(d.port);
+            if (Number.isInteger(p) && p > 0 && p <= 65535) {
+                obsDiscoveredPort = p;
+                // Simpan juga apakah server memakai password, supaya pil
+                // status OBS tahu koneksi TCP saja belum cukup.
+                obsDiscoveredAuthRequired = (d.authRequired === true);
+                if (p !== fallbackPort) console.debug(`[Geseki][OBS] discovery: ws port ${p}`);
+                return p;
+            }
+        }
+        obsDiscoveryFailedAt = Date.now();
+    } catch (e) { obsDiscoveryFailedAt = Date.now(); }
+    return fallbackPort;
+}
+
+// Sama seperti ResolveObsPort, tetapi TANPA fallback: hasilnya dipakai UI untuk
+// memutuskan apakah input Port ditandai "Auto". Sengaja TIDAK memakai cache
+// sukses supaya label Auto hilang lagi kalau bridge mati. null = bridge tidak
+// tersedia, server obs-websocket nonaktif, atau responsnya tidak valid.
+async function DiscoverObsPort() {
+    if (obsDiscoveryFailedAt && (Date.now() - obsDiscoveryFailedAt) < OBS_DISCOVERY_RETRY_MS) {
+        return null;
+    }
+    try {
+        const ctl = new AbortController();
+        const t = setTimeout(() => ctl.abort(), 1500);
+        const r = await fetch(`http://${OBS_BRIDGE_HOST}:47800/obs-port`, { signal: ctl.signal });
+        clearTimeout(t);
+        if (!r.ok) { obsDiscoveryFailedAt = Date.now(); return null; }
+        const d = await r.json();
+        if (d && d.ok === true && d.enabled !== false) {
+            const p = Number(d.port);
+            if (Number.isInteger(p) && p > 0 && p <= 65535) {
+                obsDiscoveredPort = p;
+                obsDiscoveredAuthRequired = (d.authRequired === true);
+                return p;
+            }
+        }
+        obsDiscoveredAuthRequired = null;
+        obsDiscoveryFailedAt = Date.now();
+    } catch (e) { obsDiscoveredAuthRequired = null; obsDiscoveryFailedAt = Date.now(); }
+    return null;
+}
+
+// Apakah obs-websocket meminta password (hasil discovery). false bila belum
+// diketahui, supaya UI tidak menandai "wajib" tanpa dasar.
+function ObsAuthRequired() { return obsDiscoveredAuthRequired === true; }
+
 let obsSocket = null;
 let obsSocketEndpoint = null;
 let obsRequestId = 0;
 const obsPending = new Map();
 
 // ── Koneksi ──────────────────────────────────────────────────────
-function ObsConnect() {
+async function ObsConnect() {
     const cfg = GetObsConfig();
     const password = cfg.password;
-    const endpoint = `ws://${cfg.address}:${cfg.port}`;
+    // Port: discovery dulu (bridge baca config obs-websocket), lalu input user.
+    const port = await ResolveObsPort(cfg.port);
+    cfg.port = port;
+    const endpoint = `ws://${cfg.address}:${port}`;
 
     return new Promise((resolve, reject) => {
         // Pakai ulang koneksi HANYA bila endpoint-nya sama: dulu socket dipakai
@@ -88,7 +168,7 @@ function ObsConnect() {
 
         let ws;
         try {
-            ws = new WebSocket(`ws://${cfg.address}:${cfg.port}`);
+            ws = new WebSocket(endpoint);
         } catch (e) {
             reject(new Error('WebSocket is not supported'));
             return;
@@ -156,6 +236,20 @@ function ObsConnect() {
         ws.addEventListener('error', () => {
             clearTimeout(timeout);
             reject(new Error(`Failed to connect to OBS WebSocket at ${cfg.address}:${cfg.port}`));
+        });
+
+        // obs-websocket menutup koneksi dengan kode 4009 saat autentikasi
+        // ditolak. Tanpa handler ini kegagalannya cuma terlihat sebagai
+        // timeout, sehingga pesannya menyesatkan ("server tidak merespons"
+        // padahal servernya hidup dan passwordnya yang salah).
+        ws.addEventListener('close', (ev) => {
+            clearTimeout(timeout);
+            if (obsSocket === ws) { obsSocket = null; obsSocketEndpoint = null; }
+            if (ev && ev.code === 4009) {
+                reject(new Error('OBS rejected the connection: wrong password. Check Tools > WebSocket Server Settings.'));
+            } else {
+                reject(new Error(`OBS WebSocket closed (code ${ev ? ev.code : '?'}).`));
+            }
         });
     });
 }

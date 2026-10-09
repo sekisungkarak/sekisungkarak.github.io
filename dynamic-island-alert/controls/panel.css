@@ -981,6 +981,38 @@ div.cp-group-head:hover { color: #eae7ee; }
 }
 .cp-pw-eye:hover { color: #fff; }
 
+/* Dialog Connect OBS: baris Port + label "Auto" saat port dideteksi. */
+.cp-dialog-port { display: flex; align-items: center; gap: 8px; }
+.cp-dialog-port .cp-input { flex: 1 1 auto; }
+.cp-dialog-auto {
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: #d4a843;
+	background: rgba(212, 168, 67, 0.16);
+	border: 1px solid rgba(212, 168, 67, 0.4);
+	border-radius: 999px;
+	padding: 1px 7px;
+	line-height: 1.5;
+	flex: 0 0 auto;
+}
+.cp-input[readonly] { color: #b3acbd; cursor: default; }
+/* Label "Required" di baris Password saat server OBS memakai password. */
+.cp-dialog-req {
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: #e8a3a3;
+	background: rgba(224, 106, 106, 0.18);
+	border: 1px solid rgba(224, 106, 106, 0.42);
+	border-radius: 999px;
+	padding: 1px 7px;
+	margin-left: 8px;
+	line-height: 1.5;
+}
+
 /* Pill profil aktif di navbar (tampilan saja, tidak bisa diklik). */
 .cp-profile-pill.is-static {
 	cursor: default;
