@@ -1971,6 +1971,9 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		LayoutShowGuides(null, null);
 		LayoutLighten(false);
 		if (layoutRaf) { cancelAnimationFrame(layoutRaf); layoutRaf = 0; }
+		// Scene aktif yang keluar menyiarkan ke instance scene lain: hanya scene
+		// yang sedang tayang yang jendela Interact-nya menerima blur.
+		BroadcastLayoutExit();
 	}
 
 	function SetLayoutMode(on) {
@@ -2493,6 +2496,17 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 		try { panelBc.postMessage({ type: 'panelState', open: open }); } catch (e) { /* abaikan */ }
 	}
 
+	// Keluar Layout harus ikut menutup SEMUA scene, bukan hanya scene aktif:
+	// hanya scene yang sedang tayang yang jendela Interact-nya menerima blur,
+	// jadi instance itu menyiarkan keluar ke instance lain lewat kanal widget.
+	// layoutSyncing menahan siaran balik saat state dari scene lain diterapkan.
+	var layoutSyncing = false;
+
+	function BroadcastLayoutExit() {
+		if (!panelBc || layoutSyncing) return;
+		try { panelBc.postMessage({ type: 'layoutExit' }); } catch (e) { /* abaikan */ }
+	}
+
 	// Buang edit yang belum di-Save: kembalikan form (dan posisi/skala/rotasi
 	// widget) ke setting TERAKHIR YANG TERSIMPAN. Dipanggil tiap panel dibuka,
 	// supaya perubahan yang tidak jadi disimpan tidak "diingat" panel.
@@ -2571,11 +2585,20 @@ var NOW_PLAYING_GROUP = 'Now Playing';
 	if (panelBc) {
 		panelBc.onmessage = function (event) {
 			var d = event && event.data;
-			if (!d || d.type !== 'panelState') return;
-			if (d.open === !!isOpen) return;
-			panelSyncing = true;
-			try { if (d.open) Open(); else Close(); }
-			finally { panelSyncing = false; }
+			if (!d) return;
+			if (d.type === 'panelState') {
+				if (d.open === !!isOpen) return;
+				panelSyncing = true;
+				try { if (d.open) Open(); else Close(); }
+				finally { panelSyncing = false; }
+				return;
+			}
+			// Keluar Layout dari scene lain: terapkan lokal tanpa menyiarkan balik.
+			if (d.type === 'layoutExit') {
+				layoutSyncing = true;
+				try { LayoutExit(); }
+				finally { layoutSyncing = false; }
+			}
 		};
 	}
 

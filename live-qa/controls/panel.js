@@ -343,6 +343,7 @@
 	}
 
 	function SetLayoutMode(on) {
+		var was = layoutOn;
 		layoutOn = !!on;
 		if (layoutOn) {
 			Build();
@@ -354,6 +355,8 @@
 			if (giOverlay) giOverlay.classList.remove('is-on');
 			qaPanel.classList.remove('is-layout');
 			if (layoutIdleTimer) { clearTimeout(layoutIdleTimer); layoutIdleTimer = null; }
+			// Scene aktif yang keluar menyiarkan ke instance scene lain.
+			if (was) BroadcastLayoutExit();
 		}
 		if (gear) {
 			gear.classList.toggle('is-active', layoutOn);
@@ -472,6 +475,27 @@
 	// tombol Interact di navbar dashboard diklik, supaya widget langsung
 	// masuk Layout mode tanpa membuka panel kontrol dulu.
 	window.gesekiEnterLayout = function () { SetLayoutMode(true); };
+
+	// Keluar Layout harus ikut menutup SEMUA scene, bukan hanya scene aktif:
+	// hanya scene yang sedang tayang yang jendela Interact-nya menerima blur,
+	// jadi instance itu menyiarkan keluar ke instance lain lewat kanal widget.
+	// layoutSyncing menahan siaran balik saat state dari scene lain diterapkan.
+	var layoutBc = window.BroadcastChannel ? new BroadcastChannel('geseki:live-qa:channel') : null;
+	var layoutSyncing = false;
+
+	function BroadcastLayoutExit() {
+		if (!layoutBc || layoutSyncing) return;
+		try { layoutBc.postMessage({ type: 'layoutExit' }); } catch (e) { /* abaikan */ }
+	}
+
+	if (layoutBc) {
+		layoutBc.onmessage = function (event) {
+			var d = event && event.data;
+			if (!d || d.type !== 'layoutExit') return;
+			layoutSyncing = true;
+			try { SetLayoutMode(false); } finally { layoutSyncing = false; }
+		};
+	}
 
 	BuildGear();
 
